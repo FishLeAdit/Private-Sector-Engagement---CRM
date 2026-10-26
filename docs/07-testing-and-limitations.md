@@ -1,6 +1,63 @@
 # Testing and limitations
 
-The database foundation and authentication/access checkpoint are implemented. CRM business pages and APIs remain scaffolds. Evidence below distinguishes actual PostgreSQL tests, mocked authentication tests, anonymous browser checks and live-account verification that remains manual.
+The database foundation, authentication, Contacts and financial Opportunities workflows are implemented. Other CRM modules remain scaffolds. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
+
+## Hosted demo seeding on 26 October 2026
+
+The separate `scripts/seed-demo.ts` command previews or explicitly inserts 3 fictional companies, 8 individuals and 8 opportunities into the configured project. It requires an existing active PSE owner and a private server-side key, preserves existing rows on repeat runs, checks communication-identifier collisions before writes, and initializes provisional lookups only when their tables are empty. It does not provision users or create received contributions/targets. The administrative transport is separate from the normal caller-scoped application path.
+
+All 206 tests across 17 files passed, including six additional checks for the generated dataset, active configuration/owner selection, collision checks, actual SQL/RLS relationships and rerun preservation of user edits. Typecheck, lint and production build passed. Local tests also verify that this dataset leaves existing profiles, targets and recognized contributions unchanged. The runner rejects placeholder/non-administrative keys before making requests.
+
+After the developer privately configured the key, the hosted preview confirmed 3 companies, 8 individuals and 8 opportunities were missing, with no stage/category setup needed. `npm.cmd run seed:demo -- --apply` inserted them and verified the stored records plus contact/stage/category joins through real PostgREST. They are assigned to the existing Demo Manager. A subsequent read-only preview reported 11 contacts and 8 opportunities already present, with zero inserts needed. No received contributions, target values, Auth accounts or profiles were inserted/changed.
+
+The ordinary `npm` PowerShell invocation consumed the `--apply` flag and only previewed; using `npm.cmd` forwarded it correctly. This verification used administrative access, not an end-user session. Hosted sign-in, interactive browser persistence and end-user RLS/filter acceptance remain manual checks. Earlier checkpoint notes below describe their historical runs before this hosted demo insert.
+
+## Opportunities verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 200 passed across 16 files, including 49 additional opportunity service/SQL, SDK, API and form checks |
+| `npm run test:e2e -- sign-in.spec.ts contacts.spec.ts opportunities.spec.ts` | Eight anonymous Chromium checks passed; three live cases skipped |
+| `npm run typecheck` / `npm run build` | Passed; list/new/detail/edit, Settings and new API routes compile |
+| `npm run lint` / `npm run validate:seed` / `npm run db:types:check` | Passed; seed integrity retained and generated types match all 13 tables |
+
+Shared-service tests use disposable PostgreSQL/RLS to verify individual/company deals, both contact people, optional fields/budgets, partial-update preservation, positive finite decimal values, manual in-kind valuation, owner/creator/manager editing and reassignment, inactive historical selections and empty-project provisional configuration. Stage moves retain before/after audit snapshots and create no recognized contributions. Database tests independently reject unrelated edits, non-manager configuration, incompatible meeting/activity links and changes to recognized-contribution currency/type. The seed/type scripts initially hit the known Windows user-info sandbox error and passed when rerun outside the sandbox.
+
+SDK tests use the real Supabase client with mocked HTTP to check literal search, combined filters, deterministic pagination, FK selections, bounded history, configuration writes and safe error mapping. API tests cover verified creators, no-store responses, same-origin writes, JSON/size checks, strict fields, role denial and safe exceptions. DOM tests check required financial value/valuation, inline contact creation preserving the deal draft and selecting the new contact without navigation or nested forms, error preservation, reference URLs and rejected stage moves. Contact form regression tests still pass after adding callback support.
+
+Anonymous browser checks cover opportunity APIs/configuration and redirects for board/new/detail/edit/Settings. They reused the developer's running port-3000 server, which was left running. Live login and contact-write cases were explicitly disabled in keeping with the developer's manual-testing preference. No hosted login, deal/contact/configuration writes, schema changes or new migrations were performed. Full authenticated hosted persistence, actual PostgREST join/filter behavior and native dialog focus/keyboard behavior remain manual checks; jsdom uses dialog method substitutes.
+
+The original assessment fields are represented, with primary company contact required and secondary optional pending confirmation. Final stages are not hardcoded: manager configuration uses stored IDs/outcomes; optional assessment examples are explicitly provisional. The board and expected-value subtotals cover only the current 20-deal page. Details show recent actuals/audits rather than full totals. Lookups cap at 1,000 entries each. Configuration example setup uses sequential, retryable writes and is not atomic. No uploads, external autofill, Gmail sync, automatic valuations or unapproved lead/follow-up KPI are introduced.
+
+## Contact deletion verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 151 passed across 12 files, including 27 additional deletion checks |
+| `npm run test:e2e -- sign-in.spec.ts contacts.spec.ts` | Six anonymous browser checks passed, including blocked anonymous DELETE; three live cases skipped |
+| `npm run validate:seed` | Passed with all four migrations |
+| `npm run db:types:check` | Types still match all 13 tables |
+| `npm run lint` / `npm run typecheck` / `npm run build` | Passed |
+
+Real local SQL tests verify creator/manager deletion, rejection of colleagues/non-PSE/inactive/anonymous actors, retained actor/before audit data, and protection of company associations, opportunity parties/primary/secondary contacts, meetings and activities. Service/API/SDK tests verify permissions, affected-row checks, same-origin requests and safe HTTP 409 mapping for both PostgreSQL RESTRICT/reference conflict codes. DOM tests verify confirmation, cancellation without a request, pending-state duplicate-submission protection and visible conflict errors.
+
+No hosted migration or contact deletion was executed. The optional live Contacts workflow now exercises linked-company rejection and removes its own fictional records on success; it was skipped. The new migration must be applied by the developer before manually testing hosted deletion. Database types did not change because migration 0004 only adds a grant/policy. Local migration loading now discovers sorted migration files rather than hardcoding the first three.
+
+## Contacts verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 124 passed across 10 files, including 36 new Contacts workflow/query/API/form checks |
+| `npm run test:e2e -- sign-in.spec.ts contacts.spec.ts` | Six anonymous Chromium browser checks passed; three optional live cases skipped |
+| `npm run lint` | Passed |
+| `npm run typecheck` | Passed |
+| `npm run build` | Passed; contact list/new/detail/edit and API routes compile |
+
+Shared service tests execute against disposable PostgreSQL with RLS to verify persistence/reload, phone-only individuals, optional company links, normalized duplicates, self-exclusion on edit, partial-update preservation, restricted editing and identity/creator mass-assignment rejection. Query-contract tests use the real Supabase SDK with a mocked HTTP transport to inspect pagination, FK selections, quoted filters and safe database-error mapping. API tests exercise authorization, same-origin checks, JSON limits, response statuses and shared-service delegation. DOM tests cover validation, company/individual modes, duplicate warnings, preserved values after conflicts, saving and keyboard selection of internal companies.
+
+Anonymous browser checks additionally verify contact POST/PATCH/duplicate access and detail/edit redirects. The runner initially tried to start a second Next.js dev server; it then successfully reused the developer's existing port-3000 server through `E2E_BASE_URL`. That server was left running. Live login and contact-write tests were explicitly disabled for the run, honoring the developer's manual-testing preference. No hosted contacts, users or profiles were created or changed by these checks.
+
+The optional live contact test requires private demo credentials and `E2E_CONTACT_WRITES=1`; its newer deletion behavior is described in the checkpoint above. It was not run. Production PostgREST joins/filter semantics and full authenticated browser persistence remain part of manual hosted verification; local SQL/service tests and SDK-contract tests do not establish that verification.
 
 ## Authentication verification on 26 October 2026
 
@@ -50,7 +107,8 @@ The TypeScript runner initially could not read Windows user information inside t
 
 - Independent hosted Supabase role/security verification and live Auth sessions remain pending manual checks. The local engine uses PostgreSQL 18; verify compatibility against the selected hosted PostgreSQL version when integrating.
 - Parent-row locks serialize target edits and approval in the SQL design. The single-connection local harness does not prove multi-session race behavior; add a two-session hosted/local-server test during integration.
-- No working CRM forms/services, dashboard queries, contacts-engaged KPI, application cache or production deployment exist yet. Only the sign-in E2E suite is implemented; other E2E files remain placeholders.
+- Contacts and Opportunities forms/services, including inline New Deal contact creation and stage configuration, are implemented. Meetings, Activities, target/contribution-entry workflows, dashboard queries, contacts-engaged KPI, application cache and production deployment remain pending. Target E2E remains a placeholder; opportunity E2E covers anonymous boundaries only.
+- Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unreferenced contact deletion is implemented as a user-requested addition; active/inactive contact lifecycle remains unresolved.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.

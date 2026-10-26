@@ -1,9 +1,13 @@
-import { authorizeApi } from "@/lib/auth/access";
+import { contactApi, invalidateContact, readContactJson } from "@/features/contacts/api";
 
-export async function GET() {
-  const auth = await authorizeApi();
-  if (!auth.ok) return auth.response;
-  return Response.json({ error: "Not implemented" }, { status: 501, headers: { "Cache-Control": "private, no-store" } });
+export async function GET(request: Request) {
+  return contactApi(request, async service => ({ data: await service.list(Object.fromEntries(new URL(request.url).searchParams)) }));
 }
 
-// TODO: Validate requests and delegate to shared feature services with caller-scoped access.
+export async function POST(request: Request) {
+  return contactApi(request, async service => {
+    const contact = await service.create(await readContactJson(request));
+    invalidateContact(contact.id);
+    return { data: { contact }, status: 201 };
+  }, true);
+}

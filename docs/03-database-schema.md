@@ -9,6 +9,7 @@ The SQL migrations implement the database foundation. They are designed for Supa
 | [0001_core_schema.sql](../supabase/migrations/0001_core_schema.sql) | Tables, foreign keys, financial and communication constraints, normalized identifiers and URL validation |
 | [0002_security_policies.sql](../supabase/migrations/0002_security_policies.sql) | Active-PSE access helpers, table grants and RLS policies |
 | [0003_indexes_and_triggers.sql](../supabase/migrations/0003_indexes_and_triggers.sql) | Relationship validation, timestamps, audit history, target reconciliation/locking and query indexes |
+| [0004_contact_deletion.sql](../supabase/migrations/0004_contact_deletion.sql) | Creator/manager contact DELETE grant and RLS policy; keeps restrictive foreign keys and audit history |
 
 Apply migrations in filename order. On Supabase, the Auth schema and application database roles are supplied by the platform. Local verification creates an isolated substitute for those dependencies; do not install the test Auth bootstrap into a hosted project.
 
@@ -32,17 +33,21 @@ Apply migrations in filename order. On Supabase, the Auth schema and application
 
 Operational records use UUID identities and UTC `timestamptz` audit fields. Foreign keys restrict deletion of referenced records. Client access is narrower than referential integrity alone; see [API and permissions](04-api-and-permissions.md).
 
+Contact deletion is allowed only for an active PSE creator or authorized manager/admin after migration 0004. An individual referenced as an opportunity party/primary/secondary contact, meeting/activity contact, or company associated with people cannot be removed until those references are reassigned or unlinked. No related data cascades. The existing audit trigger records the delete actor and full before snapshot, so deleting a contact is not an erasure of its audit history. No new columns, public functions or generated type changes were needed. The hosted migration is applied separately with `npx supabase db push`.
+
 ## Contacts and related records
 
 An individual may exist without a company. A company association must point to a company record rather than another individual or the same contact. Company opportunity points of contact reference individual contact records so names and communication methods remain structured and searchable. A primary point of contact is required for a company opportunity; a secondary point remains representable without enforcing unresolved secondary-contact requiredness.
 
-At least one normalized email or phone must be present. Email comparison trims whitespace and ignores case. Phone comparison removes non-digit characters; it does not infer a country code or equate local and international forms. Use a consistent international format during entry/import and review ambiguous matches. Unique normalized identifiers prevent duplicate records when either value matches; the future UI must translate these conflicts into a clear warning rather than merge automatically.
+At least one normalized email or phone must be present. Email comparison trims whitespace and ignores case. Phone comparison removes non-digit characters; it does not infer a country code or equate local and international forms. Use a consistent international format during entry/import and review ambiguous matches. Unique normalized identifiers prevent duplicate records when either value matches; contact forms, including New Deal's inline form, show duplicate warnings/conflicts without automatic merging.
 
 An opportunity's party, company points of contact, meeting and activity links are checked for compatible relationships. An activity may still exist with no CRM links, keeping `related_person_name`, `related_organization_name` and `remaining_work`. Free-text names provide context, not reliable unique identities for a contacts-engaged KPI. No such KPI query is implemented in this checkpoint.
 
 ## Financial values and recognition
 
 Amounts use `numeric(14,2)` with finite-value checks. Expected opportunity amounts, actual contribution amounts and annual targets are positive; allocation amounts and an optional operational budget are non-negative. Currency is stored as a three-letter uppercase code. PostgreSQL decimal arithmetic performs reconciliation; future application inputs must handle rounding explicitly.
+
+The Opportunities application uses these existing tables and requires no additional migration. Input rejects more than two decimal places or more than 12 whole digits, rather than silently rounding entered amounts. Stage/category activation is required on creation or selection changes; unchanged inactive historical references can still be edited. Only a manager can reassign a focal person. Configurable stage labels, positions, closed outcomes and provisional flags are maintained through Settings; target verticals remain separate.
 
 `operational_budget` is optional and uses the opportunity currency in this implementation. It is separate from `expected_amount` and must never be added to expected fundraising or realized achievement. There is no currency conversion rule; reports must group by currency.
 
@@ -69,4 +74,4 @@ Seed stage/category/vertical labels are provisional demonstration configuration,
 
 The seed is local demonstration data using fixed fictional profile IDs. Matching Auth identity rows are supplied by the isolated test bootstrap, not by the migrations or seed. There are no Auth passwords or real demo login accounts. A hosted import requires trusted identity provisioning and reviewed ID mappings; this checkpoint does not deploy to a hosted project.
 
-Database types are generated from the migrated local catalog by the repository workflow. They do not imply a hosted deployment or completed CRM business services. Supabase browser/server Auth clients and request access checks are implemented separately; live-account checks remain manual. See [verification evidence](07-testing-and-limitations.md) for commands actually run and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.
+Database types are generated from the migrated local catalog by the repository workflow. Auth and Contacts services/forms use this existing schema; no Contacts migration was needed. Contact creators are displayed as owners, and type/creator fields remain immutable. Hosted sign-in/CRUD checks remain manual. See [verification evidence](07-testing-and-limitations.md) for commands actually run and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.

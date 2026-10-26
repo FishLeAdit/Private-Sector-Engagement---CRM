@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "validate:seed": "tsx scripts/validate-seed.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "db:types": "tsx scripts/generate-database-types.ts",
     "db:types:check": "tsx scripts/generate-database-types.ts --check"
   },
@@ -39,6 +40,7 @@
     "daisyui": "^5.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
+    "jsdom": "^29.1.1",
     "supabase": "^2.122.0",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.0.0",

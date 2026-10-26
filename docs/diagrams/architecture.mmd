@@ -5,7 +5,8 @@ flowchart LR
     Pages[Pages and reusable components]
     Login[Login and logout server actions]
     Proxy[Session refresh proxy]
-    Services[Shared feature services and request authorization]
+    Services[Shared Auth Contacts Opportunities services and authorization]
+    Future[Other CRM business modules pending]
     Client[Caller-scoped Supabase client]
   end
   subgraph Supabase[Configured Supabase project - live verification pending]
@@ -24,7 +25,8 @@ flowchart LR
   Browser --> Proxy --> Pages
   Pages --> Login --> Auth
   Proxy --> Auth
-  Pages -. integration pending .-> Services
+  Pages --> Services
+  Pages -. later checkpoints .-> Future
   Auth -. caller identity .-> Client
   Services --> Client
   Client --> RLS

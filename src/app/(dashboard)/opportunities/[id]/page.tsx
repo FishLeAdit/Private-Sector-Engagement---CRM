@@ -1,3 +1,38 @@
-export default function Page() {
-  return <><h1 className="text-3xl font-bold">Opportunities details</h1><p className="mt-4">Scaffold only. This workflow is not implemented yet.</p></>;
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { Json } from "@/types/database.types";
+import { opportunityPageContext, opportunityPageData } from "@/features/opportunities/context";
+import { canEditOpportunity } from "@/features/opportunities/service";
+import type { Party } from "@/features/opportunities/types";
+import { OpportunityProblem } from "@/components/opportunities/opportunity-state";
+import { StageMove } from "@/components/opportunities/stage-move";
+import { formatMoney } from "@/lib/currency";
+import { formatDate } from "@/lib/dates";
+function stageId(value: Json) { return value && typeof value === "object" && !Array.isArray(value) && typeof value.stage_id === "string" ? value.stage_id : null; }
+function ContactInfo({ party, label }: { party: Party | null; label: string }) {
+  return <div><dt className="text-base-content/60">{label}</dt><dd className="mt-1">{party ? <><Link href={`/contacts/${party.id}`} className="link">{party.name}</Link><p className="mt-1 break-all">{[party.email, party.phone].filter(Boolean).join(" · ")}</p>{party.website && <a className="link mt-1 block break-all" href={party.website} target="_blank" rel="noreferrer">{party.website}</a>}</> : "Not linked"}</dd></div>;
+}
+export default async function OpportunityDetailsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
+  const { access, service } = await opportunityPageContext(); const { id } = await params;
+  const result = await opportunityPageData(() => Promise.all([service.details(id), service.options()]));
+  if (!result.ok) { if ([400, 404].includes(result.error.status)) notFound(); return <OpportunityProblem message={result.error.message} />; }
+  const [{ opportunity: row, history }, options] = result.data, editable = canEditOpportunity(access, row);
+  const saved = (await searchParams).saved;
+  const stageName = (id: string | null) => options.stages.find(stage => stage.id === id)?.name ?? "Unknown stage";
+  return <>
+    <Link href="/opportunities" className="link text-sm">← Opportunities</Link><div className="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4"><div><p className="mb-2 text-sm text-base-content/65">{row.stage?.name}{row.stage?.is_provisional && " · provisional stage"}</p><h1 className="break-words text-3xl font-bold">{row.deal_name}</h1></div>{editable && <Link href={`/opportunities/${id}/edit`} className="btn btn-outline">Edit deal</Link>}</div>
+    {["created", "updated"].includes(saved ?? "") && <p role="status" className="mb-5 rounded-lg bg-success/10 p-4 text-success">Deal {saved === "created" ? "created" : "updated"} successfully.</p>}
+    <div className="grid gap-6 lg:grid-cols-2"><section className="space-y-5 rounded-xl border border-base-300 p-6"><h2 className="text-lg font-semibold">Financial opportunity</h2><p className="text-2xl font-bold">{formatMoney(row.expected_amount, row.currency)} <span className="text-sm font-normal">expected</span></p><p className="text-sm text-base-content/65">Forecast value. Moving to Won does not recognize funds or change target achievement.</p>
+      <dl className="grid gap-5 text-sm sm:grid-cols-2">{[["Focal person", row.owner?.display_name], ["Contribution type", row.contribution_type === "cash" ? "Cash" : "Valued in-kind"], ["Category", row.category?.name], ["Expected closing", formatDate(row.expected_close_at)], ["Payment interval", row.payment_interval], ["Country", row.country], ["Operational budget (separate)", row.operational_budget == null ? "Not provided" : formatMoney(row.operational_budget, row.currency)]].map(([label, value]) => <div key={label}><dt className="text-base-content/60">{label}</dt><dd className="mt-1">{value || "Not provided"}</dd></div>)}</dl>
+      {editable && <StageMove key={`${id}:${row.stage_id}`} id={id} stageId={row.stage_id} stages={options.stages} />}</section>
+      <section className="rounded-xl border border-base-300 p-6"><h2 className="mb-5 text-lg font-semibold">Contact information</h2><dl className="space-y-5 text-sm"><ContactInfo party={row.contact} label={row.contact?.kind === "company" ? "Company" : "Individual"} />{row.contact?.kind === "company" && <><ContactInfo party={row.primary_contact} label="Primary contact" /><ContactInfo party={row.secondary_contact} label="Secondary contact" /></>}</dl></section>
+      <section className="space-y-5 rounded-xl border border-base-300 p-6"><h2 className="text-lg font-semibold">Context and references</h2>{([['Description', row.description], ['Notes', row.notes], ['Agreed manual valuation', row.valuation_note]] as const).map(([label, value]) => <div key={label}><h3 className="mb-2 text-sm font-semibold">{label}</h3><p className="whitespace-pre-wrap break-words text-sm leading-7">{value || "Not provided"}</p></div>)}
+        {row.valuation_reference_url && <a href={row.valuation_reference_url} target="_blank" rel="noreferrer" className="link block break-all text-sm">Valuation reference</a>}<h3 className="text-sm font-semibold">Document references</h3><ul className="space-y-2 text-sm">{row.drive_urls.map((url, index) => <li key={`${index}:${url}`}><a href={url} target="_blank" rel="noreferrer" className="link break-all">{url}</a></li>)}</ul>{!row.drive_urls.length && <p className="text-sm text-base-content/60">No separate reference URLs. Links may also be recorded in Notes.</p>}</section>
+      <section className="rounded-xl border border-base-300 p-6"><h2 className="text-lg font-semibold">Recognized contributions</h2><p className="mt-2 text-sm text-base-content/65">Latest 10 recorded actuals, shown separately from expected value. Contribution entry is a later workflow.</p><ul className="mt-5 space-y-4">{history.contributions.map(item => <li key={item.id}><p className="font-semibold">{formatMoney(item.amount, item.currency)}</p><p className="mt-1 text-sm text-base-content/65">{formatDate(item.recognized_at)} · {item.contribution_type === "cash" ? "Cash" : "Valued in-kind"}</p>{item.notes && <p className="mt-1 whitespace-pre-wrap text-sm">{item.notes}</p>}</li>)}</ul>{!history.contributions.length && <p className="mt-5 text-sm">No recognized contributions recorded.</p>}</section>
+    </div>
+    <section className="mt-6 rounded-xl border border-base-300 p-6"><h2 className="text-lg font-semibold">Recent changes</h2><p className="mt-1 text-xs text-base-content/60">Latest 20 audit entries. Stage names use the current configuration. Dates use Asia/Dhaka.</p><ul className="mt-5 space-y-4">{history.audits.map(audit => {
+      const before = stageId(audit.before), after = stageId(audit.after);
+      return <li key={audit.id} className="text-sm"><p className="font-medium">{audit.action === "insert" ? `Deal created in ${stageName(after)}` : before !== after ? `Stage: ${stageName(before)} → ${stageName(after)}` : "Deal details updated"}</p><p className="mt-1 text-base-content/60">{audit.actor?.display_name ?? "System or unavailable user"} · {formatDate(audit.created_at, true)}</p></li>;
+    })}</ul>{!history.audits.length && <p className="mt-4 text-sm">No changes recorded.</p>}</section>
+  </>;
 }

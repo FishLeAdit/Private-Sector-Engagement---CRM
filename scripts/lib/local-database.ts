@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 
@@ -40,8 +40,10 @@ export async function createLocalDatabase({ seed = true } = {}) {
   const db = await PGlite.create();
   try {
     await db.exec(localAuthBootstrap);
-    for (const name of ["0001_core_schema", "0002_security_policies", "0003_indexes_and_triggers"]) {
-      const sql = await readFile(resolve("supabase/migrations", `${name}.sql`), "utf8");
+    const migrations = (await readdir(resolve("supabase/migrations")))
+      .filter(name => /^\d+_[a-z0-9_]+\.sql$/.test(name)).sort();
+    for (const name of migrations) {
+      const sql = await readFile(resolve("supabase/migrations", name), "utf8");
       await db.exec(sql);
     }
     if (seed) {

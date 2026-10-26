@@ -10,6 +10,10 @@ export function isActivePseProfile(profile: AccessProfile | null): profile is Ps
 }
 
 export function canManageTargets(profile: AccessProfile | null): boolean {
+  return isPseManager(profile);
+}
+
+export function isPseManager(profile: AccessProfile | null): boolean {
   return isActivePseProfile(profile) && ["pse_manager", "admin"].includes(profile.role);
 }
 
