@@ -3,10 +3,12 @@ flowchart LR
   Browser[Browser]
   subgraph Application[Next.js application on proposed Vercel hosting]
     Pages[Pages and reusable components]
+    Login[Login and logout server actions]
+    Proxy[Session refresh proxy]
     Services[Shared feature services and request authorization]
     Client[Caller-scoped Supabase client]
   end
-  subgraph Supabase[Planned Supabase project]
+  subgraph Supabase[Configured Supabase project - live verification pending]
     Auth[Auth identity and verified session]
     subgraph Database[PostgreSQL database foundation]
       RLS[Table grants and active PSE row policies]
@@ -19,11 +21,13 @@ flowchart LR
   Local[Isolated PGlite PostgreSQL verification]
   Migrations[Versioned SQL migrations]
   Staff --> Browser --> Pages
+  Browser --> Proxy --> Pages
+  Pages --> Login --> Auth
+  Proxy --> Auth
   Pages -. integration pending .-> Services
-  Browser -. sign-in pending .-> Auth
   Auth -. caller identity .-> Client
-  Services -. integration pending .-> Client
-  Client -. hosted integration pending .-> RLS
+  Services --> Client
+  Client --> RLS
   RLS --> Data
   RLS --> Targets
   Data --> Guards

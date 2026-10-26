@@ -1,6 +1,15 @@
 # API and permissions
 
-Database authorization is implemented in grants, row-level security (RLS), validated target approval and triggers. The HTTP route handlers remain scaffolds returning HTTP 501. Supabase login, session refresh, server-side request authorization and business-service integration are not implemented yet.
+Database authorization is implemented in grants, row-level security (RLS), validated target approval and triggers. Supabase login/logout, session refresh and server-side request authorization are implemented. Business HTTP handlers remain stubs: they require active PSE access before returning HTTP 501.
+
+## HTTP and session behavior
+
+- `/login` accepts email/password through a Next.js Server Action with server-side validation. Supabase verifies the credentials; shared access logic verifies the user and current profile before granting entry. Failed membership checks attempt to sign out the newly created session. No public signup or profile/role editor is provided.
+- `/` redirects to `/dashboard`, `/access-denied` or `/login` according to verified access. The login return path is restricted to workspace routes and cannot redirect to an external site.
+- Proxy refreshes/verifies tokens with `getClaims()` and preserves refreshed cookies across redirects. Protected page rendering and all API GET handlers independently verify the current user/profile. Future business services must call the guard before accessing data; layout checks alone are insufficient.
+- Anonymous API callers receive JSON 401; authenticated callers without active PSE membership receive 403; identity/profile service failures produce 503 and never grant access. Active PSE callers currently receive 501 from the seven business stubs. Unsupported methods have no implemented mutation.
+- `authorizeApi({ manager: true })` provides the server-side manager check for future target mutations. Existing target GET access remains team-wide; target writes still require RLS/approval validation.
+- Auth responses use private/no-store headers and Supabase server fetches bypass caching. Cookie-session refresh is implemented; the admin/service-role client remains unused. Sign out affects the current session and reports failure instead of claiming success if the provider rejects it.
 
 ## Membership and trusted administration
 
@@ -43,4 +52,4 @@ Timestamp and audit triggers run at the database boundary. Audit actor identity 
 
 Local verification runs SQL under isolated database roles and request identities. It exercises database rules, not real Supabase JWT validation or session cookies. The seed uses fixed fictional profile IDs whose Auth identity rows are supplied by the local test bootstrap. It does not create Supabase users, passwords or real login accounts. A hosted import would require trusted identity provisioning and a reviewed mapping rather than copying the bootstrap. No hosted deployment is part of this checkpoint.
 
-Future route handlers/server actions must authenticate every request, validate input with shared schemas and call shared services with the caller's database context. Target-manager authorization is required in those services in addition to the existing database checks. See [testing and limitations](07-testing-and-limitations.md) for completed checks and remaining integration work.
+Authentication helpers, actions and proxy behavior have mocked unit coverage; anonymous browser routes/APIs have E2E coverage. The developer chose to verify live sign-in manually, so real-credential login/logout and refresh have not been claimed as tested here. Future business route handlers/server actions must validate inputs and call shared services with the caller's database context and required manager guard. See [testing and limitations](07-testing-and-limitations.md) for evidence and [the user guide](06-user-guide.md) for manual sign-in steps.

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { getAccess } from "@/lib/auth/access";
 
-export default function HomePage() {
-  // TODO: Redirect by verified authentication state when Supabase Auth is implemented.
-  redirect("/login");
+export default async function HomePage() {
+  const access = await getAccess();
+  redirect(access.status === "allowed" ? "/dashboard" : access.status === "forbidden" ? "/access-denied" : "/login");
 }

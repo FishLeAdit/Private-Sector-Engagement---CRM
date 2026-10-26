@@ -1,8 +1,24 @@
 # Testing and limitations
 
-The database foundation is implemented and locally verified. The web interface, HTTP APIs and Auth integration remain scaffolds. Database evidence below does not imply a completed CRM workflow or hosted deployment.
+The database foundation and authentication/access checkpoint are implemented. CRM business pages and APIs remain scaffolds. Evidence below distinguishes actual PostgreSQL tests, mocked authentication tests, anonymous browser checks and live-account verification that remains manual.
 
-## Database verification on 26 October 2026
+## Authentication verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 88 passed: 43 database checks and 45 authentication/action/proxy checks |
+| `npm run test:e2e -- sign-in.spec.ts` | Four anonymous Chromium browser tests passed; two optional live-account cases skipped |
+| `npm run lint` | Passed |
+| `npm run typecheck` | Passed |
+| `npm run build` | Passed; authenticated pages are request-rendered |
+
+Mocked Auth checks cover active member/manager/admin access, missing/inactive/non-PSE/invalid profiles, identity/profile mismatch, rejected sessions, provider failures, caller-scoped profile lookup, manager guards, login field validation, password preservation, safe return paths, logout error handling and cookie forwarding on refresh/redirects. They use no live credentials. Public configuration rejects privileged keys without disclosing their values.
+
+Browser checks cover root-to-login navigation, anonymous dashboard/nested-route redirects, JSON 401 on all seven CRM API stubs, and refusal of external return URLs. The browser suite completed successfully after running outside the restricted sandbox to allow development-server shutdown. The initial sandbox run completed its checks but hung on teardown and was interrupted; it is not counted as a separate pass.
+
+The developer chose to test live sign-in manually. Real demo-account login/logout, cookie expiry/refresh and hosted profile deactivation were not tested by the agent. The developer reports configuring Supabase and applying migrations/RLS; that report is distinct from the automated evidence above. No remote users/profiles were created or changed during this checkpoint.
+
+## Database foundation verification on 26 October 2026
 
 | Command | Result |
 |---|---|
@@ -13,7 +29,7 @@ The database foundation is implemented and locally verified. The web interface, 
 | `npm run typecheck` | Passed |
 | `npm run build` | Passed with Next.js 16.4.3 |
 
-Tests execute actual SQL using PostgreSQL 18.6 through PGlite 0.5.11. Each suite gets a fresh database, with a local-only Auth identity adapter supplying `auth.users`, `auth.uid()` and database roles. No hosted Supabase project, JWT verification, browser session or real login account was tested. Do not deploy the adapter as application authentication.
+These database tests execute actual SQL using PostgreSQL 18.6 through PGlite 0.5.11. Each database suite gets a fresh database, with a local-only Auth identity adapter supplying `auth.users`, `auth.uid()` and database roles. These checks do not test hosted Supabase JWTs or real accounts. Do not deploy the adapter as application authentication.
 
 The TypeScript runner initially could not read Windows user information inside the restricted execution sandbox. Seed validation and type generation/checking passed outside that sandbox. Tests, lint, typecheck and build passed. Vitest emits a forward-looking Vite configuration-loader warning; it does not fail the checks.
 
@@ -32,9 +48,9 @@ The TypeScript runner initially could not read Windows user information inside t
 
 ## Remaining checks and limitations
 
-- Hosted Supabase migration/RLS verification and real Auth sessions are pending. The local engine uses PostgreSQL 18; verify compatibility against the selected hosted PostgreSQL version when integrating.
+- Independent hosted Supabase role/security verification and live Auth sessions remain pending manual checks. The local engine uses PostgreSQL 18; verify compatibility against the selected hosted PostgreSQL version when integrating.
 - Parent-row locks serialize target edits and approval in the SQL design. The single-connection local harness does not prove multi-session race behavior; add a two-session hosted/local-server test during integration.
-- No working CRM forms/services, dashboard queries, contacts-engaged KPI, cache, deployment or browser E2E suite exist yet. E2E files remain placeholders and were not run.
+- No working CRM forms/services, dashboard queries, contacts-engaged KPI, application cache or production deployment exist yet. Only the sign-in E2E suite is implemented; other E2E files remain placeholders.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.

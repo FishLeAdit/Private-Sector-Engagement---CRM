@@ -1,12 +1,14 @@
 # System architecture
 
-The database foundation separates relationship management, expected fundraising, realized contributions and fixed targets. PostgreSQL constraints, row-level security (RLS) and triggers enforce data integrity at the storage boundary. The Next.js application remains a scaffold; login, server services and working CRM screens are subsequent checkpoints.
+The database foundation separates relationship management, expected fundraising, realized contributions and fixed targets. PostgreSQL constraints, row-level security (RLS) and triggers enforce data integrity at the storage boundary. The Next.js application implements Supabase login/logout, session refresh and active PSE access checks; CRM business services/screens remain subsequent checkpoints.
 
 ## Application and deployment
 
 The selected deployment design is browser → Next.js on Vercel → Supabase Auth and PostgreSQL. This stack and deployment platform are implementation choices, not mandates established by the supplied Word assessment. Any separate platform requirement needs verification against the recruitment email.
 
-Pages display UI, components provide reusable elements, `features/*` owns validation and business services, and `lib/supabase/*` owns database connections. Future route handlers and server actions must validate the authenticated identity, call shared services and use a caller-scoped Supabase client. RLS is an additional database boundary; hiding UI controls is insufficient authorization.
+Pages display UI, components provide reusable elements, `features/*` owns validation and business services, and `lib/supabase/*` owns database connections. Auth server actions call shared validation/services. API guards and protected layout verify identity and database membership using a caller-scoped Supabase client. Future data services must keep those checks close to every read/mutation; RLS remains the database boundary.
+
+`src/proxy.ts` refreshes/verifies sessions with `getClaims()` and forwards updated cookies on both request and response, including redirects. Server access checks use `getUser()` and read the caller's current profile. Active department `PSE` membership and a recognized role are required. Profiles come from trusted provisioning, not signup metadata. React cache deduplicates access checks within a server render only; Supabase fetches and auth HTTP responses use no-store behavior. Protected pages render per request.
 
 The server-only administrative client must never enter a browser bundle. Trusted profile provisioning and role assignment are separate administrative operations, not permissions available to ordinary CRM clients.
 
@@ -26,7 +28,7 @@ Money uses finite PostgreSQL decimal values and explicit currencies. Financial r
 
 The local database workflow uses PGlite's PostgreSQL engine to apply the SQL migrations and exercise constraints, security policies and seed data. Its isolated Auth schema and identity fixtures support database tests only; they do not implement Supabase sign-in, sessions or JWT verification.
 
-A configured Supabase project, real Auth identities and hosted migration/policy verification are still required before using private CRM data. No hosted project or credentials are included in the repository. Generated database types describe the migrated local catalog; they are not evidence that the schema has been deployed to Supabase.
+The developer reports configuring a Supabase project and applying migrations/RLS. Project values stay in ignored `.env.local`; no credentials are included in the repository. Automated checks cover mocked Auth behavior and anonymous browser access; live demo-account sign-in, refresh, revocation and hosted role behavior remain manual verification. Generated database types describe the migrated local catalog rather than a new hosted introspection.
 
 Application data caching and reporting endpoints remain unimplemented. Their future access scope, invalidation rules and KPI definitions must match the caller's permissions and the database model.
 
