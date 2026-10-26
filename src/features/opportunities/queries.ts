@@ -57,6 +57,12 @@ export function createOpportunityRepository(client: SupabaseClient<Database>): O
       if (error) databaseError(error);
       return data;
     },
+    async remove(id) {
+      const { data, error } = await client.from("opportunities").delete().eq("id", id).select("id").maybeSingle();
+      if (error && ["23503", "23001"].includes(error.code)) throw new OpportunityError(409, "This opportunity has linked meetings, activities or recognized contributions and cannot be deleted. Related work must be reassigned or unlinked, and recognized contribution history must be retained.");
+      if (error) databaseError(error);
+      return data?.id === id;
+    },
     async history(id) {
       const [contributions, audits] = await Promise.all([
         client.from("recognized_contributions").select("id,amount,currency,recognized_at,contribution_type,notes").eq("opportunity_id", id).order("recognized_at", { ascending: false }).order("id").limit(10),

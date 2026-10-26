@@ -1,6 +1,74 @@
 # Testing and limitations
 
-The database foundation, authentication, Contacts and financial Opportunities workflows are implemented. Other CRM modules remain scaffolds. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
+The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, and the full Activities workspace are implemented. Other CRM modules remain scaffolds. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
+
+## Activities, deletion, hosted seed and assessment review on 27 October 2026
+
+| Check | Result |
+|---|---|
+| `npm test` | 418 passed across 32 files; 74 new Activities checks |
+| `npm.cmd run test:e2e -- sign-in.spec.ts contacts.spec.ts opportunities.spec.ts meetings.spec.ts activities.spec.ts` | Twelve anonymous Chromium checks passed; three optional live cases skipped |
+| `npm run lint`, `npm run typecheck`, `npm run build` | Passed; list/new/detail/edit and Activities API routes compile |
+| `npm run validate:seed`, `npm run db:types:check` | Passed; seven migrations and unchanged 13-table types |
+| Linked Supabase migration | Dry run identified only 0007; activity deletion grant/RLS applied successfully |
+| `npm.cmd run seed:activities -- --apply` | Inserted/verified 11 hosted activities, all 11 required types, including four independent entries |
+
+Local SQL tests verify owner/creator/manager deletion, denied unrelated/inactive/non-PSE/anonymous mutations, retained audit snapshots and parents, compatible direct and meeting-derived links, immutable identity, and deletion that can unblock parent meeting deletion. Creation, completion, deletion and demo insertion/reruns leave recognized contributions, opportunity values and target allocations unchanged. Legacy non-monetary estimates remain untouched by status/detail writes.
+
+API tests exercise the real shared service through mocked repositories: all 11 independent types, optional links/free context, partial-update preservation, verified creator, manager-only owner assignment, inactive historical ownership, unavailable references, same-origin/content/size/strict-field validation, safe failures and zero-row writes. SDK contracts inspect real Supabase-generated filters/joins, literal search, direct-context filters, Dhaka date boundaries, deterministic pagination, audit/owner bounds and scoped deletes. DOM tests cover independent creation, UTC conversion, lookup-in-progress submission protection, preserved drafts, status changes and confirmation/cancel/error/duplicate-delete/Escape behavior. Native dialog focus and keyboard interaction still need manual browser testing; jsdom substitutes dialog methods.
+
+The configured hosted project matched the app before migration. The administrative seed inserted only missing stable activity IDs for the existing Demo Manager and verified real PostgREST relationships. It did not provision users or alter parents, forecasts, targets or actual contributions. A subsequent read-only preview found all 11 entries and zero missing inserts. No hosted record was deleted as a test. End-user JWT/RLS, authenticated browser persistence and interactive mutation acceptance remain manual, as requested; anonymous tests reused the existing port-3000 server and left it running.
+
+The assessment mapping is in [requirements](01-requirements-and-assumptions.md#activities-assessment-check). Work-category/status keys, required descriptive notes, optional time, ownership permissions and user-requested deletion are documented project choices. All CRM links can be absent; unlinked text is not automatically a contact identity. Events and Meeting-type work logs do not create separate calendar/financial records. No Gmail sync, direct uploads, external autofill, automatic valuations, financial recognition or unapproved KPI was added. Relevant-time filters exclude undated entries; lists show 20 rows and audit history 20 entries. Full reporting, target/contribution-entry UI and deployment remain pending. Earlier sections below record historical checkpoint results and limitations at the time.
+
+## Meeting deletion, hosted examples and assessment review on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 344 passed across 28 files; 33 additional meeting deletion/seed checks |
+| Combined sign-in/Contacts/Opportunities/Meetings E2E | Ten anonymous Chromium checks passed, including blocked anonymous meeting DELETE; three live cases skipped |
+| Lint / TypeScript / production build | Passed |
+| `validate:seed` / `db:types:check` | Passed with all six migrations; types still match all 13 tables |
+| Linked Supabase migration dry run, then push | Confirmed only 0006 pending and applied it; no records deleted by migration |
+| `npm.cmd run seed:meetings -- --apply`, then preview | Inserted/verified six meetings for Demo Manager (Scheduled 3, Done 2, Cancelled 1); repeat preview found zero missing inserts |
+
+SQL tests verify deletion by owner/creator/manager, denial for unrelated/non-PSE/inactive/anonymous callers, revoked access on own records, retained contacts/opportunities/audit snapshots, blocked activity/follow-up references with no cascades or failed-delete audit, and Done/Cancelled deletion without financial mutation. API/service/SDK tests cover authorization, requested-ID/affected-row handling, matching Origin, no-body DELETE and safe 409 mapping for both reference-conflict codes. DOM tests cover named confirmation, cancellation, successful navigation, conflicts and pending duplicate/cancel/Escape prevention.
+
+The meeting-seed tests validate six deterministic fictional records, status/link/timezone variation, use of current parent contact points, no automatic recreation of deleted parents, PSE visibility, repeat-run preservation of edits, and unchanged financial/activity records. Hosted application used the private administrative connection and preserved existing meetings/parents/financial data. Real PostgREST meeting/contact/opportunity joins were verified. Normal application clients remain caller-scoped under RLS; live login and authenticated browser deletion remain manual. Anonymous browser tests reused and left the existing port-3000 server running. No live end-user opportunity/contact/meeting was deleted as a test.
+
+The Word assessment's original Meetings fields and later relationship/follow-up/visibility/internal-search clarifications were reread and compared with the code. Confirmed behaviors are mapped in [requirements and assumptions](01-requirements-and-assumptions.md#meetings-assessment-check). Title/owner requiredness, optional description, Cancelled, live-linked contact details and detailed edit/delete rules remain project choices; deletion is explicitly user-requested. Named-individual requiredness for company-only meetings remains a PSE clarification. Full Activities editing/reporting and the broader assessment remain pending; this checkpoint is not a claim that the whole CRM assessment is complete.
+
+## Meetings verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 311 passed across 25 files, including 74 additional meeting SQL/service/API/SDK/form/date checks |
+| `npm.cmd run test:e2e -- sign-in.spec.ts contacts.spec.ts opportunities.spec.ts meetings.spec.ts` | Ten anonymous Chromium checks passed; three optional live cases skipped |
+| `npm run lint` / `npm run typecheck` / `npm run build` | Passed; Meetings list/new/detail/edit and options/follow-up API routes compile |
+
+SQL/RLS tests verify contact-only and opportunity-only persistence, company party/primary/secondary compatibility, mandatory linkage, designation/communication joins, UTC status auditing, team reads, owner/creator/manager edits, manager-only assignment/reassignment, restricted actors, unchanged inactive historical owners and reverse relationship guards when linked follow-ups exist. Follow-up tasks persist as open activities linked to the meeting without changing forecast, target or actual contribution values. Shared-service tests additionally cover identity mismatch, partial-update preservation/clearing, stale selections and nullable inherited context.
+
+API and real-SDK/mock-HTTP tests verify strict payloads, verified creator binding, same-origin/JSON limits, safe errors, filter bounds, stable 20-row pagination, full Dhaka-day ranges and bounded 20-row activity/audit history. Upcoming means scheduled from now; completed means done. Period/status filters intersect and direct-contact filtering does not include opportunity-derived contacts. Form/date tests cover Dhaka-to-UTC round trips across dates, invalid calendar input, derived contact information, preserved drafts/errors, internal opportunity selection, waiting for deal details before submission, status-only completion and follow-up retry after failure.
+
+The combined browser run reused the existing localhost:3000 server and left it running. It verifies anonymous APIs/redirects, including Meetings options/new/detail/edit/follow-ups. Live credentials/writes were disabled, honoring the developer's manual-testing preference. No schema migration, hosted login, hosted meeting/follow-up seed or hosted mutation was performed for this checkpoint. Existing tables/types/RLS already support the workflow. Authenticated hosted PostgREST joins, browser persistence, native keyboard/focus and current-user permissions still require manual acceptance.
+
+At the initial Meetings checkpoint, deletion had not yet been added; the subsequent deletion/seed checkpoint is recorded above. The full Activities workspace, follow-up status editing and standalone work logging remain pending. Required title/owner and optional Cancelled status are existing project choices; organization/designation/communication are internal linked data rather than external autofill or snapshots. Follow-up relevant date/time uses the existing activity timestamp and is not a separate due-date/reminder feature. No Gmail sync, uploads, calendar integration, valuation engine or follow-up KPI was introduced.
+
+## Opportunity deletion verification on 26 October 2026
+
+| Command | Result |
+|---|---|
+| `npm test` | 237 passed across 19 files, including 31 additional deletion checks |
+| `npm run test:e2e -- sign-in.spec.ts contacts.spec.ts opportunities.spec.ts` | Eight anonymous Chromium checks passed, including rejected anonymous opportunity DELETE; three live cases skipped |
+| `npm run lint` / `npm run typecheck` / `npm run build` | Passed |
+| `npm run validate:seed` / `npm run db:types:check` | Passed with all five migrations; generated types still match all 13 tables |
+| `npx.cmd supabase db push --dry-run` then `npx.cmd supabase db push --linked --yes` | Confirmed only migration 0005 was pending, then applied it to the same project configured for the app |
+
+Local SQL tests independently verify focal-person, creator and manager deletion; unrelated/non-PSE/inactive/anonymous denial; inactive/non-PSE owners losing access; FK restrictions for meetings, activities and recognized contributions; retained contacts; retained actor/before audit snapshots; no delete audit on a rolled-back FK failure; and deletion of an unlinked Won deal without altering actual achievement. Service tests exercise the same permissions under SQL/RLS. API/SDK tests cover strict requested-ID deletion, affected-row checks, same-origin requests, missing IDs, no-store responses and safe 409 mapping for both `23503` and `23001`.
+
+DOM tests cover named confirmation, cancellation without a request, successful navigation, visible conflicts, disabled duplicate submission/cancellation and blocked Escape dismissal while pending, plus retry after network failure. Native dialog focus behavior remains a manual browser check. Anonymous checks reused the existing port-3000 server and left it running.
+
+The hosted migration adds a DELETE grant/policy only; it deleted no existing opportunities or other records. No hosted opportunity deletion or live login was executed; the developer's preference for manual authenticated browser testing remains in effect. End-user hosted permission/persistence checks remain manual. Deletion is an explicit user-requested addition, with ownership matching the existing edit policy; recognized-contribution correction/deletion remains excluded.
 
 ## Hosted demo seeding on 26 October 2026
 
@@ -107,8 +175,8 @@ The TypeScript runner initially could not read Windows user information inside t
 
 - Independent hosted Supabase role/security verification and live Auth sessions remain pending manual checks. The local engine uses PostgreSQL 18; verify compatibility against the selected hosted PostgreSQL version when integrating.
 - Parent-row locks serialize target edits and approval in the SQL design. The single-connection local harness does not prove multi-session race behavior; add a two-session hosted/local-server test during integration.
-- Contacts and Opportunities forms/services, including inline New Deal contact creation and stage configuration, are implemented. Meetings, Activities, target/contribution-entry workflows, dashboard queries, contacts-engaged KPI, application cache and production deployment remain pending. Target E2E remains a placeholder; opportunity E2E covers anonymous boundaries only.
-- Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unreferenced contact deletion is implemented as a user-requested addition; active/inactive contact lifecycle remains unresolved.
+- Contacts, Opportunities, Meetings and Activities forms/services, including inline New Deal contact creation, stage configuration and meeting follow-up task creation, are implemented. Target/contribution-entry workflows, dashboard queries, contacts-engaged KPI, application cache and production deployment remain pending. Target E2E remains a placeholder; Meetings/Opportunities/Activities E2E cover anonymous boundaries only.
+- Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unlinked contact/opportunity deletion is implemented as a user-requested addition with FK protection and retained audit history; active/inactive contact lifecycle remains unresolved.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.

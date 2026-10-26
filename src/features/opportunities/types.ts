@@ -24,6 +24,7 @@ export interface OpportunityRepository {
   options(): Promise<OpportunityOptions>;
   create(input: OpportunityWrite, actor: string): Promise<OpportunityRecord>;
   update(id: string, input: OpportunityWrite): Promise<OpportunityRecord | null>;
+  remove(id: string): Promise<boolean>;
   history(id: string): Promise<OpportunityHistory>;
   saveStage(input: StageWrite, id?: string): Promise<void>;
   saveCategory(input: CategoryWrite, id?: string): Promise<void>;

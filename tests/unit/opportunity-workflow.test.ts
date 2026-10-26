@@ -48,6 +48,7 @@ function repository(actor: string, database: PGlite = db): OpportunityRepository
       const result = await query(`update public.opportunities set (${columns.join(",")})=(select ${columns.map(key => `x.${key}`).join(",")} from jsonb_populate_record(null::public.opportunities,$1::jsonb) x) where id=$2 returning id`, [JSON.stringify(input), id]);
       return result.rows.length ? find(id) : null;
     },
+    async remove(id) { return (await query("delete from public.opportunities where id=$1 returning id", [id])).rows.length === 1; },
     async history(id) {
       return { contributions: (await query<Awaited<ReturnType<OpportunityRepository["history"]>>["contributions"][number]>("select * from public.recognized_contributions where opportunity_id=$1", [id])).rows,
         audits: (await query<Awaited<ReturnType<OpportunityRepository["history"]>>["audits"][number]>("select a.*,json_build_object('display_name',p.display_name) as actor from public.audit_logs a left join public.profiles p on p.id=a.actor_id where entity='opportunities' and entity_id=$1", [id])).rows };
@@ -165,5 +166,22 @@ describe("financial opportunity workflow", () => {
     for (const extra of [{ expected_close_at: "2026-02-30" }, { operational_budget: "-0.01" }, { valuation_reference_url: "javascript:alert(1)" }, { drive_urls: ["file:///local"] }]) expect(opportunitySchema.safeParse(payload(extra)).success).toBe(false);
     expect(formatCents(toCents("0.10") + toCents("0.20"), "BDT")).toBe("BDT 0.30");
     expect(formatCents(toCents("999999999999.99"), "USD")).toBe("USD 999,999,999,999.99");
+  });
+  it("lets the creator, current focal person and manager delete unlinked deals", async () => {
+    const own = await service().create(payload()); expect(await service().remove(own.id)).toEqual({ deleted: true, id: own.id });
+    await expect(service().get(own.id)).rejects.toMatchObject({ status: 404 });
+    const reassigned = await service().create(payload()); await service(ids.manager, "pse_manager").update(reassigned.id, { owner_id: ids.colleague });
+    expect((await service(ids.colleague).remove(reassigned.id)).deleted).toBe(true);
+    const retainedCreator = await service().create(payload()); await service(ids.manager, "pse_manager").update(retainedCreator.id, { owner_id: ids.colleague });
+    expect((await service().remove(retainedCreator.id)).deleted).toBe(true);
+    const managed = await service().create(payload()); expect((await service(ids.manager, "pse_manager").remove(managed.id)).deleted).toBe(true);
+  });
+  it("denies colleague deletion before issuing a delete query", async () => {
+    const row = await service().create(payload()), repo = repository(ids.colleague), remove = vi.spyOn(repo, "remove");
+    await expect(createOpportunitiesService(repo, access(ids.colleague)).remove(row.id)).rejects.toMatchObject({ status: 403 }); expect(remove).not.toHaveBeenCalled();
+  });
+  it.each(["anonymous", "forbidden", "unavailable"] as const)("rejects %s deletion before reading data", async status => {
+    const repo = repository(ids.member), find = vi.spyOn(repo, "find"), remove = vi.spyOn(repo, "remove");
+    await expect(createOpportunitiesService(repo, { status }).remove(ids.cashOpportunity)).rejects.toBeInstanceOf(Error); expect(find).not.toHaveBeenCalled(); expect(remove).not.toHaveBeenCalled();
   });
 });

@@ -20,7 +20,7 @@ export default async function ContactDetailsPage({ params, searchParams }: { par
     return <>
       <Link href="/contacts" className="link link-hover text-sm text-base-content/65">← Contacts</Link>
       <div className="mb-7 mt-4 flex flex-wrap items-start justify-between gap-4"><div><span className="badge badge-ghost mb-2 capitalize">{contact.kind}</span><h1 className="break-words text-3xl font-bold">{contact.name}</h1>{contact.designation && <p className="mt-2 text-base-content/65">{contact.designation}</p>}</div>
-        {canEditContact(access, contact) && <div className="flex flex-wrap gap-2"><Link href={`/contacts/${contact.id}/edit`} className="btn btn-outline">Edit contact</Link><DeleteContactButton contactId={contact.id} name={contact.name} /></div>}
+        <div className="flex flex-wrap gap-2"><Link href={`/activities/new?contact_id=${contact.id}`} className="btn btn-outline">Log activity</Link><Link href={`/activities?contact_id=${contact.id}`} className="btn btn-ghost">View direct activities</Link><Link href={`/meetings/new?contact_id=${contact.id}`} className="btn btn-primary">Schedule meeting</Link>{canEditContact(access, contact) && <><Link href={`/contacts/${contact.id}/edit`} className="btn btn-outline">Edit contact</Link><DeleteContactButton contactId={contact.id} name={contact.name} /></>}</div>
       </div>
       {["created", "updated"].includes(saved ?? "") && <p role="status" className="mb-6 rounded-lg bg-success/10 p-4 text-success">Contact {saved === "created" ? "created" : "updated"} successfully.</p>}
       <div className="grid gap-6 xl:grid-cols-[1fr_1.5fr]">
@@ -49,6 +49,6 @@ export default async function ContactDetailsPage({ params, searchParams }: { par
           <ul className="mt-4 space-y-4">{history.activities.map(row => <li key={row.id}><Link href={`/activities/${row.id}`} className="link link-hover font-medium capitalize">{row.activity_type.replaceAll("_", " ")}</Link><p className="mt-1 text-sm text-base-content/65">{row.status.replaceAll("_", " ")} · {formatDate(row.occurred_at ?? row.created_at)}</p>{row.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{row.notes}</p>}</li>)}</ul>{!history.activities.length && <p className="mt-4 text-sm text-base-content/60">No linked activities yet.</p>}
         </section>
       </div>
-      <p className="mt-5 text-xs text-base-content/60">Dates are displayed in Asia/Dhaka. Related workflow screens are being developed separately.</p>
+      <p className="mt-5 text-xs text-base-content/60">Dates are displayed in Asia/Dhaka. Related history is limited to the recent records shown.</p>
     </>;
 }

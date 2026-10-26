@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/dates";
 
 export default async function OpportunitiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { service, access } = await opportunityPageContext();
-  const { view = "list", ...filters } = await searchParams;
+  const { view = "list", deleted, ...filters } = await searchParams;
   const parsed = opportunityListSchema.safeParse(filters);
   if (!parsed.success || !["list", "board"].includes(String(view))) return <OpportunityProblem message={parsed.error?.issues[0]?.message ?? "Choose list or board view."} />;
   const input = parsed.data;
@@ -25,6 +25,7 @@ export default async function OpportunitiesPage({ searchParams }: { searchParams
   const select = (name: "stage_id" | "owner_id" | "contribution_category_id", label: string, rows: { id: string; name?: string; display_name?: string }[]) => <label className="block text-xs">{label}<select name={name} defaultValue={input[name]} className="select select-bordered mt-1 w-full"><option value="">All</option>{rows.map(row => <option key={row.id} value={row.id}>{row.name ?? row.display_name}</option>)}</select></label>;
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Opportunities</h1><p className="mt-2 text-base-content/65">Financial opportunities and their expected value.</p></div><Link className="btn btn-primary" href="/opportunities/new">New deal</Link></div>
+    {deleted === "1" && <p role="status" className="mb-5 rounded-lg bg-success/10 p-4 text-success">Opportunity deleted successfully.</p>}
     {(!options.stages.some(row => row.active) || !options.categories.some(row => row.active)) && <div className="mb-6"><PipelineSetupNeeded /></div>}
     <form action="/opportunities" className="mb-5 rounded-xl border border-base-300 p-4"><input type="hidden" name="view" value={String(view)} />{input.contact_id && <input type="hidden" name="contact_id" value={input.contact_id} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="block text-xs">Deal name<input name="q" defaultValue={input.q} maxLength={100} className="input input-bordered mt-1 w-full" placeholder="Search deals" /></label>

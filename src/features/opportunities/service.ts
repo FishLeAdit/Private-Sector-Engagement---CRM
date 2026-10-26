@@ -82,6 +82,13 @@ export function createOpportunitiesService(repository: OpportunityRepository, ac
       if (!saved) throw new OpportunityError(403, "This opportunity could not be updated. Refresh to check your access.");
       return saved;
     },
+    async remove(id: string) {
+      authorize();
+      const current = await requireOpportunity(id);
+      if (!canEditOpportunity(access, current)) throw new OpportunityError(403, "Only the focal person, creator or an authorized manager may delete this opportunity.");
+      if (!await repository.remove(current.id)) throw new OpportunityError(403, "This opportunity could not be deleted. Refresh to check your access.");
+      return { deleted: true, id: current.id };
+    },
     async configure(input: unknown) {
       authorize(true); const data = parse(configurationSchema, input);
       if (data.entity === "stage") {

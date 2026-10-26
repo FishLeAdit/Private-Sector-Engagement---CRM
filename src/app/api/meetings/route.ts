@@ -1,9 +1,10 @@
-import { authorizeApi } from "@/lib/auth/access";
-
-export async function GET() {
-  const auth = await authorizeApi();
-  if (!auth.ok) return auth.response;
-  return Response.json({ error: "Not implemented" }, { status: 501, headers: { "Cache-Control": "private, no-store" } });
+import { meetingApi, readMeetingJson, invalidateMeeting } from "@/features/meetings/api";
+export async function GET(request: Request) {
+  return meetingApi(request, async service => ({ data: await service.list(Object.fromEntries(new URL(request.url).searchParams)) }));
 }
-
-// TODO: Validate requests and delegate to shared feature services with caller-scoped access.
+export async function POST(request: Request) {
+  return meetingApi(request, async service => {
+    const meeting = await service.create(await readMeetingJson(request)); invalidateMeeting(meeting.id);
+    return { data: { meeting }, status: 201 };
+  }, true);
+}

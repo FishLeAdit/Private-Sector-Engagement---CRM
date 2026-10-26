@@ -1,0 +1,16 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { PGlite } from "@electric-sql/pglite";
+import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
+import { buildDemoMeetings, demoMeetingIds } from "../../scripts/lib/demo-meetings";
+let db:PGlite;
+beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
+const contacts=[{id:ids.individual,kind:"individual"},{id:ids.person,kind:"individual"}];
+const opportunities=[{id:ids.cashOpportunity,contact_id:ids.company,primary_contact_id:ids.person,secondary_contact_id:ids.secondary}];
+const data=()=>buildDemoMeetings(ids.manager,contacts,opportunities,new Date("2026-10-26T20:00:00Z"));
+async function insert(){await asActor(db,ids.manager,async tx=>{for(const row of data()){const columns=Object.keys(row);await tx.query(`insert into public.meetings(${columns.join(",")}) select ${columns.map(key=>`x.${key}`).join(",")} from jsonb_populate_record(null::public.meetings,$1::jsonb) x on conflict(id) do nothing`,[JSON.stringify(row)]);}});}
+describe("fictional meeting seed",()=>{
+  it("builds six labeled meetings with UTC times, both link modes and all statuses",()=>{const rows=data();expect(rows).toHaveLength(6);expect(new Set(rows.map(row=>row.id)).size).toBe(6);expect(rows.every(row=>row.title.startsWith("Demo | ")&&row.created_by===ids.manager)).toBe(true);expect(rows.filter(row=>row.status==="scheduled")).toHaveLength(3);expect(rows.filter(row=>row.status==="done")).toHaveLength(2);expect(rows.filter(row=>row.status==="cancelled")).toHaveLength(1);expect(rows.some(row=>!row.contact_id&&row.opportunity_id)).toBe(true);expect(rows.some(row=>row.contact_id&&!row.opportunity_id)).toBe(true);expect(rows[0].scheduled_at).toBe("2026-10-28T04:00:00.000Z");});
+  it("reuses current opportunity contact points and falls back without recreating deleted parents",()=>{const rows=buildDemoMeetings(ids.manager,contacts,[],new Date());expect(rows.every(row=>row.contact_id&&!row.opportunity_id)).toBe(true);expect(()=>buildDemoMeetings(ids.manager,[],opportunities)).toThrow(/Existing demo contacts/);});
+  it("persists valid relationships and remains visible to PSE colleagues",async()=>{await insert();expect((await asActor(db,ids.member,tx=>tx.query("select id from public.meetings where id=any($1::uuid[])",[demoMeetingIds]))).rows).toHaveLength(6);expect((await asActor(db,ids.outsider,tx=>tx.query("select id from public.meetings where id=any($1::uuid[])",[demoMeetingIds]))).rows).toHaveLength(0);});
+  it("preserves edited meetings on repeat runs and does not create financial/activity rows",async()=>{await asActor(db,ids.manager,tx=>tx.query("update public.meetings set title='Demo | Edited meeting' where id=$1",[demoMeetingIds[0]]));await insert();expect((await db.query<{title:string}>("select title from public.meetings where id=$1",[demoMeetingIds[0]])).rows[0].title).toBe("Demo | Edited meeting");expect((await db.query("select (select count(*)::int from public.contacts) as contacts,(select count(*)::int from public.opportunities) as opportunities,(select count(*)::int from public.activities) as activities,(select count(*)::int from public.recognized_contributions) as actuals")).rows).toEqual([{contacts:4,opportunities:3,activities:3,actuals:3}]);});
+});

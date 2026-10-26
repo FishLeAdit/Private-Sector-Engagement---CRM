@@ -2,14 +2,14 @@
 import { useEffect, useId, useState } from "react";
 import type { Party } from "@/features/opportunities/types";
 
-export function ContactPicker({ value, selected, onSelect, label, individual = false, disabled = false }: {
-  value: string; selected: Party | null; onSelect: (party: Party | null) => void; label: string; individual?: boolean; disabled?: boolean;
+export function ContactPicker<T extends Party = Party>({ value, selected, onSelect, label, individual = false, disabled = false, emptyMessage = "No contacts found. Create one below." }: {
+  value: string; selected: T | null; onSelect: (party: T | null) => void; label: string; individual?: boolean; disabled?: boolean; emptyMessage?: string;
 }) {
   const id = useId();
   const [draft, setDraft] = useState({ value, text: selected?.name ?? "" });
   const text = draft.value === value ? draft.text : selected?.id === value ? selected.name : "";
   const [open, setOpen] = useState(false), [active, setActive] = useState(-1);
-  const [result, setResult] = useState<{ query: string | null; rows: Party[]; error: string }>({ query: null, rows: [], error: "" });
+  const [result, setResult] = useState<{ query: string | null; rows: T[]; error: string }>({ query: null, rows: [], error: "" });
   const query = text.trim(), rows = result.query === query ? result.rows : [];
   useEffect(() => {
     if (!open) return;
@@ -24,7 +24,7 @@ export function ContactPicker({ value, selected, onSelect, label, individual = f
     }, 250);
     return () => { controller.abort(); clearTimeout(timer); };
   }, [open, query, individual]);
-  function choose(row: Party) { setDraft({ value: row.id, text: row.name }); onSelect(row); setOpen(false); setActive(-1); }
+  function choose(row: T) { setDraft({ value: row.id, text: row.name }); onSelect(row); setOpen(false); setActive(-1); }
   return <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
     <label htmlFor={id} className="mb-2 block text-sm font-medium">{label}</label>
     <div className="flex gap-2"><input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-results`}
@@ -42,7 +42,7 @@ export function ContactPicker({ value, selected, onSelect, label, individual = f
       {rows.map((row, index) => <li key={row.id} id={`${id}-${index}`} role="option" aria-selected={active === index || value === row.id}>
         <button type="button" className={`w-full rounded p-3 text-left hover:bg-base-200 ${index === active ? "bg-base-200" : ""}`} onClick={() => choose(row)}>{row.name}<span className="block text-xs text-base-content/60">{row.kind} · {row.email || row.phone}</span></button>
       </li>)}
-      {!rows.length && <li role="presentation" className="p-3 text-sm">{result.query !== query ? "Searching…" : result.error || "No contacts found. Create one below."}</li>}
+      {!rows.length && <li role="presentation" className="p-3 text-sm">{result.query !== query ? "Searching…" : result.error || emptyMessage}</li>}
     </ul>}
     {selected && value === selected.id && <p className="mt-2 break-all text-sm text-base-content/65">{[selected.email, selected.phone, selected.kind === "company" && selected.website].filter(Boolean).join(" · ")}</p>}
   </div>;

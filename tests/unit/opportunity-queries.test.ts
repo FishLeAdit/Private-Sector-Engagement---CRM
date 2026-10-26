@@ -43,4 +43,13 @@ describe("Supabase opportunity query contracts", () => {
     expect(fetcher.mock.calls[0][1].method).toBe("PATCH"); expect(new URL(fetcher.mock.calls[0][0]).searchParams.get("id")).toBe(`eq.${id}`);
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({ active: false, is_closed: false });
   });
+  it("deletes only the requested opportunity and checks the returned row", async () => {
+    const { repo, fetcher } = repository({ id }); expect(await repo.remove(id)).toBe(true);
+    const url = new URL(fetcher.mock.calls[0][0]); expect(url.searchParams.get("id")).toBe(`eq.${id}`); expect(url.searchParams.get("select")).toBe("id"); expect(fetcher.mock.calls[0][1].method).toBe("DELETE");
+    expect(await repository(null).repo.remove(id)).toBe(false);
+  });
+  it.each(["23503", "23001"])("maps referenced-opportunity delete code %s to a safe 409", async code => {
+    const error = await repository({ code, message: "Sensitive constraint internals" }, 409).repo.remove(id).catch(error => error);
+    expect(error.status).toBe(409); expect(error.message).toContain("recognized contributions"); expect(error.message).not.toContain("Sensitive");
+  });
 });
