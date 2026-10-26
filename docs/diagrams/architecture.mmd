@@ -1,0 +1,33 @@
+flowchart LR
+  Staff[PSE staff or authorized manager]
+  Browser[Browser]
+  subgraph Application[Next.js application on proposed Vercel hosting]
+    Pages[Pages and reusable components]
+    Services[Shared feature services and request authorization]
+    Client[Caller-scoped Supabase client]
+  end
+  subgraph Supabase[Planned Supabase project]
+    Auth[Auth identity and verified session]
+    subgraph Database[PostgreSQL database foundation]
+      RLS[Table grants and active PSE row policies]
+      Data[Contacts opportunities meetings activities contributions]
+      Targets[Annual plan quarterly baselines allocation grid]
+      Guards[Constraints approval locks and audit triggers]
+      Audit[Append-only audit history]
+    end
+  end
+  Local[Isolated PGlite PostgreSQL verification]
+  Migrations[Versioned SQL migrations]
+  Staff --> Browser --> Pages
+  Pages -. integration pending .-> Services
+  Browser -. sign-in pending .-> Auth
+  Auth -. caller identity .-> Client
+  Services -. integration pending .-> Client
+  Client -. hosted integration pending .-> RLS
+  RLS --> Data
+  RLS --> Targets
+  Data --> Guards
+  Targets --> Guards
+  Guards --> Audit
+  Migrations --> Database
+  Migrations --> Local

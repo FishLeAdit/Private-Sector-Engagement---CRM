@@ -1,0 +1,28 @@
+flowchart TD
+  Manager[Active authorized PSE manager]
+  Annual[Create draft annual target and currency]
+  Quarters[Store Q1 to Q4 baselines with uneven amounts allowed]
+  Grid[Allocate each quarter by employee and vertical]
+  Request[Request approve_target_plan]
+  Identity{Authorized manager?}
+  Lock[Lock parent target plan row]
+  Draft{Plan is draft?}
+  AnnualCheck{Exactly four quarters sum to annual amount?}
+  GridCheck{Each quarter grid sums to its baseline and employees are valid?}
+  Reject[Reject transaction and preserve draft]
+  Approve[Record approved status actor and timestamp]
+  Fixed[Block plan quarter and allocation changes]
+  Actuals[Record realized contributions separately]
+  Report[Compare actuals with fixed targets by currency and period]
+  Manager --> Annual --> Quarters --> Grid --> Request --> Identity
+  Identity -- No --> Reject
+  Identity -- Yes --> Lock --> Draft
+  Draft -- No --> Reject
+  Draft -- Yes --> AnnualCheck
+  AnnualCheck -- No --> Reject
+  AnnualCheck -- Yes --> GridCheck
+  GridCheck -- No --> Reject
+  GridCheck -- Yes --> Approve --> Fixed --> Report
+  Actuals --> Report
+  Report --> Unchanged[Q1 overachievement leaves Q2 baseline unchanged]
+  Grid -. edits take the same parent lock .-> Lock

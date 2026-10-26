@@ -1,0 +1,80 @@
+erDiagram
+  AUTH_USERS ||--o| PROFILES : provisions
+  PROFILES ||--o{ CONTACTS : creates
+  CONTACTS o|--o{ CONTACTS : company_for
+  CONTACTS ||--o{ OPPORTUNITIES : party
+  CONTACTS o|--o{ OPPORTUNITIES : primary_or_secondary_point
+  PROFILES ||--o{ OPPORTUNITIES : owns
+  PIPELINE_STAGES ||--o{ OPPORTUNITIES : classifies
+  CONTRIBUTION_CATEGORIES ||--o{ OPPORTUNITIES : categorizes
+  CONTACTS o|--o{ MEETINGS : links
+  OPPORTUNITIES o|--o{ MEETINGS : links
+  PROFILES ||--o{ MEETINGS : owns
+  CONTACTS o|--o{ ACTIVITIES : optional_link
+  OPPORTUNITIES o|--o{ ACTIVITIES : optional_link
+  MEETINGS o|--o{ ACTIVITIES : optional_follow_up
+  PROFILES ||--o{ ACTIVITIES : owns
+  OPPORTUNITIES ||--o{ RECOGNIZED_CONTRIBUTIONS : realizes
+  PROFILES ||--o{ RECOGNIZED_CONTRIBUTIONS : attributed_employee
+  TARGET_VERTICALS o|--o{ RECOGNIZED_CONTRIBUTIONS : optional_attribution
+  PROFILES ||--o{ TARGET_PLANS : creates_or_approves
+  TARGET_PLANS ||--o{ TARGET_QUARTERS : stores_baseline
+  TARGET_QUARTERS ||--o{ TARGET_ALLOCATIONS : allocates
+  PROFILES ||--o{ TARGET_ALLOCATIONS : allocated_employee
+  TARGET_VERTICALS ||--o{ TARGET_ALLOCATIONS : allocated_vertical
+  PROFILES o|--o{ AUDIT_LOGS : actor
+
+  CONTACTS {
+    uuid id PK
+    text kind
+    uuid company_id FK
+    text email_normalized UK
+    text phone_normalized UK
+  }
+  OPPORTUNITIES {
+    uuid id PK
+    uuid contact_id FK
+    uuid primary_contact_id FK
+    uuid secondary_contact_id FK
+    numeric expected_amount
+    numeric operational_budget
+    text currency
+  }
+  ACTIVITIES {
+    uuid id PK
+    uuid contact_id FK
+    uuid opportunity_id FK
+    uuid meeting_id FK
+    text related_person_name
+    text related_organization_name
+    text remaining_work
+  }
+  RECOGNIZED_CONTRIBUTIONS {
+    uuid id PK
+    uuid opportunity_id FK
+    uuid employee_id FK
+    uuid target_vertical_id FK
+    numeric amount
+    text currency
+    timestamptz recognized_at
+  }
+  TARGET_PLANS {
+    uuid id PK
+    integer year
+    text currency
+    numeric annual_amount
+    text status
+  }
+  TARGET_QUARTERS {
+    uuid plan_id PK,FK
+    integer quarter PK
+    numeric amount
+  }
+  TARGET_ALLOCATIONS {
+    uuid id PK
+    uuid plan_id FK
+    integer quarter FK
+    uuid employee_id FK
+    uuid vertical_id FK
+    numeric amount
+  }

@@ -1,0 +1,42 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+.vercel/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Environment secrets; retain the safe configuration template
+.env*
+!.env.example
+/.aws/
+/.ssh/
+/.npmrc
+
+# Private development instructions and planning
+/AGENTS.md
+/.agents/
+/.codex/
+/PSE_CRM_Implementation_Plan.md
+
+# Personal editor settings and temporary files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# Local Supabase CLI state
+/supabase/.temp/
+/supabase/.branches/
+
+# Logs and operating-system metadata
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
