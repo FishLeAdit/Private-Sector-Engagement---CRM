@@ -16,7 +16,16 @@ Three display fixes, plus a documentation pass that maps the assessment's open d
 | `npm test` | 637 passed across 49 files; 1 added check (contact history money format; its USD case fails against the previous formatter) |
 | `npm run lint` (includes the format check), `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
 | Playwright, anonymous, against the running development server | 19 passed, 3 skipped (no live credentials configured) |
-| Signed-in browser check of the three pages | Pending: no demo credentials in `.env.local` for this pass |
+| Signed-in browser check, local development server | Target plan shows "Annual attainment: 0.00%."; contact Recent opportunities show "BDT 50,000.00 expected" (the demo data has only BDT deals, so the USD case is covered by the unit test); the deal page shows the new contribution text and no "later workflow" |
+
+## Preview deployment on 28 October 2026
+
+`main` at `04710f8` (the end of the readability refactor, before the display fixes above) is deployed on Vercel at https://private-sector-engagement-crm.vercel.app with the two public Supabase variables and `PSE_REPORT_CACHE_ENABLED=false`; no service-role key is configured there.
+
+| Check | Result |
+|---|---|
+| Playwright against the deployment, with live sign-in credentials | 20 passed, 2 skipped (contact writes not enabled; no restricted account) |
+| Signed-in, read-only walk of the deployment (writes to `/api` blocked) | Dashboard, Reports, stage board, Settings, Verticals, and every list page with its first detail page (contacts, deals, meetings, activities, contributions, targets) returned 200 with no error panel or browser console error |
 
 ## Bug fixes on 28 October 2026
 
