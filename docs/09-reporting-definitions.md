@@ -55,6 +55,19 @@ The dashboard stage chart shows up to 12 stages ranked by expected value; the de
 
 A Meeting-type activity and its canonical Meeting can both exist. Their separate counts are never added into a claimed unique-interaction total. Done is current saved status, not completion within the period: the schema has no distinct completion timestamp. Created time is not silently substituted for missing relevant activity time.
 
+## Original dashboard indicators
+
+Pages 2–3 of the assessment ask for Lead, Meeting, Achievement and Events, each by employee/team as target versus achievement, for monthly, quarterly and annual periods. Pages 4–10 replace part of that list. What each indicator maps to:
+
+| Indicator (pages 2–3) | Shown in Dashboard/Reports | Target versus achievement |
+|---|---|---|
+| Lead | Pipeline count and expected value by stage and outcome; scoped to one focal person with the employee filter | No lead target. Leads are pipeline stages and the KPI definition is pending (page 4) |
+| Meeting | Meeting counts by Scheduled/Done/Cancelled, per owner, and in the monthly trend | Counts only. No meeting target has been approved (pages 6, 10) |
+| Achievement | Recognized contributions against the assigned monetary target, by member and vertical, with remaining and overachieved amounts | Yes for years and quarters. Months show actuals only, because page 6 defines no monthly targets |
+| Events | Event and campaign activity counts by type for the selected year, quarter or month; one owner with the employee filter | Counts only. Events are an activity type (page 5) and have no approved target |
+
+“Employee” is the employee filter and the per-owner breakdowns. “Team” is the whole PSE team, the unfiltered total; there are no sub-teams. Both remain open questions in [requirements and assumptions](01-requirements-and-assumptions.md).
+
 ## Monthly trends and freshness
 
 Each included calendar month has a zero-filled bucket for actual recognized amount, dated activities, Done activities, scheduled meetings and Done meetings. These remain separate measures, not a combined workload total. Numeric figures originate in one report statement snapshot and include every eligible record, including more than 1,000 receipts. Profile names are resolved from a fresh permitted lookup on every request. Money is returned as decimal text and display calculations use integer cents.

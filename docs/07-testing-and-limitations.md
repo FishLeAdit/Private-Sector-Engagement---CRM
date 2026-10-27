@@ -2,6 +2,22 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Display fixes and requirement mapping on 28 October 2026
+
+Three display fixes, plus a documentation pass that maps the assessment's open dashboard items:
+
+- The target plan page showed "No target%" when a plan had no annual amount; the percent sign now appears only with a number. A saved plan always has a positive annual amount (database check), so this guards a state the data cannot currently reach.
+- A contact's **Recent opportunities** list formatted expected values with the browser's currency style (for example "$2,500.50"), unlike every other page; it now uses the shared money format ("USD 2,500.50").
+- The deal page's **Recognized contributions** section and the user guide no longer call contribution entry a later workflow, and the target percentage limitation below describes the current behavior.
+- [Requirements and assumptions](01-requirements-and-assumptions.md) now records lead, meeting/event/monthly target, team-level and events-module questions against the assessment pages. [Reporting definitions](09-reporting-definitions.md) maps the original Lead, Meeting, Achievement and Events indicators to what the dashboard shows.
+
+| Check | Result |
+|---|---|
+| `npm test` | 637 passed across 49 files; 1 added check (contact history money format; its USD case fails against the previous formatter) |
+| `npm run lint` (includes the format check), `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Playwright, anonymous, against the running development server | 19 passed, 3 skipped (no live credentials configured) |
+| Signed-in browser check of the three pages | Pending: no demo credentials in `.env.local` for this pass |
+
 ## Bug fixes on 28 October 2026
 
 Three known issues were fixed after the readability refactor (details under [remaining checks and limitations](#remaining-checks-and-limitations)): target allocation percentages, list pages past the last one, and the live contact workflow test's time limit.
@@ -248,7 +264,7 @@ The TypeScript runner initially could not read Windows user information inside t
 - Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unlinked contact/opportunity deletion is implemented as a user-requested addition with FK protection and retained audit history; active/inactive contact lifecycle remains unresolved.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
-- Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
+- Allocation percentages round down to the cent and only the resulting amount is stored, so remaining cents must be assigned explicitly before approval. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
 - Refund/contribution correction and deletion workflows are not implemented. Application clients cannot edit/delete realized contributions or approved targets.
 - Fixed 28 October 2026 (found in manual testing, 27 October): the target form's "% of quarter" box was a one-shot calculator that dropped a typed but unapplied percentage on save. Each box now shows the share its saved amount represents, typing a percentage updates the amount immediately (the Apply button is gone), invalid percentages are flagged under the box without changing the amount, and removing rows or changing quarter totals keeps every row's percentage correct.
 - Fixed 28 October 2026 (found in signed-in acceptance testing): a list page beyond the last one (for example `/activities?page=5` when one page exists) showed "temporarily unavailable". PostgREST answers such a request with HTTP 416 (`PGRST103`) and no row count; all six list queries now re-read page 1 for the total, so the page redirects to the real last page with its filters kept.

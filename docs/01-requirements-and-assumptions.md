@@ -2,7 +2,7 @@
 
 ## Sources and precedence
 
-Functional source: “Dashboard Requirements for PSE” in `Assessment Material_Associate, Tech 4 Development.docx`. The “Major requirement changes” section and later meeting clarifications override conflicting earlier field specifications. Earlier fields remain in scope unless superseded.
+Functional source: “Dashboard Requirements for PSE” in `Assessment Material_Associate, Tech 4 Development.pdf`. Pages 1–3 are the original field, pipeline, target and dashboard lists; the “Major requirement changes” section and the meeting clarifications that follow (pages 4–10) override them where they conflict. Earlier fields remain in scope unless superseded.
 
 The recruitment email was not available for the document review. The original plan's deadline, platform mandates and submission package remain unverified against that email. Google Drive URLs for CRM record references are confirmed; Google Drive hosting for documentation is a separate, unverified submission choice.
 
@@ -42,8 +42,11 @@ Opportunity deletion is also a user-requested addition. It follows existing oppo
 Meeting deletion is a further explicit user addition, matching meeting edit permissions (owner, creator or active PSE manager/admin). Confirmation is required, linked activities/follow-ups block deletion, and parent contacts/opportunities plus audit snapshots remain retained. Migration 0006 adds the matching grant/RLS policy; it does not imply deleting the related work.
 
 - Final pipeline stages; target verticals and their relationship to contribution categories, including VBD versus SAC.
-- Lead KPI definition; follow-up-rate KPI is unapproved and must not be built.
-- Contact active/inactive status; final target management layout and detailed currency/recognition rules.
+- Lead KPI definition; follow-up-rate KPI is unapproved and must not be built. Pages 2–3 ask for Lead target versus achievement, page 4 says leads are pipeline stages and the KPI still needs confirmation, and the later reporting list (pages 9–10) leaves Lead out. Until PSE defines it, the pipeline count and expected value by stage and outcome is the lead representation; no lead target or lead KPI is shown.
+- Meeting, event and monthly targets. Pages 2–3 ask for target versus achievement for Meeting and Events in monthly, quarterly and annual views. Page 6 replaces the target setup with annual → uneven quarterly → member and vertical monetary targets, and pages 9–10 list meeting counts, completion and activity counts rather than count targets. The CRM therefore shows meeting and event counts and monthly actuals, but no meeting, event or monthly targets, and never divides quarters into invented monthly quotas. Count targets need PSE confirmation.
+- Team level. Page 9 asks for performance by team member, team and vertical. “Team” is read as the whole PSE team (page 5 makes visibility team-wide; page 9 starts from the annual team target), which is the unfiltered report total. There are no sub-teams in the data model; PSE must say whether sub-team reporting is needed and how members are grouped.
+- Whether events need their own module with budgets, participants, sponsor packages, approvals or ROI (pages 5 and 8). Until then an event is an Activity type.
+- Contact active/inactive status; final target management layout, who besides Safina may manage targets (pages 5 and 9), and detailed currency/recognition rules.
 - Whether every company opportunity must have a secondary contact; the field must remain representable without inventing a mandatory constraint.
 - Contacts-engaged eligible interactions, time basis and identity rules, including unlinked participants.
 - Odoo export completeness and field mappings, including valuation evidence and optional operational budgets.
