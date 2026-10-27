@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { ActivityError } from "../../src/features/activities/types";
 import { activityTypes } from "../../src/features/activities/schemas";
 const mocks = vi.hoisted(() => ({ authorize: vi.fn(), client: vi.fn(), repository: vi.fn(), revalidate: vi.fn() }));
+vi.mock("../../src/lib/cache/invalidation",()=>({invalidateReportCache:vi.fn()}));
 vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/auth/access", () => ({ authorizeApi: mocks.authorize }));
 vi.mock("../../src/lib/supabase/server", () => ({ createClient: mocks.client }));
@@ -15,7 +16,7 @@ const id = "40000000-0000-4000-8000-000000000099", member = "00000000-0000-4000-
 const contactId = "10000000-0000-4000-8000-000000000002", company = "10000000-0000-4000-8000-000000000001", opportunityId = "20000000-0000-4000-8000-000000000001", meetingId = "30000000-0000-4000-8000-000000000001";
 const contact = { id: contactId }, opportunity = { id: opportunityId, contact_id: company, primary_contact_id: contactId, secondary_contact_id: null };
 const meeting = { id: meetingId, contact_id: contactId, opportunity_id: opportunityId, opportunity };
-const body = { activity_type: "general", owner_id: member, notes: "Fictional independent context" };
+const body = { activity_type: "general", owner_id: member, notes: "Fictional independent context", related_organization_name: "Fictional PSE team" };
 const record = { ...body, id, created_by: member, status: "in_progress", work_category: "independent_general", contact_id: null, opportunity_id: null, meeting_id: null, occurred_at: null, drive_urls: ["https://drive.google.com/fictional-reference"], remaining_work: "Fictional pending task", related_person_name: "Fictional Person", related_organization_name: null, estimated_nonmonetary_value: 5000 };
 let repo: Record<"list" | "find" | "contact" | "opportunity" | "meeting" | "owners" | "create" | "update" | "remove" | "history", ReturnType<typeof vi.fn>>;
 beforeEach(() => {
@@ -27,6 +28,7 @@ beforeEach(() => {
 const params = () => ({ params: Promise.resolve({ id }) });
 function request(method: string, data?: unknown, origin = "http://localhost") { return new Request("http://localhost/api/activities", { method, headers: { "Content-Type": "application/json", Origin: origin }, body: data === undefined ? undefined : JSON.stringify(data) }); }
 describe("Activities authenticated HTTP workflow", () => {
+  it("rejects absent context on create and prevents clearing all context on update",async()=>{expect((await POST(request("POST",{...body,related_organization_name:""}))).status).toBe(422);expect((await PATCH(request("PATCH",{related_person_name:"",related_organization_name:""}),params())).status).toBe(422);expect(repo.create).not.toHaveBeenCalled();expect(repo.update).not.toHaveBeenCalled();});
   it.each([401,403,503])("rejects auth state %s before all data access", async status => {
     mocks.authorize.mockResolvedValue({ ok: false, response: NextResponse.json({ error: "Denied" }, { status }) });
     for (const response of [await GET(request("GET")),await DETAIL(request("GET"),params()),await OPTIONS(request("GET")),await POST(request("POST",body)),await PATCH(request("PATCH",{status:"done"}),params()),await DELETE(request("DELETE"),params())]) expect(response.status).toBe(status);

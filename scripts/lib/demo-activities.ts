@@ -25,7 +25,7 @@ export function buildDemoActivities(ownerId: string, contacts: Contact[], opport
     { notes: "General inbox and small-gift coordination\nRecord an unvalued stationery offer and general correspondence without financial recognition.", status: "open", category: "independent_general", remaining: "Confirm collection arrangements." },
   ];
   return specs.map((spec, index) => {
-    const data = activitySchema.parse({ activity_type: activityTypes[index], work_category: spec.category, status: spec.status, owner_id: ownerId, notes: `Demo | ${spec.notes}`, remaining_work: spec.remaining ?? "", related_person_name: spec.person ?? "", related_organization_name: spec.organization ?? "", occurred_at: spec.days === undefined ? "" : date(spec.days), ...spec.links });
+    const data = activitySchema.parse({ activity_type: activityTypes[index], work_category: spec.category, status: spec.status, owner_id: ownerId, notes: `Demo | ${spec.notes}`, remaining_work: spec.remaining ?? "", related_person_name: spec.person ?? "", related_organization_name: spec.organization ?? (spec.links && Object.keys(spec.links).length ? "" : "Fictional PSE general-work team"), occurred_at: spec.days === undefined ? "" : date(spec.days), ...spec.links });
     return { ...data, id: demoActivityIds[index], created_by: ownerId, contact_id: data.contact_id || null, opportunity_id: data.opportunity_id || null, meeting_id: data.meeting_id || null, occurred_at: data.occurred_at || null };
   });
 }

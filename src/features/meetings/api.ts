@@ -1,3 +1,4 @@
+import { invalidateReportCache } from "@/lib/cache/invalidation";
 import "server-only";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -27,7 +28,7 @@ export async function meetingApi(request: Request, run: (service: Service) => Pr
     return NextResponse.json({ error: "Meetings are temporarily unavailable. Please try again." }, { status: 503, headers });
   }
 }
-export function invalidateMeeting(id: string) {
+export function invalidateMeeting(id: string) { invalidateReportCache(false); revalidatePath("/dashboard", "layout"); revalidatePath("/reports", "layout");
   revalidatePath("/meetings"); revalidatePath(`/meetings/${id}`); revalidatePath(`/meetings/${id}/edit`);
   revalidatePath("/contacts", "layout"); revalidatePath("/opportunities", "layout"); revalidatePath("/activities", "layout");
 }

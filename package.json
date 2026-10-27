@@ -11,9 +11,11 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "validate:seed": "tsx scripts/validate-seed.ts",
+    "benchmark:reports": "node --conditions=react-server --import tsx scripts/benchmark-reports.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:meetings": "tsx scripts/seed-meetings.ts",
     "seed:activities": "tsx scripts/seed-activities.ts",
+    "seed:finance": "tsx scripts/seed-finance.ts",
     "db:types": "tsx scripts/generate-database-types.ts",
     "db:types:check": "tsx scripts/generate-database-types.ts --check"
   },

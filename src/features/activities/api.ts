@@ -1,3 +1,4 @@
+import { invalidateReportCache } from "@/lib/cache/invalidation";
 import "server-only";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -18,4 +19,4 @@ export async function activityApi(request: Request, run: (service: Service) => P
     const result = await run(createActivitiesService(createActivityRepository(await createClient()), auth.access)); return NextResponse.json(result.data, { status: result.status ?? 200, headers });
   } catch (error) { if (error instanceof ActivityError) return NextResponse.json({ error: error.message, fields: error.fields }, { status: error.status, headers }); return NextResponse.json({ error: "Activities are temporarily unavailable. Please try again." }, { status: 503, headers }); }
 }
-export function invalidateActivity(id: string) { revalidatePath("/activities"); revalidatePath(`/activities/${id}`); revalidatePath(`/activities/${id}/edit`); revalidatePath("/contacts", "layout"); revalidatePath("/opportunities", "layout"); revalidatePath("/meetings", "layout"); }
+export function invalidateActivity(id: string) { invalidateReportCache(false); revalidatePath("/dashboard", "layout"); revalidatePath("/reports", "layout"); revalidatePath("/activities"); revalidatePath(`/activities/${id}`); revalidatePath(`/activities/${id}/edit`); revalidatePath("/contacts", "layout"); revalidatePath("/opportunities", "layout"); revalidatePath("/meetings", "layout"); }

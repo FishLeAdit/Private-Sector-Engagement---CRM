@@ -19,7 +19,11 @@ export const activitySchema = z.object({ ...raw,
   work_category: raw.work_category.default("independent_general"), status: raw.status.default("open"),
   contact_id: optionalId.default(""), opportunity_id: optionalId.default(""), meeting_id: optionalId.default(""),
   related_person_name: raw.related_person_name.default(""), related_organization_name: raw.related_organization_name.default(""), remaining_work: raw.remaining_work.default(""), occurred_at: raw.occurred_at.default(""), drive_urls: raw.drive_urls.default([]),
-}).strict();
+}).strict().superRefine((value,ctx)=>{
+  if(!value.related_person_name&&!value.related_organization_name&&!value.contact_id&&!value.opportunity_id&&!value.meeting_id){
+    ctx.addIssue({code:"custom",path:["related_person_name"],message:"Add a related person or organization, or link an existing CRM record."});
+  }
+});
 export const activityPatchSchema = z.object(raw).partial().strict().refine(value => Object.keys(value).length > 0, "Provide at least one change.");
 export type ActivityInput = z.output<typeof activitySchema>;
 export type ActivityFormInput = z.input<typeof activitySchema>;

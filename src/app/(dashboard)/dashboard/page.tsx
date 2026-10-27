@@ -1,3 +1,2 @@
-export default function Page() {
-  return <><h1 className="text-3xl font-bold">Dashboard</h1><p className="mt-4">Scaffold only. This workflow is not implemented yet.</p></>;
-}
+import { ReportScreen } from "@/components/reports/screen";
+export default function Page({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){return<ReportScreen view="dashboard" searchParams={searchParams}/>;}

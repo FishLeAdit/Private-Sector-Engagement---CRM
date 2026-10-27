@@ -5,7 +5,7 @@ import { buildDemoActivities,demoActivityIds } from "../../scripts/lib/demo-acti
 import { activityTypes } from "../../src/features/activities/schemas";
 let db:PGlite;
 beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
-async function activity(actor:string=ids.member,owner:string=actor,links:{contact?:string;opportunity?:string;meeting?:string}={}){return(await asActor(db,actor,tx=>tx.query<{id:string}>("insert into public.activities(activity_type,owner_id,contact_id,opportunity_id,meeting_id,notes) values('general',$1,$2,$3,$4,'Fictional activity') returning id",[owner,links.contact??null,links.opportunity??null,links.meeting??null]))).rows[0].id;}
+async function activity(actor:string=ids.member,owner:string=actor,links:{contact?:string;opportunity?:string;meeting?:string}={}){return(await asActor(db,actor,tx=>tx.query<{id:string}>("insert into public.activities(activity_type,owner_id,contact_id,opportunity_id,meeting_id,notes,related_organization_name) values('general',$1,$2,$3,$4,'Fictional activity','Fictional team') returning id",[owner,links.contact??null,links.opportunity??null,links.meeting??null]))).rows[0].id;}
 const remove=(id:string,actor:string|null=ids.member)=>asActor(db,actor,tx=>tx.query("delete from public.activities where id=$1 returning id",[id]));
 const contacts=[{id:ids.person,kind:"individual"},{id:ids.company,kind:"company"}];
 const opportunities=[{id:ids.cashOpportunity,contact_id:ids.company,primary_contact_id:ids.person,secondary_contact_id:ids.secondary}];

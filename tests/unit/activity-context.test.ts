@@ -1,0 +1,21 @@
+import { afterAll,beforeAll,describe,expect,it } from "vitest";
+import type { PGlite } from "@electric-sql/pglite";
+import { asActor,createLocalDatabase,fixtureIds as ids } from "../../scripts/lib/local-database";
+import { activitySchema } from "../../src/features/activities/schemas";
+let db:PGlite;beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
+const base={activity_type:"general",owner_id:ids.member,notes:"Fictional independent work"};
+describe("related context for activities",()=>{
+ it.each([{}, {related_person_name:" \t\n",related_organization_name:"  "}])("rejects independent empty context %j in shared validation and SQL",async context=>{expect(activitySchema.safeParse({...base,...context}).success).toBe(false);await expect(asActor(db,ids.member,tx=>tx.query("insert into public.activities(activity_type,owner_id,related_person_name,related_organization_name,notes)values('general',$1,$2,$3,'Fictional work')",[ids.member,context.related_person_name??null,context.related_organization_name??null]))).rejects.toMatchObject({code:"23514"});});
+ it.each(["related_person_name","related_organization_name"]as const)("allows independent %s without creating a CRM contact",async field=>{expect(activitySchema.safeParse({...base,[field]:"Fictional context"}).success).toBe(true);const result=await asActor(db,ids.member,tx=>tx.query<{id:string}>(`insert into public.activities(activity_type,owner_id,${field},notes)values('general',$1,'Fictional context','Fictional work')returning id`,[ids.member]));expect(result.rows).toHaveLength(1);});
+ it.each([["contact_id",ids.person],["opportunity_id",ids.cashOpportunity],["meeting_id",ids.meeting]])("allows context from linked %s",async(field,value)=>{expect(activitySchema.safeParse({...base,[field]:value}).success).toBe(true);expect((await asActor(db,ids.member,tx=>tx.query(`insert into public.activities(activity_type,owner_id,${field},notes)values('call',$1,$2,'Fictional linked work')returning id`,[ids.member,value]))).rows).toHaveLength(1);});
+ it("prevents clearing the last piece of context and leaves the row intact",async()=>{const id=(await asActor(db,ids.member,tx=>tx.query<{id:string}>("insert into public.activities(activity_type,owner_id,related_person_name,notes)values('general',$1,'Fictional person','Fictional work')returning id",[ids.member]))).rows[0].id;await expect(asActor(db,ids.member,tx=>tx.query("update public.activities set related_person_name=' ' where id=$1",[id]))).rejects.toMatchObject({code:"23514"});expect((await db.query<{name:string}>("select related_person_name as name from public.activities where id=$1",[id])).rows[0].name).toBe("Fictional person");});
+ it("keeps legacy rows readable and reports them for correction without fabricating identities",async()=>{
+  const id="f2000000-0000-4000-8000-000000000001";
+  await db.transaction(async tx=>{const definition=(await tx.query<{definition:string}>("select pg_get_constraintdef(oid) as definition from pg_constraint where conname='activities_related_context_required'")).rows[0].definition;await tx.exec("alter table public.activities drop constraint activities_related_context_required");await tx.query("insert into public.activities(id,activity_type,owner_id,created_by,notes)values($1,'general',$2,$2,'Fictional legacy work')",[id,ids.member]);await tx.exec(`alter table public.activities add constraint activities_related_context_required ${definition}`);});
+  expect((await asActor(db,ids.colleague,tx=>tx.query("select id from public.activities where id=$1",[id]))).rows).toHaveLength(1);
+  const report=(await asActor(db,ids.member,tx=>tx.query<{data:{workload:{missing_context:number}}}>("select public.pse_report(2026,0,0,'','','BDT') as data"))).rows[0].data;expect(report.workload.missing_context).toBe(1);
+  await expect(asActor(db,ids.member,tx=>tx.query("update public.activities set status='done' where id=$1",[id]))).rejects.toMatchObject({code:"23514"});
+  await asActor(db,ids.member,tx=>tx.query("update public.activities set related_organization_name='Fictional office',status='done' where id=$1",[id]));
+  expect((await db.query<{name:string}>("select related_organization_name as name from public.activities where id=$1",[id])).rows[0].name).toBe("Fictional office");
+ });
+});

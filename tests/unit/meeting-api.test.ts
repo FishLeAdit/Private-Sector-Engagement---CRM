@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { MeetingError } from "../../src/features/meetings/types";
 
 const mocks = vi.hoisted(() => ({ authorize: vi.fn(), client: vi.fn(), repository: vi.fn(), revalidate: vi.fn() }));
+vi.mock("../../src/lib/cache/invalidation",()=>({invalidateReportCache:vi.fn()}));
 vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/auth/access", () => ({ authorizeApi: mocks.authorize }));
 vi.mock("../../src/lib/supabase/server", () => ({ createClient: mocks.client }));

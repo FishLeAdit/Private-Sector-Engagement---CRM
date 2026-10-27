@@ -1,3 +1,4 @@
+import { invalidateReportCache } from "@/lib/cache/invalidation";
 import "server-only";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -28,8 +29,9 @@ export async function opportunityApi(request: Request, run: (service: Service) =
     return NextResponse.json({ error: "Opportunities are temporarily unavailable. Please try again." }, { status: 503, headers });
   }
 }
-export function invalidateOpportunity(id: string) {
+export function invalidateOpportunity(id: string) { invalidateReportCache(false);
+  revalidatePath("/dashboard", "layout"); revalidatePath("/reports", "layout");
   revalidatePath("/opportunities"); revalidatePath(`/opportunities/${id}`); revalidatePath(`/opportunities/${id}/edit`);
   revalidatePath("/contacts", "layout");
 }
-export function invalidateConfiguration() { revalidatePath("/settings"); revalidatePath("/opportunities", "layout"); }
+export function invalidateConfiguration() { invalidateReportCache(false); revalidatePath("/dashboard", "layout"); revalidatePath("/reports", "layout"); revalidatePath("/settings"); revalidatePath("/opportunities", "layout"); }
