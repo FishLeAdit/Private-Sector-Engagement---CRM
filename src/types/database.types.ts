@@ -882,7 +882,13 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      approve_target_draft: { Args: { p_plan_id: string; p_expected_updated_at: string }; Returns: string };
       approve_target_plan: { Args: { p_plan_id: string }; Returns: string };
+      pse_report: { Args: { p_year: number; p_quarter: number; p_month: number; p_employee_id: string; p_vertical_id: string; p_currency: string }; Returns: Json };
+      record_contribution: { Args: { p_id: string; p_values: Json }; Returns: string };
+      save_target_draft: { Args: { p_id: string; p_values: Json; p_expected_updated_at: string }; Returns: string };
+      seed_demo_target: { Args: { p_id: string; p_values: Json }; Returns: boolean };
+      target_actuals: { Args: { p_plan_id: string }; Returns: Json };
       valid_http_url: { Args: { value: string }; Returns: boolean };
       valid_http_urls: { Args: { values_to_check: string[] }; Returns: boolean };
     };

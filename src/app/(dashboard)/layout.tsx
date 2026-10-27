@@ -3,7 +3,7 @@ import { requirePseUser } from "@/lib/auth/access";
 import { roleLabels } from "@/lib/auth/roles";
 import { LogoutButton } from "@/components/auth/logout-button";
 
-const sections = ["dashboard", "contacts", "opportunities", "meetings", "activities", "targets", "reports", "settings"];
+const sections = ["dashboard", "contacts", "opportunities", "meetings", "activities", "contributions", "targets", "reports", "settings"];
 
 export const dynamic = "force-dynamic";
 

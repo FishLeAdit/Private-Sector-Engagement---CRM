@@ -23,7 +23,7 @@ export async function resolveAccess(deps: AccessDependencies): Promise<AccessRes
   }
 }
 
-const protectedRoots = ["dashboard", "contacts", "opportunities", "meetings", "activities", "targets", "reports", "settings"];
+const protectedRoots = ["dashboard", "contacts", "opportunities", "meetings", "activities", "contributions", "targets", "reports", "settings"];
 
 export function safeReturnPath(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(value)) return "/dashboard";

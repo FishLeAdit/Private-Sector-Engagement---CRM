@@ -1,9 +1,3 @@
-import { authorizeApi } from "@/lib/auth/access";
-
-export async function GET() {
-  const auth = await authorizeApi();
-  if (!auth.ok) return auth.response;
-  return Response.json({ error: "Not implemented" }, { status: 501, headers: { "Cache-Control": "private, no-store" } });
-}
-
-// TODO: Validate requests and delegate to shared feature services with caller-scoped access.
+import { financeApi,financeJson,invalidateFinance } from "@/features/finance/context";
+export async function GET(request:Request){return financeApi(request,service=>service.plans(Object.fromEntries(new URL(request.url).searchParams)));}
+export async function POST(request:Request){return financeApi(request,async service=>{const result=await service.save(await financeJson(request));invalidateFinance();return result;},true,true);}

@@ -75,7 +75,7 @@ describe("target approval and fixed allocations in PostgreSQL", () => {
     await expect(asActor(db, ids.manager, tx => tx.query("delete from public.target_plans where id=$1", [ids.approvedPlan]))).rejects.toThrow(/permission/i);
   });
   it("retains immutable approval audit history", async () => {
-    const { rows } = await db.query<{ before: { status: string }; after: { status: string } }>("select before,after from public.audit_logs where entity='target_plans' and entity_id=$1 and action='update'", [ids.approvedPlan]);
+    const { rows } = await db.query<{ before: { status: string }; after: { status: string } }>("select before,after from public.audit_logs where entity='target_plans' and entity_id=$1 and action='update' and after->>'status'='approved'", [ids.approvedPlan]);
     expect(rows[0].before.status).toBe("draft");
     expect(rows[0].after.status).toBe("approved");
     await expect(db.exec("update public.audit_logs set action='hidden'")).rejects.toThrow(/immutable/i);

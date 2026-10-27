@@ -17,8 +17,8 @@ describe("financial integrity in PostgreSQL", () => {
     expect(rows).toEqual([{ currency: "BDT", amount: "205000.00" }, { currency: "USD", amount: "200.00" }]);
   });
   it("does not count unvalued activity recognition estimates as financial achievement", async () => {
-    await asActor(db, ids.member, tx => tx.query(`insert into public.activities(activity_type,owner_id,estimated_nonmonetary_value,notes)
-      values('general',$1,9999,'Fictional unvalued gift')`, [ids.member]));
+    await asActor(db, ids.member, tx => tx.query(`insert into public.activities(activity_type,owner_id,estimated_nonmonetary_value,notes,related_organization_name)
+      values('general',$1,9999,'Fictional unvalued gift','Fictional school')`, [ids.member]));
     const { rows } = await db.query("select sum(amount)::text as total from public.recognized_contributions where currency='BDT'");
     expect(rows).toEqual([{ total: "205000.00" }]);
   });
