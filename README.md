@@ -20,22 +20,22 @@ Sign in with a provisioned PSE account to enter the workspace. Open Contacts to 
 
 ## Structure
 
-- `src/app`: pages, dashboard shell, Contacts/Opportunities/Meetings/Activities/Contributions/Targets APIs.
-- `src/components`: reusable UI organized by module.
-- `src/features`: validation, queries and business services.
-- `src/lib`: database, authorization, cache and formatting helpers.
+- `src/app`: page files and API routes. Pages load data and compose components; routes are thin wrappers around feature services.
+- `src/features/<module>`: each CRM area's Zod schemas, types and error class, caller-scoped repository (`queries.ts`), service and page/API wiring. Contributions and targets share `features/finance`.
+- `src/components/<module>`: each area's forms, filters, tables and detail sections; `src/components/ui` holds pieces shared by every module (form fields, filters, list headers, pagination, delete confirmation, audit history).
+- `src/lib`: shared API/page wiring, errors and validation, authorization guards, report caching, money and Asia/Dhaka date helpers, and Supabase clients.
 - `supabase`: executable schema, RLS, trigger/index migrations and fictional local seed.
 - `docs`: technical documentation and editable Mermaid diagrams.
 - `tests/unit`: PostgreSQL-backed database/service checks plus authentication, API, form and query-contract tests.
 - `tests/e2e`: anonymous sign-in/contact/opportunity/meeting/activity checks, optional live login checks and an explicitly opted-in fictional contact write workflow; target/contribution/report browser checks cover anonymous boundaries.
 - `scripts/lib/local-database.ts`: isolated local Auth adapter and migration runner; never deploy its Auth bootstrap.
 
-Next.js 16 uses `src/proxy.ts` instead of `src/middleware.ts`. Tailwind CSS 4 uses its PostCSS plugin and CSS configuration. `components.json` reserves component aliases; no shadcn components have been generated. Empty planned directories use `.gitkeep`.
+Next.js 16 uses `src/proxy.ts` instead of `src/middleware.ts`. Tailwind CSS 4 uses its PostCSS plugin and CSS configuration. `components.json` reserves component aliases; no shadcn components have been generated. See [code organization](docs/02-system-architecture.md#code-organization) for how the layers fit together.
 
 ## Commands
 
 - `npm run dev`: local development.
-- `npm run lint`: ESLint.
+- `npm run lint`: ESLint, then Prettier's formatting check. ESLint also warns when a source file in `src` passes 300 lines.
 - `npm run format` / `npm run format:check`: apply or verify Prettier formatting. Migrations, docs, Markdown and generated files (`src/types/database.types.ts`, `next-env.d.ts`) are excluded in `.prettierignore`.
 - `npm run typecheck`: TypeScript.
 - `npm run build`: production build.

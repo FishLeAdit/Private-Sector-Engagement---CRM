@@ -38,6 +38,26 @@ Pages display UI, components provide reusable elements, `features/*` owns valida
 
 The server-only administrative client must never enter a browser bundle. Trusted profile provisioning and role assignment are separate administrative operations, not permissions available to ordinary CRM clients.
 
+## Code organization
+
+Each CRM area in `src/features/<module>/` follows the same layout, so a page or route never talks to Supabase directly:
+
+| File | Responsibility |
+|---|---|
+| `schemas.ts` | Zod schemas shared by browser forms and the server. Create schemas apply defaults; PATCH schemas are partial with no defaults, so omitted fields keep their stored values. |
+| `types.ts` | Record types and the module's error class, a subclass of `AppError` carrying an HTTP status and per-field messages. |
+| `queries.ts` | The caller-scoped repository. It maps PostgreSQL error codes to module errors; list queries recover from a page past the last one by re-reading page 1 for the total. |
+| `service.ts` | Access checks (`assertVerifiedPse`), input parsing (`parseOrThrow`, `requireUuid`) and business rules such as ownership and compatible links. |
+| `context.ts` / `api.ts` | Page wiring (redirects non-PSE visitors, turns module errors into a renderable result) and route wiring (authorization, same-origin writes, JSON error mapping, `private, no-store`, and cache/page invalidation after writes). |
+
+Contributions and targets share `features/finance` (error type, database-error mapping, employee/vertical lookup, guards and API wiring). Reports add a request service that wraps the SQL aggregate in the permission-scoped cache.
+
+Shared server and browser helpers live in `src/lib`: `api/handler.ts` and `page-data.ts` (the wiring above), `errors.ts`, `validation.ts`, `auth/guards.ts`, `cache/` (report-tag expiry in `invalidation.ts`, page revalidation in `paths.ts`, cache policy and adapter), `money.ts` (integer-cent arithmetic and formatting), `dates.ts` (Asia/Dhaka conversion), `list-href.ts`, `send-json.ts` and `supabase/` (clients and pagination recovery).
+
+Interface code is split the same way. `src/components/ui` holds pieces every module uses: form fields and actions, list filters, list headers and notices, pagination, delete confirmation, audit history and the error panel. `src/components/<module>` holds each area's filters, tables, detail sections and form sections. Page files in `src/app` load data and compose those sections.
+
+Two guardrails keep files in this shape: `npm run lint` also runs Prettier's check, and ESLint warns when a source file in `src` passes 300 lines.
+
 ## Database boundaries
 
 - Contacts represent individuals and companies, with structured company relationships and normalized communication identifiers.
@@ -56,7 +76,7 @@ The local database workflow uses PGlite's PostgreSQL engine to apply the SQL mig
 
 The developer reports configuring a Supabase project and applying migrations/RLS. Project values stay in ignored `.env.local`; no credentials are included in the repository. Automated checks cover mocked Auth behavior and anonymous browser access; live demo-account sign-in, refresh, revocation and hosted role behavior remain manual verification. Generated database types describe the migrated local catalog rather than a new hosted introspection.
 
-Application data caching and reporting endpoints remain unimplemented. Their future access scope, invalidation rules and KPI definitions must match the caller's permissions and the database model.
+Reporting and its permission-scoped cache are described in the Phase 11 and Phase 12 sections below; KPI definitions are in [reporting definitions](09-reporting-definitions.md).
 
 Editable diagrams: [system boundaries](diagrams/architecture.mmd), [entity relationships](diagrams/entity-relationships.mmd) and [target approval](diagrams/target-allocation-flow.mmd). See [database schema](03-database-schema.md), [permissions](04-api-and-permissions.md) and [verification evidence](07-testing-and-limitations.md) for details.
 
