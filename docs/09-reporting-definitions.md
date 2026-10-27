@@ -55,6 +55,21 @@ The dashboard stage chart shows up to 12 stages ranked by expected value; the de
 
 A Meeting-type activity and its canonical Meeting can both exist. Their separate counts are never added into a claimed unique-interaction total. Done is current saved status, not completion within the period: the schema has no distinct completion timestamp. Created time is not silently substituted for missing relevant activity time.
 
+## Contacts engaged (provisional)
+
+Assessment page 10 lists "visits, events, campaigns, and contacts engaged" for the non-monetary lens without defining the last one. This project definition (decided 28 October 2026) is shown as **Provisional — awaiting PSE definition** until PSE confirms or replaces it. Migration 0014 adds it to the report.
+
+| Rule | Definition |
+|---|---|
+| Eligible interactions | Meetings whose current status is Done, scheduled in the period, and activities whose current status is Done, with a relevant date in the period. Scheduled, cancelled, open and in-progress work does not count; an open task dated next week has not engaged anyone yet |
+| Contact reached | The interaction's own contact. Otherwise an activity uses its meeting's contact, then the linked deal's primary contact, then the deal's party; a meeting without a contact uses its deal's primary contact, then the party. This is the same rule the meeting screens use to show contact details |
+| Identity | Distinct CRM contact records, individuals and companies/organizations alike, also shown by kind. Each contact counts once in the total however often it was reached |
+| Unlinked names | Done independent activities that name a person or organization without any CRM link are counted as interactions ("Named, unlinked interactions"), never as contacts, because free text is not a reliable identity |
+| Owners | Distinct contacts per current owner of the interaction. A contact reached by two owners counts once in the total and once for each owner, so owner figures can add up to more than the total |
+| Filters | The employee filter selects interactions by owner. Currency and funding vertical do not apply |
+
+Questions for PSE: whether open or in-progress activities should count, whether a deal's company should count alongside its primary contact, whether unlinked names should be matched to contacts, and the time basis (meeting date or activity date).
+
 ## Original dashboard indicators
 
 Pages 2–3 of the assessment ask for Lead, Meeting, Achievement and Events, each by employee/team as target versus achievement, for monthly, quarterly and annual periods. Pages 4–10 replace part of that list. What each indicator maps to:
@@ -74,4 +89,4 @@ Each included calendar month has a zero-filled bucket for actual recognized amou
 
 The generated timestamp is shown in Dhaka time. Reports may reuse a per-user/session/filter snapshot for up to 30 seconds, and vertical options for 300 seconds. Authentication/profile checks remain fresh. Refresh data expires the verified user’s entries and then retrieves a new authorized snapshot; app writes immediately expire applicable project tags. Administrative edits outside the app need Refresh or TTL expiry. HTTP responses remain private/no-store. See [cache scopes, deployment controls and local timing evidence](05-caching-strategy.md).
 
-Lead, contacts-engaged and follow-up-rate KPIs remain omitted until PSE approves their eligibility, identity/deduplication and timing definitions. Final vertical/category mappings and pipeline stage names remain configurable rather than declared final.
+Lead and follow-up-rate KPIs remain omitted until PSE approves their definitions; contacts engaged is shown with the provisional definition above. Final vertical/category mappings and pipeline stage names remain configurable rather than declared final.

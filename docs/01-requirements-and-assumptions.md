@@ -30,7 +30,7 @@ The recruitment email was not available for the document review. The original pl
 - A company deal requires a primary individual contact, with a distinct optional secondary contact. Closing date, payment interval, country, description, notes and operational budget remain optional; the assessment lists these fields without establishing every field's requiredness.
 - Meetings use the existing required title and owner, plus optional description and a Cancelled status alongside the confirmed Scheduled/Done states. A contact may be a person or organization. For opportunity-only meetings, display the primary contact or party without forcing a duplicate direct contact link. Organization/designation/communication are read from internal contact records. These storage/requiredness choices are documented implementation assumptions.
 - Meeting follow-ups are open task activities with the meeting's saved contact/opportunity links. Active PSE colleagues may create their own follow-ups on team meetings; managers may assign another active employee. Activity editing, status changes and all assessment types are now available in the Activities workspace. Meeting times use explicit Asia/Dhaka input/display and UTC storage.
-- Contacts-engaged starter metric: distinct linked CRM contact IDs reached through recorded meetings/activities in a selected period, with a documented rule for opportunity-derived contacts and deduplication. Unlinked names remain context and are not treated as unique contact identities. This formula needs PSE confirmation.
+- Contacts engaged (built 28 October 2026 as a provisional figure, migration 0014): distinct CRM contacts reached by Done meetings and Done activities in the period, with interactions that lack their own contact using their meeting's contact, then the deal's primary contact, then the deal's party. Unlinked names are counted as interactions, never as contact identities. The full rule is in [reporting definitions](09-reporting-definitions.md); it is labelled provisional and needs PSE confirmation.
 - Permission-scoped caching, architecture PDF, Google Drive documentation exports and fictional demo data. Any separate recruiter mandate for caching or submission formats needs email verification.
 
 ## Unresolved decisions and external requirements
@@ -48,7 +48,7 @@ Meeting deletion is a further explicit user addition, matching meeting edit perm
 - Whether events need their own module with budgets, participants, sponsor packages, approvals or ROI (pages 5 and 8). Until then an event is an Activity type.
 - Contact active/inactive status; final target management layout, who besides Safina may manage targets (pages 5 and 9), and detailed currency/recognition rules.
 - Whether every company opportunity must have a secondary contact; the field must remain representable without inventing a mandatory constraint.
-- Contacts-engaged eligible interactions, time basis and identity rules, including unlinked participants.
+- Contacts-engaged eligible interactions, time basis and identity rules, including unlinked participants. A provisional version is built and labelled as such; PSE may confirm or replace it.
 - Odoo export completeness and field mappings, including valuation evidence and optional operational budgets.
 - Recruitment email deliverables, platform constraints, caching requirement, deadline/timezone and submission procedure. The original planning assumption is October 28, 2026, 11:59 PM Asia/Dhaka; the Word assessment does not establish it.
 
@@ -91,7 +91,7 @@ Proposed project choices: work-category keys `stewardship`, `prospect_engagement
 
 Activity deletion is explicitly requested by the user. Migration 0007 adds its grant/RLS policy; confirmation names the entry, parents remain intact and immutable audit snapshots remain. No soft-delete or automatic parent deletion is introduced. The proposed legacy `estimated_nonmonetary_value` field remains stored but is not exposed or overwritten by the workflow; no currency or valuation rule is invented for it.
 
-A Meeting-type activity is a work log, not a second scheduled meeting. Events use Activities without registration, budget or ROI workflows. No contacts-engaged deduplication formula, lead KPI, follow-up-rate KPI or reporting totals are invented. The Phase 11 operational reports now cover confirmed financial/workload counts and trends; unapproved KPIs remain excluded. Supplied demo records are fictional and clearly labeled.
+A Meeting-type activity is a work log, not a second scheduled meeting. Events use Activities without registration, budget or ROI workflows. No lead KPI, follow-up-rate KPI or reporting totals are invented; contacts engaged later received a provisional, labelled definition (see below). The Phase 11 operational reports now cover confirmed financial/workload counts and trends; unapproved KPIs remain excluded. Supplied demo records are fictional and clearly labeled.
 
 
 ## Phase 10 assessment check
@@ -132,7 +132,7 @@ The requested hosted finance seed creates six labeled fictional receipts, three 
 
 Reporting-period/date rules, draft target labels, currency isolation and the lack of monthly target baselines are documented implementation choices. Financial dates use recognition time; meetings use scheduled time; activities use relevant time. Pipeline date filtering uses expected closing dates and current stage, not historical stage reconstruction. Undated work/deals are counted separately across the selected owner, without inventing relevant dates. Related context through a valid CRM link is accepted without forcing duplicate free-text names.
 
-Funding vertical filters apply only where an explicit vertical exists (targets/contributions). No contribution-category-to-vertical mapping or workload vertical is inferred. Employee selects historical contribution attribution for actuals and current ownership for pipeline/work. Monthly views display actuals only because monthly target allocation is not defined. Lead, contacts-engaged and follow-up-rate KPIs remain absent pending PSE definitions. Full [metric definitions](09-reporting-definitions.md) distinguish record counts from unique interactions and explain filter scopes. The legacy Activity constraint is NOT VALID for historical rows, but enforces all new/updated rows without backfill.
+Funding vertical filters apply only where an explicit vertical exists (targets/contributions). No contribution-category-to-vertical mapping or workload vertical is inferred. Employee selects historical contribution attribution for actuals and current ownership for pipeline/work. Monthly views display actuals only because monthly target allocation is not defined. Lead and follow-up-rate KPIs remain absent pending PSE definitions; contacts engaged is shown with a provisional definition. Full [metric definitions](09-reporting-definitions.md) distinguish record counts from unique interactions and explain filter scopes. The legacy Activity constraint is NOT VALID for historical rows, but enforces all new/updated rows without backfill.
 
 
 ## Phase 12 technical choices

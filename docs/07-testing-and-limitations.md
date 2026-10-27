@@ -2,6 +2,24 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Contacts engaged, provisional, on 28 October 2026
+
+Assessment page 10 lists contacts engaged for the non-monetary lens. It is now built with a provisional definition, labelled "Provisional — awaiting PSE definition" (full rule in [reporting definitions](09-reporting-definitions.md)).
+
+- **Migration 0014** redefines `pse_report` with an `engagement` object: distinct CRM contacts reached by Done meetings and Done activities in the period, by kind and by owner, plus named but unlinked interactions. Apart from that object and its two supporting query parts, the function matches 0011.
+- **Dashboard and Reports** show a new section after the non-monetary work; Reports adds a per-owner table.
+- **Older snapshots.** A snapshot without the figures (before 0014, or cached from before it) hides the section rather than showing zeros.
+- **Report cache.** It removes the new owner names before storing a snapshot and fills them in fresh on each request, like the other owner names. The first full run caught this: the existing "never stores profile names" test failed until the cache handled the new field.
+
+| Check | Result |
+|---|---|
+| `npm test` | 660 passed across 50 files. Added: a PGlite test (one person reached four ways and a company once count as 2, with Scheduled, cancelled and open work excluded and one named unlinked interaction; owner, month and vertical filters), the same test failing with 0014 removed, view tests (provisional section, owner table, hidden for older snapshots) and cache tests (names neither stored nor stale; older snapshots pass through unchanged) |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed; generated types unchanged |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 26 passed in 4.6 min |
+| Signed-in, read-only, development server against the hosted demo (0014 not yet applied there) | Dashboard and Reports render with the section hidden, no error panel and no console error |
+
+Pending: after 0014 is applied to the hosted project, check the section with real figures.
+
 ## Target allocation grid on 28 October 2026
 
 Assessment pages 6 and 9 (steps 4–6) ask for quarterly targets allocated across team members, then by vertical, "preferably percentage-based". The target form's one-row-per-cell list is replaced by a grid. For each quarter, a manager enters each member's amount and splits it across the verticals by percentage (decided 28 October 2026: percentages are shares of the member's amount).
