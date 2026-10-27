@@ -2,6 +2,24 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Target allocation grid on 28 October 2026
+
+Assessment pages 6 and 9 (steps 4–6) ask for quarterly targets allocated across team members, then by vertical, "preferably percentage-based". The target form's one-row-per-cell list is replaced by a grid. For each quarter, a manager enters each member's amount and splits it across the verticals by percentage (decided 28 October 2026: percentages are shares of the member's amount).
+
+- Calculated amounts round down to the cent, and the member's last vertical takes the leftover cents, so a member's cells always equal their amount (`splitAmount` in `src/lib/money.ts`).
+- Saving is blocked, with a message naming the quarter and member, while an entered amount has a split that does not total 100%, or percentages are entered without an amount. Drafts may still leave a quarter partly unallocated; approval enforces reconciliation as before.
+- Storage is unchanged: the same employee × vertical cells and `save_target_draft`. A saved plan opens with each member's amount and derived percentages, and rows that are not edited keep their saved cells exactly, even where two-decimal percentages cannot express them.
+- Inactive members and verticals appear only while a saved share uses them. Members whose display names are identical cannot be told apart (the two hosted "Demo Manager" profiles, G1).
+
+| Check | Result |
+|---|---|
+| `npm test` | 656 passed across 50 files. New `allocation-grid.test.ts` covers splitting, leftover cents at the largest amount, reading and re-saving the seeded 50/20/30 plan, previews and save problems. The target form tests now drive the grid (split and saved cells, leftover cents, save blocking, untouched round-trip, recalculation after an edit, quarter tabs, over-allocation, inactive members); the old per-row percentage tests were removed with that UI |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 26 passed in 5.0 min, including the rewritten `live/targets.spec.ts` (the save request is blocked) |
+| Signed-in, read-only: the hosted 2026 demo draft opened in the grid | Q1 shows one Demo Manager at 75,000.00 split 100% DSP and Demo Member at 75,000.00 split Project 60% (45,000.00) and VBD 40% (30,000.00), with 0.00 left to allocate, matching the saved cells |
+| Phone width (390 px), new and edit target forms and the plan page | No horizontal page scroll; the grid scrolls inside its own area. The first check found the form 744 px wide, because a fieldset grows to its widest content, and this was fixed |
+| Hosted demo after the runs | Still 2 draft target plans and 7 contributions; no QA records |
+
 ## Contribution stage and attribution rules on 28 October 2026
 
 Two decisions on contribution integrity, each enforced in the service and in the database:
@@ -43,7 +61,7 @@ The signed-in acceptance checks are now opt-in Playwright specs in `tests/e2e/li
 | `live/workflow.spec.ts` | Contact → deal → meeting (linked to the deal) → activity (linked to the meeting); edits of all four that survive a reload; a stage move shown in the deal's audit history; deletes of the contact, deal and meeting blocked while a linked record exists; deletion in reverse order, each confirmed by a 404 |
 | `live/contacts.spec.ts` | Company and person linked by workplace, edit, search, duplicate warning and rejection, blocked company delete, deletion. It replaces the earlier `E2E_CONTACT_WRITES` case in `contacts.spec.ts` |
 | `live/lists.spec.ts` | A page past the end on all six lists redirects to the last page with its filter kept and no error panel (read-only) |
-| `live/targets.spec.ts` | On a new, unsaved draft: percentage → amount, amount → percentage, the quarter remainder, an invalid percentage flagged without changing the amount, and the save request blocked |
+| `live/targets.spec.ts` | On a new, unsaved draft: a member's amount split across two verticals, the split status (including over 100%), an unfinished split blocking the save with a message, calculated amounts, the quarter summary, separate quarters, and the save request blocked |
 
 | Check | Result |
 |---|---|
@@ -323,7 +341,7 @@ The TypeScript runner initially could not read Windows user information inside t
 - Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unlinked contact/opportunity deletion is implemented as a user-requested addition with FK protection and retained audit history; active/inactive contact lifecycle remains unresolved.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
-- Allocation percentages round down to the cent and only the resulting amount is stored, so remaining cents must be assigned explicitly before approval. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
+- Allocation percentages split each member's quarter amount; parts round down to the cent, the member's last vertical takes the leftover cents, and only the resulting amounts are stored. Members must still add up to each quarter before approval. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
 - Refund/contribution correction and deletion workflows are not implemented. Application clients cannot edit/delete realized contributions or approved targets.
 - Fixed 28 October 2026 (found in manual testing, 27 October): the target form's "% of quarter" box was a one-shot calculator that dropped a typed but unapplied percentage on save. Each box now shows the share its saved amount represents, typing a percentage updates the amount immediately (the Apply button is gone), invalid percentages are flagged under the box without changing the amount, and removing rows or changing quarter totals keeps every row's percentage correct.
 - Fixed 28 October 2026 (found in signed-in acceptance testing): a list page beyond the last one (for example `/activities?page=5` when one page exists) showed "temporarily unavailable". PostgREST answers such a request with HTTP 416 (`PGRST103`) and no row count; all six list queries now re-read page 1 for the total, so the page redirects to the real last page with its filters kept.

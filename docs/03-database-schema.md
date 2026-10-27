@@ -78,7 +78,7 @@ Expected value and realized support remain separate records. Winning a deal or e
 
 ## Target reconciliation and locking
 
-An annual plan stores its own baseline, each quarter stores its baseline, and the employee × quarter × vertical grid stores allocation amounts once. Percentage inputs are implemented in the Phase 10 form; monetary amounts are canonical, and no second independently editable percentage total is stored.
+An annual plan stores its own baseline, each quarter stores its baseline, and the employee × quarter × vertical grid stores allocation amounts once. The target form enters each member's quarter amount and its vertical percentages and stores only the resulting cell amounts; monetary amounts are canonical, and no second independently editable percentage total is stored.
 
 Draft plans may be incomplete. Approval through `approve_target_plan` checks all of the following in one transaction:
 
