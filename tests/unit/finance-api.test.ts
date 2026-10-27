@@ -176,6 +176,39 @@ describe("financial API boundaries", () => {
       ).status,
     ).toBe(200);
   });
+  it.each([
+    [{ name: "New", is_closed: false, outcome: null }, 200],
+    [{ name: "Won", is_closed: true, outcome: "won" }, 200],
+    [{ name: "Lost", is_closed: true, outcome: "lost" }, 422],
+    [{ name: "Abandoned", is_closed: true, outcome: "abandoned" }, 422],
+    [{ name: "Junk", is_closed: true, outcome: "junk" }, 422],
+  ])("accepts receipts only on open or won deals: %j → %i", async (stage, status) => {
+    repo.opportunity.mockResolvedValue({ id: opportunity, currency: "BDT", contribution_type: "cash", stage });
+    const response = await RECORD(request("POST", receipt));
+    expect(response.status).toBe(status);
+    if (status === 422) {
+      expect((await response.json()).error).toContain(`This deal is ${stage.name}`);
+      expect(repo.record).not.toHaveBeenCalled();
+    }
+  });
+  it("lets members credit only themselves while managers may credit any active employee", async () => {
+    const colleague = "00000000-0000-4000-8000-000000000004";
+    repo.options.mockResolvedValue({
+      employees: [
+        { id: member, active: true },
+        { id: colleague, active: true },
+      ],
+      verticals: [{ id: vertical, active: true }],
+    });
+    const denied = await RECORD(request("POST", { ...receipt, employee_id: colleague }));
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).fields.employee_id[0]).toContain("Credit the contribution to yourself");
+    expect(repo.record).not.toHaveBeenCalled();
+
+    actor.profile.role = "pse_manager";
+    expect((await RECORD(request("POST", { ...receipt, employee_id: colleague }))).status).toBe(200);
+    expect(repo.record).toHaveBeenCalledWith(expect.objectContaining({ employee_id: colleague }), member);
+  });
   it("denies target saves, approval and configuration to ordinary members", async () => {
     for (const response of [
       await SAVE(request("POST", snapshot)),

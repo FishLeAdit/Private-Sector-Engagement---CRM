@@ -37,7 +37,12 @@ afterEach(() => {
 });
 function receipt(type = "cash") {
   render(
-    <ContributionForm opportunity={{ ...opportunity, contribution_type: type }} options={options} userId={member} />,
+    <ContributionForm
+      opportunity={{ ...opportunity, contribution_type: type }}
+      options={options}
+      userId={member}
+      manager={false}
+    />,
   );
   fireEvent.change(screen.getByLabelText("Actual amount received / agreed value *"), { target: { value: "100.01" } });
   fireEvent.change(screen.getByLabelText("Recognition date/time (Asia/Dhaka) *"), {
@@ -79,6 +84,48 @@ describe("contribution review and persistence", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Review contribution" }));
     expect(await screen.findByText("Confirm this financial entry")).toBeTruthy();
+  });
+  it("credits a member's contribution to the member, with no employee choice", async () => {
+    const colleague = "00000000-0000-4000-8000-000000000003";
+    const team = {
+      ...options,
+      employees: [...options.employees, { id: colleague, display_name: "Colleague", active: true }],
+    };
+    // The deal belongs to a colleague, but a member still cannot credit anyone else.
+    render(
+      <ContributionForm
+        opportunity={{ ...opportunity, owner_id: colleague }}
+        options={team}
+        userId={member}
+        manager={false}
+      />,
+    );
+    const field = screen.getByLabelText("Attributed employee *") as HTMLInputElement;
+    expect(field.readOnly).toBe(true);
+    expect(field.value).toBe("Fictional Employee");
+    expect(screen.queryByRole("combobox", { name: "Attributed employee *" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Actual amount received / agreed value *"), { target: { value: "5" } });
+    fireEvent.change(screen.getByLabelText("Recognition date/time (Asia/Dhaka) *"), {
+      target: { value: "2026-10-27T10:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Review contribution" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm and record contribution" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalled());
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).employee_id).toBe(member);
+  });
+  it("lets a manager credit any active employee, starting from the deal's focal person", async () => {
+    const colleague = "00000000-0000-4000-8000-000000000003";
+    const team = {
+      ...options,
+      employees: [...options.employees, { id: colleague, display_name: "Colleague", active: true }],
+    };
+    render(
+      <ContributionForm opportunity={{ ...opportunity, owner_id: colleague }} options={team} userId={member} manager />,
+    );
+    const select = screen.getByRole("combobox", { name: "Attributed employee *" }) as HTMLSelectElement;
+    expect(select.value).toBe(colleague);
+    fireEvent.change(select, { target: { value: member } });
+    expect(select.value).toBe(member);
   });
   it("freezes ambiguous writes and retries the identical submission ID/payload", async () => {
     fetcher.mockRejectedValueOnce(new Error("Connection lost"));

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { contributionPage } from "@/features/contributions/context";
+import { acceptsContributions } from "@/features/contributions/service";
 import { financeData } from "@/features/finance/context";
 import { ContributionForm } from "@/components/contributions/contribution-form";
 import { FinanceProblem } from "@/components/finance/problem";
+import { isPseManager } from "@/lib/auth/roles";
 export default async function Page({ searchParams }: { searchParams: Promise<{ opportunity_id?: string }> }) {
   const { service, access } = await contributionPage();
   const { id } = { id: (await searchParams).opportunity_id };
@@ -18,13 +20,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
     );
   const result = await financeData(() => Promise.all([service.opportunity(id), service.options()]));
   if (!result.ok) return <FinanceProblem message={result.error.message} />;
+  const [opportunity, options] = result.data;
   return (
     <>
       <Link href={`/opportunities/${id}`} className="link text-sm">
         ← Opportunity
       </Link>
       <h1 className="mb-7 mt-4 text-3xl font-bold">Record contribution</h1>
-      <ContributionForm opportunity={result.data[0]} options={result.data[1]} userId={access.userId} />
+      {acceptsContributions(opportunity.stage) ? (
+        <ContributionForm
+          opportunity={opportunity}
+          options={options}
+          userId={access.userId}
+          manager={isPseManager(access.profile)}
+        />
+      ) : (
+        <p role="alert" className="max-w-3xl rounded-lg bg-warning/10 p-4">
+          {opportunity.deal_name} is {opportunity.stage?.name}. Contributions can only be recorded on open or won deals;
+          receipts recorded before the deal closed stay counted.
+        </p>
+      )}
     </>
   );
 }

@@ -28,7 +28,9 @@ export function createContributionRepository(client: SupabaseClient<Database>) {
     async opportunity(id: string) {
       const { data, error } = await client
         .from("opportunities")
-        .select("id,deal_name,owner_id,currency,contribution_type,expected_amount")
+        .select(
+          "id,deal_name,owner_id,currency,contribution_type,expected_amount,stage:stage_id(name,is_closed,outcome)",
+        )
         .eq("id", id)
         .maybeSingle();
       if (error) financeDatabaseError(error);

@@ -9,10 +9,12 @@ export function ContributionForm({
   opportunity,
   options,
   userId,
+  manager,
 }: {
   opportunity: Opportunity;
   options: FinanceOptions;
   userId: string;
+  manager: boolean;
 }) {
   const router = useRouter(),
     requestId = useRef<string | null>(null);
@@ -21,9 +23,9 @@ export function ContributionForm({
     [review, setReview] = useState(false),
     [retryOnly, setRetryOnly] = useState(false);
   const snapshot = useRef<unknown>(null);
-  const defaultEmployee = options.employees.some(e => e.id === opportunity.owner_id && e.active)
-    ? opportunity.owner_id
-    : userId;
+  // Members credit themselves; a manager may credit anyone and starts from the deal's focal person.
+  const defaultEmployee =
+    manager && options.employees.some(e => e.id === opportunity.owner_id && e.active) ? opportunity.owner_id : userId;
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -108,18 +110,37 @@ export function ContributionForm({
           Recognition date/time (Asia/Dhaka) *
           <input name="recognized_at" type="datetime-local" required className="input input-bordered mt-2 w-full" />
         </label>
-        <label className="block text-sm">
-          Attributed employee *
-          <select name="employee_id" defaultValue={defaultEmployee} className="select select-bordered mt-2 w-full">
-            {options.employees
-              .filter(e => e.active)
-              .map(e => (
-                <option key={e.id} value={e.id}>
-                  {e.display_name}
-                </option>
-              ))}
-          </select>
-        </label>
+        {manager ? (
+          <label className="block text-sm">
+            Attributed employee *
+            <select name="employee_id" defaultValue={defaultEmployee} className="select select-bordered mt-2 w-full">
+              {options.employees
+                .filter(e => e.active)
+                .map(e => (
+                  <option key={e.id} value={e.id}>
+                    {e.display_name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        ) : (
+          <div className="text-sm">
+            <label htmlFor="contribution-employee" className="block">
+              Attributed employee *
+            </label>
+            <input type="hidden" name="employee_id" value={userId} />
+            <input
+              id="contribution-employee"
+              readOnly
+              aria-describedby="contribution-employee-hint"
+              className="input input-bordered mt-2 w-full bg-base-200"
+              value={options.employees.find(e => e.id === userId)?.display_name ?? "You"}
+            />
+            <p id="contribution-employee-hint" className="mt-1 text-xs text-base-content/60">
+              Contributions are credited to you. A PSE manager can record one for another employee.
+            </p>
+          </div>
+        )}
         <label className="block text-sm">
           Target vertical (optional)
           <select name="target_vertical_id" className="select select-bordered mt-2 w-full">

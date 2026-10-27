@@ -285,4 +285,54 @@ describe("contribution receipt and accurate plan actuals", () => {
       ).rows[0].amount,
     ).toBe("250.00");
   });
+  it("refuses new receipts on closed deals that were not won, but keeps earlier ones", async () => {
+    const stage = (name: string) =>
+      db
+        .query<{ id: string }>("select id from public.pipeline_stages where name=$1", [name])
+        .then(result => result.rows[0].id);
+    const move = async (name: string) => {
+      const stageId = await stage(name);
+      await asActor(db, ids.manager, tx =>
+        tx.query("update public.opportunities set stage_id=$1 where id=$2", [stageId, ids.usdOpportunity]),
+      );
+    };
+    const receipts = () =>
+      db
+        .query("select id from public.recognized_contributions where opportunity_id=$1", [ids.usdOpportunity])
+        .then(result => result.rows.length);
+    const usd = { ...contribution(), opportunity_id: ids.usdOpportunity, currency: "USD", target_vertical_id: null };
+    const before = await receipts();
+    expect(before).toBeGreaterThan(0);
+    for (const closed of ["Lost", "Abandoned"]) {
+      // A deal with receipts can still close; only new receipts are refused.
+      await move(closed);
+      await expect(record(uuid(), usd)).rejects.toMatchObject({
+        code: "23514",
+        message: expect.stringMatching(/open or won/),
+      });
+      expect(await receipts()).toBe(before);
+    }
+    await move("Won");
+    await record(uuid(), usd);
+    await move("Pending");
+    await record(uuid(), usd);
+    expect(await receipts()).toBe(before + 2);
+  });
+  it("lets members credit only themselves and managers credit any active employee", async () => {
+    const forColleague = { ...contribution(), employee_id: ids.colleague };
+    await expect(record(uuid(), forColleague)).rejects.toMatchObject({ code: "42501" });
+    await expect(
+      asActor(db, ids.member, tx =>
+        tx.query(
+          "insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) values($1,$2,1,'2026-05-01Z','cash')",
+          [ids.cashOpportunity, ids.colleague],
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "42501" });
+    const id = uuid();
+    await record(id, forColleague, ids.manager);
+    expect(
+      (await db.query("select employee_id,recorded_by from public.recognized_contributions where id=$1", [id])).rows,
+    ).toEqual([{ employee_id: ids.colleague, recorded_by: ids.manager }]);
+  });
 });

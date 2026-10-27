@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Json } from "@/types/database.types";
+import { acceptsContributions } from "@/features/contributions/service";
 import { opportunityPageContext, opportunityPageData } from "@/features/opportunities/context";
 import { canEditOpportunity } from "@/features/opportunities/service";
 import { DeleteOpportunityButton } from "@/components/opportunities/delete-opportunity-button";
@@ -53,9 +54,11 @@ export default async function OpportunityDetailsPage({
           <h1 className="break-words text-3xl font-bold">{row.deal_name}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/contributions/new?opportunity_id=${id}`} className="btn btn-primary">
-            Record contribution
-          </Link>
+          {acceptsContributions(row.stage) && (
+            <Link href={`/contributions/new?opportunity_id=${id}`} className="btn btn-primary">
+              Record contribution
+            </Link>
+          )}
           <Link href={`/contributions?opportunity_id=${id}`} className="btn btn-ghost">
             View contributions
           </Link>
