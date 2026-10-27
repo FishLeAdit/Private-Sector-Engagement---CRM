@@ -2,13 +2,14 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
+import { buildAllocations, gridFromAllocations, usedVerticals } from "@/features/targets/allocation-grid";
 import { targetSchema, type TargetInput } from "@/features/targets/schemas";
-import { cents, decimal, percentAmount, percentOf } from "@/lib/money";
+import { cents, decimal } from "@/lib/money";
 import { sendJson } from "@/lib/send-json";
-import { AllocationRow } from "./allocation-row";
+import { AllocationGrid } from "./allocation-grid";
 
-// Annual target → four quarter baselines → employee × vertical cells. Drafts may be incomplete;
-// the plan's ID doubles as the request ID so a retried save updates the same draft.
+// Annual target → four quarter baselines → member amounts → vertical percentages. Drafts may be
+// incomplete; the plan's ID doubles as the request ID so a retried save updates the same draft.
 export function TargetForm({
   initial,
   options,
@@ -33,34 +34,15 @@ export function TargetForm({
     ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  // The percentage box currently being typed in. Every other box shows its row's amount as a share of the quarter.
-  const [typing, setTyping] = useState<{ index: number; text: string; error: string } | null>(null);
-  const quarterTarget = (quarter: number) => draft.quarters.find(q => q.quarter === quarter)?.amount ?? "";
+  // The member × vertical split being edited; it becomes draft.allocations only when saving.
+  const [grid, setGrid] = useState(() => gridFromAllocations(draft.allocations));
+  const used = usedVerticals(grid);
+  const verticalIds = options.verticals.filter(v => v.active || used.has(v.id)).map(v => v.id);
+  const quarterTargets = Object.fromEntries(draft.quarters.map(q => [q.quarter, q.amount]));
 
-  function allocation(index: number, values: Partial<TargetInput["allocations"][number]>) {
-    setDraft(d => ({ ...d, allocations: d.allocations.map((a, i) => (i === index ? { ...a, ...values } : a)) }));
-  }
-  // Typing a percentage sets the amount straight away, so nothing typed can be lost on save.
-  function typePercentage(index: number, text: string) {
-    const value = text.trim();
-    let problem = "";
-    // Empty, or a trailing dot still being typed, leaves the amount as it is.
-    if (value && !/^\d{1,3}\.$/.test(value)) {
-      const target = quarterTarget(draft.allocations[index].quarter);
-      try {
-        allocation(index, { amount: percentAmount(target, value) });
-      } catch (failure) {
-        problem = /^\d+(\.\d{1,2})?$/.test(target) ? (failure as Error).message : "Enter a valid quarter target first.";
-      }
-    }
-    setTyping({ index, text, error: problem });
-  }
-  function remainder(quarter?: number) {
+  function annualRemainder() {
     try {
-      const total = draft.allocations.filter(a => a.quarter === quarter).reduce((sum, a) => sum + cents(a.amount), 0n);
-      return quarter
-        ? decimal(cents(draft.quarters.find(q => q.quarter === quarter)!.amount) - total)
-        : decimal(cents(draft.annual_amount) - draft.quarters.reduce((sum, q) => sum + cents(q.amount), 0n));
+      return decimal(cents(draft.annual_amount) - draft.quarters.reduce((sum, q) => sum + cents(q.amount), 0n));
     } catch {
       return "Enter valid amounts";
     }
@@ -68,8 +50,14 @@ export function TargetForm({
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
+    const name = (employee: string) => options.employees.find(e => e.id === employee)?.display_name ?? "Employee";
+    const { allocations, problems } = buildAllocations(grid, verticalIds, name);
+    if (problems.length) {
+      setError(problems.join("\n"));
+      return;
+    }
     id.current ||= crypto.randomUUID();
-    const parsed = targetSchema.safeParse({ ...draft, request_id: id.current });
+    const parsed = targetSchema.safeParse({ ...draft, allocations, request_id: id.current });
     if (!parsed.success) {
       setError(parsed.error.issues.map(i => i.message).join(" "));
       return;
@@ -106,7 +94,8 @@ export function TargetForm({
         Save an incomplete draft as you work. Approval requires reconciled annual, quarterly and employee/vertical
         amounts and permanently locks the plan.
       </p>
-      <fieldset disabled={busy} className="space-y-6">
+      {/* min-w-0: a fieldset otherwise grows to its widest content, so the grid's table could not scroll. */}
+      <fieldset disabled={busy} className="min-w-0 space-y-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="text-sm">
             Year *
@@ -141,7 +130,7 @@ export function TargetForm({
         <section className="space-y-4 rounded-lg border border-base-300 p-5">
           <h2 className="text-lg font-semibold">Quarter baselines</h2>
           <p className="text-sm">
-            Distribute the annual target unevenly if needed. Annual amount left to allocate: {remainder()}{" "}
+            Distribute the annual target unevenly if needed. Annual amount left to allocate: {annualRemainder()}{" "}
             {draft.currency}
           </p>
           <div className="grid gap-4 sm:grid-cols-4">
@@ -166,54 +155,26 @@ export function TargetForm({
           </div>
         </section>
         <section className="space-y-4 rounded-lg border border-base-300 p-5">
-          <h2 className="text-lg font-semibold">Employee × vertical allocations</h2>
+          <h2 className="text-lg font-semibold">Member and vertical allocations</h2>
           <p className="text-sm text-base-content/65">
-            Add a row for each employee/vertical pair in a quarter. Enter either the amount or a percentage of that
-            quarter’s target; the other updates to match. Percentages round down to the cent, so assign any remaining
-            cents explicitly before approval. The amount is what gets saved.
+            For each quarter, give each member their amount, then split it across verticals by percentage; a member’s
+            split must total 100%. Amounts are calculated and rounded down to the cent, with any leftover cents on the
+            member’s last vertical, so they always add up. The calculated amounts are what gets saved.
           </p>
-          {[1, 2, 3, 4].map(q => (
-            <p key={q} className="text-sm">
-              Q{q} left to allocate: {remainder(q)} {draft.currency}
-            </p>
-          ))}
-          {!options.verticals.some(v => v.active) && (
+          {!options.verticals.some(v => v.active) ? (
             <p role="alert" className="text-warning">
               Configure active target verticals before allocating. Final terminology remains a PSE decision.
             </p>
+          ) : (
+            <AllocationGrid
+              grid={grid}
+              onChange={setGrid}
+              quarterTargets={quarterTargets}
+              currency={draft.currency}
+              options={options}
+              verticalIds={verticalIds}
+            />
           )}
-          <div className="space-y-4">
-            {draft.allocations.map((a, index) => (
-              <AllocationRow
-                key={index}
-                index={index}
-                allocation={a}
-                options={options}
-                percentage={typing?.index === index ? typing.text : percentOf(a.amount, quarterTarget(a.quarter))}
-                percentageError={typing?.index === index ? typing.error : ""}
-                onChange={values => allocation(index, values)}
-                onPercentageChange={value => typePercentage(index, value)}
-                onPercentageBlur={() => setTyping(null)}
-                onRemove={() => {
-                  setDraft(d => ({ ...d, allocations: d.allocations.filter((_, i) => i !== index) }));
-                  setTyping(null);
-                }}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            disabled={draft.allocations.length >= 4000}
-            onClick={() =>
-              setDraft(d => ({
-                ...d,
-                allocations: [...d.allocations, { quarter: 1, employee_id: "", vertical_id: "", amount: "0.00" }],
-              }))
-            }
-          >
-            Add allocation
-          </button>
         </section>
       </fieldset>
       {error && (

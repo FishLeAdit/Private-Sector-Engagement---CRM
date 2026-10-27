@@ -49,7 +49,23 @@ export function percentOf(amount: string, total: string) {
 
 // Rounds down to the cent; the caller shows any remainder so a manager can assign it explicitly.
 export function percentAmount(amount: string, percentage: string) {
+  return decimal((cents(amount) * percentHundredths(percentage)) / 10000n);
+}
+
+// A percentage in hundredths of a percent: "12.5" → 1250n, "100" → 10000n.
+export function percentHundredths(percentage: string) {
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(percentage) || cents(percentage) > 10000n)
     throw new Error("Use a percentage from 0 to 100 with at most two decimals.");
-  return decimal((cents(amount) * cents(percentage)) / 10000n);
+  return cents(percentage);
+}
+
+// Splits an amount by percentages that total exactly 100. Each part rounds down to the cent and the last
+// nonzero share takes the leftover cents, so the parts always add up to the amount.
+export function splitAmount(amount: string, percentages: string[]) {
+  const total = cents(amount);
+  const shares = percentages.map(percentHundredths);
+  if (shares.reduce((sum, share) => sum + share, 0n) !== 10000n) throw new Error("Percentages must total 100.");
+  const parts = shares.map(share => (total * share) / 10000n);
+  parts[shares.findLastIndex(share => share > 0n)] += total - parts.reduce((sum, part) => sum + part, 0n);
+  return parts.map(decimal);
 }

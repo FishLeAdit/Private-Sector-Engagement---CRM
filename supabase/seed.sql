@@ -111,7 +111,7 @@ insert into public.target_quarters (plan_id, quarter, amount) values
 ('60000000-0000-4000-8000-000000000001', 4, 350000);
 
 -- Each quarter: Member A/DSP 50%, Member B/VBD 20%, Member B/Project 30%.
--- Amounts are canonical. UI percentage conversion/rounding is a later workflow.
+-- Amounts are canonical; the target form shows each member's amount and vertical percentages derived from them.
 insert into public.target_allocations (plan_id, quarter, employee_id, vertical_id, amount)
 select q.plan_id, q.quarter, dimensions.employee_id::uuid, dimensions.vertical_id::uuid, q.amount * dimensions.share
 from public.target_quarters q cross join (values

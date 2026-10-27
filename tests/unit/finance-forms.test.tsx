@@ -5,6 +5,7 @@ import { ContributionForm } from "../../src/components/contributions/contributio
 import { TargetForm } from "../../src/components/targets/target-form";
 import { ApproveTarget } from "../../src/components/targets/approve-target";
 import type { FinanceOptions } from "../../src/features/finance/types";
+import type { TargetInput } from "../../src/features/targets/schemas";
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 const member = "00000000-0000-4000-8000-000000000002",
@@ -152,88 +153,158 @@ describe("target entry and locked approval", () => {
       expected_updated_at: "",
     });
   });
-  it("calculates percentages in cents and displays the unallocated remainder", () => {
-    render(<TargetForm options={options} year={2026} />);
-    fireEvent.change(screen.getByLabelText("Annual target *"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("Q1 target"), { target: { value: "10" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add allocation" }));
-    fireEvent.change(screen.getByLabelText("Allocation 1 percentage"), { target: { value: "33.33" } });
-    expect((screen.getByLabelText("Allocation 1 amount") as HTMLInputElement).value).toBe("3.33");
-    expect(screen.getByText("Q1 left to allocate: 6.67 BDT")).toBeTruthy();
-  });
 });
 
-describe("allocation percentages stay in step with saved amounts", () => {
-  const draft = {
+describe("member amounts split across verticals by percentage", () => {
+  const vbd = "50000000-0000-4000-8000-000000000002",
+    colleague = "00000000-0000-4000-8000-000000000003";
+  const team: FinanceOptions = {
+    employees: [...options.employees, { id: colleague, display_name: "Fictional Colleague", active: true }],
+    verticals: [...options.verticals, { ...options.verticals[0], id: vbd, code: "VBD", name: "Second Vertical" }],
+  };
+  const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+  const type = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
+  // The calculated amount shown under a percentage box.
+  const shown = (label: string) => document.getElementById(field(label).getAttribute("aria-describedby")!)!.textContent;
+  const saved = () => JSON.parse(fetcher.mock.calls[0][1].body).allocations;
+  const save = () => fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  const draft = (allocations: TargetInput["allocations"]): TargetInput => ({
     request_id: id,
     expected_updated_at: "2026-10-27T04:00:00Z",
     year: 2026,
     currency: "BDT",
-    annual_amount: "600000",
-    quarters: [
-      { quarter: 1, amount: "150000" },
-      { quarter: 2, amount: "150000" },
-      { quarter: 3, amount: "150000" },
-      { quarter: 4, amount: "150000" },
-    ],
-    allocations: [
-      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "75000" },
-      { quarter: 2, employee_id: member, vertical_id: vertical, amount: "30000" },
-    ],
-  };
-  const percentage = (row: number) => screen.getByLabelText(`Allocation ${row} percentage`) as HTMLInputElement;
-  const amount = (row: number) => screen.getByLabelText(`Allocation ${row} amount`) as HTMLInputElement;
-
-  it("shows the share each saved amount already represents", () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    expect(percentage(1).value).toBe("50");
-    expect(percentage(2).value).toBe("20");
+    annual_amount: "1000",
+    quarters: [1, 2, 3, 4].map(quarter => ({ quarter, amount: "250" })),
+    allocations,
   });
 
-  it("saves a typed percentage without any extra step", async () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    fireEvent.change(percentage(1), { target: { value: "12" } });
-    expect(amount(1).value).toBe("18000.00");
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  it("splits each member's amount by vertical percentage and saves the calculated cells", async () => {
+    render(<TargetForm options={team} year={2026} />);
+    type("Annual target *", "1000");
+    type("Q1 target", "1000");
+    type("Q1 Fictional Employee amount", "600");
+    type("Q1 Fictional Employee Fictional Vertical %", "50");
+    expect(screen.getByText("50% (50% left)")).toBeTruthy();
+    type("Q1 Fictional Employee Second Vertical %", "50");
+    expect(shown("Q1 Fictional Employee Fictional Vertical %")).toBe("300.00");
+    expect(shown("Q1 Fictional Employee Second Vertical %")).toBe("300.00");
+    expect(
+      screen.getByText("Q1 target BDT 1,000.00 · allocated to members BDT 600.00 · left to allocate BDT 400.00"),
+    ).toBeTruthy();
+    save();
     await waitFor(() => expect(navigation.push).toHaveBeenCalled());
-    expect(JSON.parse(fetcher.mock.calls[0][1].body).allocations[0].amount).toBe("18000.00");
+    expect(saved()).toEqual([
+      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "300.00" },
+      { quarter: 1, employee_id: member, vertical_id: vbd, amount: "300.00" },
+    ]);
   });
+  it("puts leftover cents on the member's last vertical so the cells add up", async () => {
+    render(<TargetForm options={team} year={2026} />);
+    type("Annual target *", "1");
+    type("Q1 Fictional Employee amount", "0.05");
+    type("Q1 Fictional Employee Fictional Vertical %", "50");
+    type("Q1 Fictional Employee Second Vertical %", "50");
+    expect(shown("Q1 Fictional Employee Fictional Vertical %")).toBe("0.02");
+    expect(shown("Q1 Fictional Employee Second Vertical %")).toBe("0.03");
+    save();
+    await waitFor(() => expect(navigation.push).toHaveBeenCalled());
+    expect(saved().map((cell: { amount: string }) => cell.amount)).toEqual(["0.02", "0.03"]);
+  });
+  it("blocks saving until a member's split totals 100%", () => {
+    render(<TargetForm options={team} year={2026} />);
+    type("Annual target *", "1000");
+    type("Q1 Fictional Employee amount", "600");
+    type("Q1 Fictional Employee Fictional Vertical %", "60");
+    expect(screen.getByText("60% (40% left)")).toBeTruthy();
+    save();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Q1 · Fictional Employee: the vertical split totals 60%; it must total 100%.",
+    );
+    type("Q1 Fictional Employee Fictional Vertical %", "150");
+    expect(screen.getAllByRole("alert").some(alert => alert.textContent?.includes("Use 0–100"))).toBe(true);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("asks for the member's amount when only percentages are entered", () => {
+    render(<TargetForm options={team} year={2026} />);
+    type("Annual target *", "1000");
+    type("Q1 Fictional Colleague Second Vertical %", "100");
+    save();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Q1 · Fictional Colleague: enter the member's amount for this quarter.",
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("re-saves an untouched draft's cells exactly, even when percentages cannot express them", async () => {
+    const cells = [
+      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "100.01" },
+      { quarter: 1, employee_id: member, vertical_id: vbd, amount: "200.00" },
+      { quarter: 2, employee_id: colleague, vertical_id: vertical, amount: "250.00" },
+    ];
+    render(<TargetForm initial={draft(cells)} options={team} year={2026} />);
+    expect(field("Q1 Fictional Employee amount").value).toBe("300.01");
+    expect(field("Q1 Fictional Employee Fictional Vertical %").value).toBe("33.34");
+    expect(field("Q1 Fictional Employee Second Vertical %").value).toBe("66.66");
+    expect(shown("Q1 Fictional Employee Fictional Vertical %")).toBe("100.01");
+    fireEvent.click(screen.getByRole("button", { name: "Q2" }));
+    expect(field("Q2 Fictional Colleague amount").value).toBe("250.00");
+    expect(field("Q2 Fictional Colleague Fictional Vertical %").value).toBe("100");
+    save();
+    await waitFor(() => expect(navigation.push).toHaveBeenCalled());
+    expect(saved()).toEqual(cells);
+  });
+  it("recalculates a member's cells from amount and percentages once the row is edited", async () => {
+    const cells = [
+      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "100.01" },
+      { quarter: 1, employee_id: member, vertical_id: vbd, amount: "200.00" },
+    ];
+    render(<TargetForm initial={draft(cells)} options={team} year={2026} />);
+    type("Q1 Fictional Employee Fictional Vertical %", "50");
+    type("Q1 Fictional Employee Second Vertical %", "50");
+    save();
+    await waitFor(() => expect(navigation.push).toHaveBeenCalled());
+    expect(saved()).toEqual([
+      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "150.00" },
+      { quarter: 1, employee_id: member, vertical_id: vbd, amount: "150.01" },
+    ]);
+  });
+  it("keeps member amounts when a quarter target changes and updates what is left", () => {
+    render(
+      <TargetForm
+        initial={draft([{ quarter: 1, employee_id: member, vertical_id: vertical, amount: "250.00" }])}
+        options={team}
+        year={2026}
+      />,
+    );
+    type("Q1 target", "400");
+    expect(field("Q1 Fictional Employee amount").value).toBe("250.00");
+    expect(
+      screen.getByText("Q1 target BDT 400.00 · allocated to members BDT 250.00 · left to allocate BDT 150.00"),
+    ).toBeTruthy();
+    type("Q1 target", "200");
+    expect(
+      screen.getByText("Q1 target BDT 200.00 · allocated to members BDT 250.00 · over-allocated by BDT 50.00"),
+    ).toBeTruthy();
+  });
+  it("shows an inactive member only while a saved share still uses them", () => {
+    const inactive: FinanceOptions = {
+      ...team,
+      employees: [team.employees[0], { ...team.employees[1], active: false }],
+    };
+    const { unmount } = render(<TargetForm options={inactive} year={2026} />);
+    expect(screen.queryByText(/Fictional Colleague/)).toBeNull();
+    unmount();
+    render(
+      <TargetForm
+        initial={draft([{ quarter: 1, employee_id: colleague, vertical_id: vertical, amount: "250.00" }])}
+        options={inactive}
+        year={2026}
+      />,
+    );
+    expect(screen.getByRole("rowheader", { name: "Fictional Colleague (inactive)" })).toBeTruthy();
+  });
+});
 
-  it("keeps the typed text while editing and shows the saved share afterwards", () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    fireEvent.change(percentage(1), { target: { value: "12." } });
-    expect(percentage(1).value).toBe("12.");
-    expect(amount(1).value).toBe("75000");
-    fireEvent.change(percentage(1), { target: { value: "12.5" } });
-    fireEvent.blur(percentage(1));
-    expect(percentage(1).value).toBe("12.5");
-    expect(amount(1).value).toBe("18750.00");
-  });
-
-  it("flags an invalid percentage and leaves the amount unchanged", () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    fireEvent.change(percentage(1), { target: { value: "150" } });
-    expect(screen.getByRole("alert").textContent).toContain("Use a percentage from 0 to 100");
-    expect(percentage(1).getAttribute("aria-invalid")).toBe("true");
-    expect(amount(1).value).toBe("75000");
-    fireEvent.blur(percentage(1));
-    expect(percentage(1).value).toBe("50");
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("keeps other rows' percentages when a row is removed", () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    fireEvent.click(screen.getByRole("button", { name: "Remove allocation 1" }));
-    expect(amount(1).value).toBe("30000");
-    expect(percentage(1).value).toBe("20");
-  });
-
-  it("recalculates percentages when a quarter target changes, keeping the saved amounts", () => {
-    render(<TargetForm initial={draft} options={options} year={2026} />);
-    fireEvent.change(screen.getByLabelText("Q1 target"), { target: { value: "300000" } });
-    expect(percentage(1).value).toBe("25");
-    expect(amount(1).value).toBe("75000");
-  });
+describe("target drafts and locked approval", () => {
   it("preserves entered amounts after a stale-version conflict", async () => {
     fetcher.mockResolvedValueOnce(Response.json({ error: "Draft has changed. Reload and review." }, { status: 409 }));
     render(<TargetForm options={options} year={2026} />);
