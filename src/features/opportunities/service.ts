@@ -1,7 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
-import { isActivePseProfile, isPseManager } from "@/lib/auth/roles";
+import { assertVerifiedPse, isVerifiedPse } from "@/lib/auth/guards";
+import { isPseManager } from "@/lib/auth/roles";
+import { parseOrThrow, requireUuid } from "@/lib/validation";
 import {
   configurationSchema,
   opportunityListSchema,
@@ -18,22 +20,13 @@ import {
 } from "./types";
 import { provisionalCategories, provisionalStages } from "./defaults";
 
-function parse<T>(schema: z.ZodType<T>, input: unknown): T {
-  const parsed = schema.safeParse(input);
-  if (parsed.success) return parsed.data;
-  const fields: Record<string, string[]> = {};
-  for (const issue of parsed.error.issues) (fields[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
-  throw new OpportunityError(422, "Review the opportunity details.", fields);
-}
-function validId(id: string) {
-  if (!z.uuid().safeParse(id).success) throw new OpportunityError(400, "Invalid opportunity ID.");
-  return id;
-}
+const parse = <T>(schema: z.ZodType<T>, input: unknown) =>
+  parseOrThrow(schema, input, OpportunityError, "Review the opportunity details.");
+const validId = (id: string) => requireUuid(id, OpportunityError, "Invalid opportunity ID.");
+
 export function canEditOpportunity(access: AccessResult, record: Pick<OpportunityRecord, "owner_id" | "created_by">) {
   return (
-    access.status === "allowed" &&
-    isActivePseProfile(access.profile) &&
-    access.userId === access.profile.id &&
+    isVerifiedPse(access) &&
     (record.owner_id === access.userId || record.created_by === access.userId || isPseManager(access.profile))
   );
 }
@@ -78,14 +71,10 @@ function writeValues(input: OpportunityInput): OpportunityWrite {
 }
 export function createOpportunitiesService(repository: OpportunityRepository, access: AccessResult) {
   function authorize(manager = false) {
-    if (access.status !== "allowed" || !isActivePseProfile(access.profile) || access.userId !== access.profile.id)
-      throw new OpportunityError(
-        access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403,
-        "PSE access is required.",
-      );
-    if (manager && !isPseManager(access.profile))
+    const actor = assertVerifiedPse(access, OpportunityError, "PSE access is required.");
+    if (manager && !isPseManager(actor.profile))
       throw new OpportunityError(403, "Only an authorized manager may configure the pipeline.");
-    return access;
+    return actor;
   }
   async function requireOpportunity(id: string) {
     const row = await repository.find(validId(id));

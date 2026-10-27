@@ -1,4 +1,5 @@
 import type { Tables, TablesInsert } from "@/types/database.types";
+import { AppError, type FieldErrors } from "@/lib/errors";
 import type { ContactListInput } from "./schemas";
 
 export type ContactRow = Tables<"contacts">;
@@ -31,14 +32,14 @@ export interface ContactRepository {
   history(id: string): Promise<ContactHistory>;
 }
 
-export class ContactError extends Error {
+export class ContactError extends AppError {
   constructor(
-    public status: number,
+    status: number,
     message: string,
-    public fields: Record<string, string[]> = {},
+    fields: FieldErrors = {},
     public duplicates: DuplicateContact[] = [],
   ) {
-    super(message);
+    super(status, message, fields);
     this.name = "ContactError";
   }
 }

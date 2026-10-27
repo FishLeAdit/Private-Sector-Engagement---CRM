@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { financePage, financeData } from "@/features/finance/context";
 import { FinanceProblem } from "@/components/finance/problem";
+import { Pagination } from "@/components/ui/pagination";
 import { isPseManager } from "@/lib/auth/roles";
-import { money } from "@/features/finance/money";
+import { listHref, pageCount } from "@/lib/list-href";
+import { money } from "@/lib/money";
 export default async function Page({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { service, access } = await financePage();
   const parsed = z.coerce
@@ -17,9 +19,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   const page = parsed.data,
     result = await financeData(() => service.plans({ page }));
   if (!result.ok) return <FinanceProblem message={result.error.message} />;
-  const { plans, count } = result.data,
-    pages = Math.max(1, Math.ceil(count / 20));
-  if (page > pages) redirect(`/targets?page=${pages}`);
+  const { plans, count } = result.data;
+  const pages = pageCount(count, 20);
+  const link = (page: number) => listHref("/targets", {}, page);
+  if (page > pages) redirect(link(pages));
   return (
     <>
       <div className="mb-6 flex flex-wrap justify-between gap-4">
@@ -67,23 +70,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           <p className="p-8 text-center">No target plans yet. An authorized manager can create the first draft.</p>
         )}
       </div>
-      <div className="mt-5 flex justify-between gap-4 text-sm">
-        <p>
-          {count} plans · Page {page} of {pages}
-        </p>
-        <nav className="flex gap-3" aria-label="Target pages">
-          {page > 1 && (
-            <Link href={`/targets?page=${page - 1}`} className="btn btn-outline btn-sm">
-              Previous
-            </Link>
-          )}
-          {page < pages && (
-            <Link href={`/targets?page=${page + 1}`} className="btn btn-outline btn-sm">
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination summary={`${count} plans`} page={page} pages={pages} label="Target pages" href={link} />
     </>
   );
 }

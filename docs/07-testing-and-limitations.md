@@ -236,6 +236,7 @@ The TypeScript runner initially could not read Windows user information inside t
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
 - Refund/contribution correction and deletion workflows are not implemented. Application clients cannot edit/delete realized contributions or approved targets.
+- Known issue (found in manual testing, 27 October 2026; fix pending): the target form's "% of quarter" box is a one-shot calculator. It starts blank, does not show the share the saved amount represents, and only changes the amount when "Apply percentage" is clicked. A typed but unapplied percentage is discarded on save without warning, removing any row clears every typed percentage, and changing a quarter total does not refresh the percentages. Saved amounts and approval reconciliation are unaffected. Planned fix: derive the percentage from the amount and quarter total, and update the amount immediately when a percentage is typed.
 - The seed contains fixed fictional Auth/profile identifiers, not login credentials. Hosted import requires trusted identity provisioning and reviewed mappings. No real JAAGO/Odoo data was migrated.
 
 ## Earlier scaffold verification

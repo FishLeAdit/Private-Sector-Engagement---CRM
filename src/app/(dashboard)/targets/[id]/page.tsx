@@ -4,7 +4,7 @@ import { financePage, financeData } from "@/features/finance/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { ApproveTarget } from "@/components/finance/approve-target";
 import { isPseManager } from "@/lib/auth/roles";
-import { cents, money, performance } from "@/features/finance/money";
+import { cents, money, targetPerformance } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service, access } = await financePage();
@@ -16,7 +16,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
   const [{ plan, allocations, actuals, audits }, options] = result.data;
   const manager = isPseManager(access.profile),
-    annual = performance(
+    annual = targetPerformance(
       cents(plan.annual_amount),
       actuals.reduce((sum, a) => sum + cents(a.amount), 0n),
     );
@@ -81,7 +81,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </thead>
           <tbody>
             {[1, 2, 3, 4].map(q => {
-              const p = performance(
+              const p = targetPerformance(
                 cents(plan.quarters.find(row => row.quarter === q)?.amount ?? 0),
                 actuals.filter(a => a.quarter === q).reduce((sum, a) => sum + cents(a.amount), 0n),
               );
@@ -116,7 +116,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             {keys.map(key => {
               const [q, employee, vertical] = key.split(":"),
                 quarter = Number(q),
-                p = performance(
+                p = targetPerformance(
                   allocations
                     .filter(a => a.quarter === quarter && a.employee_id === employee && a.vertical_id === vertical)
                     .reduce((sum, a) => sum + cents(a.amount), 0n),

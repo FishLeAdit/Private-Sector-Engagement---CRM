@@ -1,7 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
-import { isActivePseProfile, isPseManager } from "@/lib/auth/roles";
+import { assertVerifiedPse, isVerifiedPse } from "@/lib/auth/guards";
+import { isPseManager } from "@/lib/auth/roles";
+import { parseOrThrow, requireUuid } from "@/lib/validation";
 import {
   followUpSchema,
   meetingListSchema,
@@ -12,22 +14,13 @@ import {
 } from "./schemas";
 import { MeetingError, type MeetingRecord, type MeetingRepository, type MeetingWrite } from "./types";
 
-function parse<T>(schema: z.ZodType<T>, input: unknown): T {
-  const parsed = schema.safeParse(input);
-  if (parsed.success) return parsed.data;
-  const fields: Record<string, string[]> = {};
-  for (const issue of parsed.error.issues) (fields[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
-  throw new MeetingError(422, "Review the meeting details.", fields);
-}
-function validId(id: string) {
-  if (!z.uuid().safeParse(id).success) throw new MeetingError(400, "Invalid meeting ID.");
-  return id;
-}
+const parse = <T>(schema: z.ZodType<T>, input: unknown) =>
+  parseOrThrow(schema, input, MeetingError, "Review the meeting details.");
+const validId = (id: string) => requireUuid(id, MeetingError, "Invalid meeting ID.");
+
 export function canEditMeeting(access: AccessResult, meeting: Pick<MeetingRecord, "owner_id" | "created_by">) {
   return (
-    access.status === "allowed" &&
-    isActivePseProfile(access.profile) &&
-    access.userId === access.profile.id &&
+    isVerifiedPse(access) &&
     (meeting.owner_id === access.userId || meeting.created_by === access.userId || isPseManager(access.profile))
   );
 }
@@ -51,14 +44,7 @@ function writeValues(input: MeetingInput): MeetingWrite {
   };
 }
 export function createMeetingsService(repository: MeetingRepository, access: AccessResult) {
-  function authorize() {
-    if (access.status !== "allowed" || !isActivePseProfile(access.profile) || access.userId !== access.profile.id)
-      throw new MeetingError(
-        access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403,
-        "PSE access is required.",
-      );
-    return access;
-  }
+  const authorize = () => assertVerifiedPse(access, MeetingError, "PSE access is required.");
   async function requireMeeting(id: string) {
     const meeting = await repository.find(validId(id));
     if (!meeting) throw new MeetingError(404, "Meeting not found.");

@@ -1,4 +1,5 @@
 import type { Tables, TablesInsert } from "@/types/database.types";
+import { AppError } from "@/lib/errors";
 import type { MeetingContact, MeetingOpportunity, MeetingOwner } from "@/features/meetings/types";
 import type { ActivityListInput } from "./schemas";
 export type ActivityContact = MeetingContact;
@@ -52,13 +53,6 @@ export interface ActivityRepository {
   remove(id: string): Promise<boolean>;
   history(id: string): Promise<ActivityAudit[]>;
 }
-export class ActivityError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public fields: Record<string, string[]> = {},
-  ) {
-    super(message);
-    this.name = "ActivityError";
-  }
+export class ActivityError extends AppError {
+  name = "ActivityError";
 }

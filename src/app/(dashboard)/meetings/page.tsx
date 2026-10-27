@@ -4,7 +4,9 @@ import { meetingPageContext, meetingPageData } from "@/features/meetings/context
 import { MEETING_PAGE_SIZE, meetingListSchema } from "@/features/meetings/schemas";
 import { MeetingProblem } from "@/components/meetings/meeting-state";
 import { meetingContact } from "@/components/meetings/contact-information";
+import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/dates";
+import { listHref, pageCount } from "@/lib/list-href";
 export default async function MeetingsPage({
   searchParams,
 }: {
@@ -23,10 +25,9 @@ export default async function MeetingsPage({
     ]),
   );
   if (!result.ok) return <MeetingProblem message={result.error.message} />;
-  const [{ meetings, count }, options] = result.data,
-    pages = Math.max(1, Math.ceil(count / MEETING_PAGE_SIZE));
-  const link = (page: number) =>
-    `/meetings?${new URLSearchParams(Object.fromEntries(Object.entries({ ...input, page }).map(([key, value]) => [key, String(value)])))}`;
+  const [{ meetings, count }, options] = result.data;
+  const pages = pageCount(count, MEETING_PAGE_SIZE);
+  const link = (page: number) => listHref("/meetings", input, page);
   if (input.page > pages) redirect(link(pages));
   return (
     <>
@@ -176,23 +177,13 @@ export default async function MeetingsPage({
           </section>
         )}
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p>
-          {count} matching meetings · Page {input.page} of {pages}
-        </p>
-        <nav aria-label="Meeting pages" className="flex gap-2">
-          {input.page > 1 && (
-            <Link href={link(input.page - 1)} className="btn btn-outline btn-sm">
-              Previous
-            </Link>
-          )}
-          {input.page < pages && (
-            <Link href={link(input.page + 1)} className="btn btn-outline btn-sm">
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination
+        summary={`${count} matching meetings`}
+        page={input.page}
+        pages={pages}
+        label="Meeting pages"
+        href={link}
+      />
     </>
   );
 }

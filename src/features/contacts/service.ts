@@ -1,7 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
-import { isPseManager, isActivePseProfile } from "@/lib/auth/roles";
+import { assertVerifiedPse, isVerifiedPse } from "@/lib/auth/guards";
+import { isPseManager } from "@/lib/auth/roles";
+import { parseOrThrow, requireUuid } from "@/lib/validation";
 import {
   contactListSchema,
   contactPatchSchema,
@@ -19,25 +21,12 @@ import {
   type DuplicateContact,
 } from "./types";
 
-function parse<T>(schema: z.ZodType<T>, value: unknown): T {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  const fields: Record<string, string[]> = {};
-  for (const issue of result.error.issues) (fields[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
-  throw new ContactError(422, "Review the highlighted contact details.", fields);
-}
-function validId(value: string) {
-  if (!z.uuid().safeParse(value).success) throw new ContactError(400, "Invalid contact ID.");
-  return value;
-}
+const parse = <T>(schema: z.ZodType<T>, value: unknown) =>
+  parseOrThrow(schema, value, ContactError, "Review the highlighted contact details.");
+const validId = (id: string) => requireUuid(id, ContactError, "Invalid contact ID.");
 
 export function canEditContact(access: AccessResult, contact: Pick<ContactRecord, "created_by">) {
-  return (
-    access.status === "allowed" &&
-    isActivePseProfile(access.profile) &&
-    access.profile.id === access.userId &&
-    (contact.created_by === access.userId || isPseManager(access.profile))
-  );
+  return isVerifiedPse(access) && (contact.created_by === access.userId || isPseManager(access.profile));
 }
 
 function writeValues(input: ContactInput): ContactWrite {
@@ -56,15 +45,7 @@ function writeValues(input: ContactInput): ContactWrite {
 }
 
 export function createContactsService(repository: ContactRepository, access: AccessResult) {
-  function authorize() {
-    if (access.status !== "allowed" || !isActivePseProfile(access.profile) || access.userId !== access.profile.id) {
-      throw new ContactError(
-        access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403,
-        "PSE access is required.",
-      );
-    }
-    return access;
-  }
+  const authorize = () => assertVerifiedPse(access, ContactError, "PSE access is required.");
   async function requireContact(id: string) {
     const contact = await repository.find(validId(id));
     if (!contact) throw new ContactError(404, "Contact not found.");

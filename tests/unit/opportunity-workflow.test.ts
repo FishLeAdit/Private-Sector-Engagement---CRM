@@ -9,7 +9,7 @@ import type {
   Party,
 } from "../../src/features/opportunities/types";
 import { opportunityPatchSchema, opportunitySchema } from "../../src/features/opportunities/schemas";
-import { formatCents, toCents } from "../../src/lib/currency";
+import { cents, formatCents } from "../../src/lib/money";
 vi.mock("server-only", () => ({}));
 import { createOpportunitiesService } from "../../src/features/opportunities/service";
 
@@ -370,8 +370,8 @@ describe("financial opportunity workflow", () => {
       { drive_urls: ["file:///local"] },
     ])
       expect(opportunitySchema.safeParse(payload(extra)).success).toBe(false);
-    expect(formatCents(toCents("0.10") + toCents("0.20"), "BDT")).toBe("BDT 0.30");
-    expect(formatCents(toCents("999999999999.99"), "USD")).toBe("USD 999,999,999,999.99");
+    expect(formatCents(cents("0.10") + cents("0.20"), "BDT")).toBe("BDT 0.30");
+    expect(formatCents(cents("999999999999.99"), "USD")).toBe("USD 999,999,999,999.99");
   });
   it("lets the creator, current focal person and manager delete unlinked deals", async () => {
     const own = await service().create(payload());

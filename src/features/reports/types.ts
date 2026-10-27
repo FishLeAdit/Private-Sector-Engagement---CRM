@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors";
+
 export type CountMetric = { key: string; count: number };
 export type ReportOptions = {
   employees: { id: string; display_name: string; active: boolean }[];
@@ -70,12 +72,6 @@ export type Report = {
     done_meetings: number;
   }[];
 };
-export class ReportError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "ReportError";
-  }
+export class ReportError extends AppError {
+  name = "ReportError";
 }

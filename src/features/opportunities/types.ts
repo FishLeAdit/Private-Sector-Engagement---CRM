@@ -1,4 +1,5 @@
 import type { Tables, TablesInsert } from "@/types/database.types";
+import { AppError } from "@/lib/errors";
 import type { OpportunityListInput } from "./schemas";
 
 export type Party = Pick<Tables<"contacts">, "id" | "name" | "kind" | "email" | "phone" | "website">;
@@ -38,13 +39,6 @@ export interface OpportunityRepository {
   saveStage(input: StageWrite, id?: string): Promise<void>;
   saveCategory(input: CategoryWrite, id?: string): Promise<void>;
 }
-export class OpportunityError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public fields: Record<string, string[]> = {},
-  ) {
-    super(message);
-    this.name = "OpportunityError";
-  }
+export class OpportunityError extends AppError {
+  name = "OpportunityError";
 }

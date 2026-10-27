@@ -10,7 +10,7 @@ import {
   demoContributionIds,
   demoVerticalIds,
 } from "./lib/demo-finance";
-import { cents, performance } from "../src/features/finance/money";
+import { cents, targetPerformance } from "../src/lib/money";
 import { toDhakaDateTimeInput } from "../src/lib/dates";
 async function main() {
   const args = process.argv.slice(2);
@@ -136,7 +136,7 @@ async function main() {
       );
     })
     .reduce((sum, r) => sum + cents(r.amount), 0n);
-  const q1 = performance(cents(verifiedQuarters.find(q => q.quarter === 1)?.amount ?? 0), q1Actual);
+  const q1 = targetPerformance(cents(verifiedQuarters.find(q => q.quarter === 1)?.amount ?? 0), q1Actual);
   if (
     missingPlans.some(p => p.id === demoTargetIds[0]) &&
     (verifiedQuarters.length !== 4 ||

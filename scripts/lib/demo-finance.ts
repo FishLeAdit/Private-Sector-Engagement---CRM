@@ -1,6 +1,6 @@
 import type { Tables, TablesInsert } from "../../src/types/database.types";
 import { contributionSchema, targetSchema } from "../../src/features/finance/schemas";
-import { cents, decimal } from "../../src/features/finance/money";
+import { cents, decimal } from "../../src/lib/money";
 import { fromDhakaDateTimeInput } from "../../src/lib/dates";
 import { DEMO_MARKER, type DemoProfile } from "./demo-data";
 const identifier = (prefix: string, index: number) => `${prefix}-0000-4000-8000-${String(index).padStart(12, "0")}`;

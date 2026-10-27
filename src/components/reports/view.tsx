@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Report, ReportOptions } from "@/features/reports/types";
 import type { ReportFilters } from "@/features/reports/schemas";
 import { reportPeriodLabel } from "@/features/reports/schemas";
-import { cents, money, performance } from "@/features/finance/money";
+import { cents, money, targetPerformance } from "@/lib/money";
 import { activityTypeLabels, activityStatusLabels, workCategoryLabels } from "@/features/activities/schemas";
 import { formatDate } from "@/lib/dates";
 import { ReportBars } from "./bars";
@@ -40,7 +40,7 @@ export function ReportView({
     p = r.pipeline,
     w = r.workload,
     monthly = filters.period.startsWith("m");
-  const totals = funds.target === null ? null : performance(cents(funds.target), cents(funds.actual));
+  const totals = funds.target === null ? null : targetPerformance(cents(funds.target), cents(funds.actual));
   const query = new URLSearchParams(Object.entries(filters).map(([key, value]) => [key, String(value)]));
   const stageBars = [...p.stages]
     .sort((a, b) =>
@@ -153,7 +153,7 @@ export function ReportView({
               </thead>
               <tbody>
                 {funds.dimensions.map(d => {
-                  const row = d.target === null ? null : performance(cents(d.target), cents(d.actual));
+                  const row = d.target === null ? null : targetPerformance(cents(d.target), cents(d.actual));
                   return (
                     <tr key={`${d.employee_id}:${d.vertical_id ?? "unassigned"}`}>
                       <td>{d.employee_name}</td>

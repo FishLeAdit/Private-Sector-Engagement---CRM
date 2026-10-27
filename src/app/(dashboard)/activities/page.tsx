@@ -13,7 +13,9 @@ import {
   activityTitle,
 } from "@/features/activities/schemas";
 import { ActivityProblem } from "@/components/activities/activity-state";
+import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/dates";
+import { listHref, pageCount } from "@/lib/list-href";
 export default async function ActivitiesPage({
   searchParams,
 }: {
@@ -36,10 +38,9 @@ export default async function ActivitiesPage({
     ]),
   );
   if (!result.ok) return <ActivityProblem message={result.error.message} />;
-  const [{ activities, count }, options] = result.data,
-    pages = Math.max(1, Math.ceil(count / ACTIVITY_PAGE_SIZE));
-  const link = (page: number) =>
-    `/activities?${new URLSearchParams(Object.fromEntries(Object.entries({ ...input, page }).map(([key, value]) => [key, String(value)])))}`;
+  const [{ activities, count }, options] = result.data;
+  const pages = pageCount(count, ACTIVITY_PAGE_SIZE);
+  const link = (page: number) => listHref("/activities", input, page);
   if (input.page > pages) redirect(link(pages));
   return (
     <>
@@ -209,23 +210,13 @@ export default async function ActivitiesPage({
           </section>
         )}
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p>
-          {count} matching activities · Page {input.page} of {pages}
-        </p>
-        <nav aria-label="Activity pages" className="flex gap-2">
-          {input.page > 1 && (
-            <Link href={link(input.page - 1)} className="btn btn-outline btn-sm">
-              Previous
-            </Link>
-          )}
-          {input.page < pages && (
-            <Link href={link(input.page + 1)} className="btn btn-outline btn-sm">
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination
+        summary={`${count} matching activities`}
+        page={input.page}
+        pages={pages}
+        label="Activity pages"
+        href={link}
+      />
     </>
   );
 }

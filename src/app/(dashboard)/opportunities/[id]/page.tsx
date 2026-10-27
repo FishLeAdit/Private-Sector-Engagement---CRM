@@ -7,7 +7,8 @@ import type { Party } from "@/features/opportunities/types";
 import { OpportunityProblem } from "@/components/opportunities/opportunity-state";
 import { StageMove } from "@/components/opportunities/stage-move";
 import { DeleteOpportunityButton } from "@/components/opportunities/delete-opportunity-button";
-import { formatMoney } from "@/lib/currency";
+import { AuditHistory } from "@/components/ui/audit-history";
+import { money } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 function stageId(value: Json) {
   return value && typeof value === "object" && !Array.isArray(value) && typeof value.stage_id === "string"
@@ -107,7 +108,7 @@ export default async function OpportunityDetailsPage({
         <section className="space-y-5 rounded-xl border border-base-300 p-6">
           <h2 className="text-lg font-semibold">Financial opportunity</h2>
           <p className="text-2xl font-bold">
-            {formatMoney(row.expected_amount, row.currency)} <span className="text-sm font-normal">expected</span>
+            {money(row.expected_amount, row.currency)} <span className="text-sm font-normal">expected</span>
           </p>
           <p className="text-sm text-base-content/65">
             Forecast value. Moving to Won does not recognize funds or change target achievement.
@@ -122,7 +123,7 @@ export default async function OpportunityDetailsPage({
               ["Country", row.country],
               [
                 "Operational budget (separate)",
-                row.operational_budget == null ? "Not provided" : formatMoney(row.operational_budget, row.currency),
+                row.operational_budget == null ? "Not provided" : money(row.operational_budget, row.currency),
               ],
             ].map(([label, value]) => (
               <div key={label}>
@@ -195,7 +196,7 @@ export default async function OpportunityDetailsPage({
           <ul className="mt-5 space-y-4">
             {history.contributions.map(item => (
               <li key={item.id}>
-                <p className="font-semibold">{formatMoney(item.amount, item.currency)}</p>
+                <p className="font-semibold">{money(item.amount, item.currency)}</p>
                 <p className="mt-1 text-sm text-base-content/65">
                   {formatDate(item.recognized_at)} · {item.contribution_type === "cash" ? "Cash" : "Valued in-kind"}
                 </p>
@@ -206,33 +207,18 @@ export default async function OpportunityDetailsPage({
           {!history.contributions.length && <p className="mt-5 text-sm">No recognized contributions recorded.</p>}
         </section>
       </div>
-      <section className="mt-6 rounded-xl border border-base-300 p-6">
-        <h2 className="text-lg font-semibold">Recent changes</h2>
-        <p className="mt-1 text-xs text-base-content/60">
-          Latest 20 audit entries. Stage names use the current configuration. Dates use Asia/Dhaka.
-        </p>
-        <ul className="mt-5 space-y-4">
-          {history.audits.map(audit => {
-            const before = stageId(audit.before),
-              after = stageId(audit.after);
-            return (
-              <li key={audit.id} className="text-sm">
-                <p className="font-medium">
-                  {audit.action === "insert"
-                    ? `Deal created in ${stageName(after)}`
-                    : before !== after
-                      ? `Stage: ${stageName(before)} → ${stageName(after)}`
-                      : "Deal details updated"}
-                </p>
-                <p className="mt-1 text-base-content/60">
-                  {audit.actor?.display_name ?? "System or unavailable user"} · {formatDate(audit.created_at, true)}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-        {!history.audits.length && <p className="mt-4 text-sm">No changes recorded.</p>}
-      </section>
+      <AuditHistory
+        className="mt-6"
+        audits={history.audits}
+        note="Latest 20 audit entries. Stage names use the current configuration. Dates use Asia/Dhaka."
+        describe={audit => {
+          const before = stageId(audit.before);
+          const after = stageId(audit.after);
+          if (audit.action === "insert") return `Deal created in ${stageName(after)}`;
+          if (before !== after) return `Stage: ${stageName(before)} → ${stageName(after)}`;
+          return "Deal details updated";
+        }}
+      />
     </>
   );
 }

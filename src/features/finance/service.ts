@@ -1,31 +1,23 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
-import { isActivePseProfile, isPseManager } from "@/lib/auth/roles";
+import { assertVerifiedPse } from "@/lib/auth/guards";
+import { isPseManager } from "@/lib/auth/roles";
+import { parseOrThrow, requireUuid } from "@/lib/validation";
 import { contributionSchema, contributionFilters, targetSchema, verticalSchema } from "./schemas";
 import { FinanceError } from "./types";
 import type { FinanceRepository } from "./queries";
-import { cents } from "./money";
-function parse<T>(schema: z.ZodType<T>, input: unknown): T {
-  const result = schema.safeParse(input);
-  if (result.success) return result.data;
-  const fields: Record<string, string[]> = {};
-  for (const issue of result.error.issues) (fields[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
-  throw new FinanceError(422, "Review the financial record details.", fields);
-}
-function uuid(id: string) {
-  if (!z.uuid().safeParse(id).success) throw new FinanceError(400, "Invalid record ID.");
-  return id;
-}
+import { cents } from "@/lib/money";
+
+const parse = <T>(schema: z.ZodType<T>, input: unknown) =>
+  parseOrThrow(schema, input, FinanceError, "Review the financial record details.");
+const uuid = (id: string) => requireUuid(id, FinanceError, "Invalid record ID.");
+
 export function createFinanceService(repo: FinanceRepository, access: AccessResult) {
   function authorize(manager = false) {
-    if (access.status !== "allowed" || !isActivePseProfile(access.profile) || access.profile.id !== access.userId)
-      throw new FinanceError(
-        access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403,
-        "Active PSE access required.",
-      );
-    if (manager && !isPseManager(access.profile)) throw new FinanceError(403, "An authorized PSE manager is required.");
-    return access;
+    const actor = assertVerifiedPse(access, FinanceError, "Active PSE access required.");
+    if (manager && !isPseManager(actor.profile)) throw new FinanceError(403, "An authorized PSE manager is required.");
+    return actor;
   }
   async function plan(id: string) {
     const result = await repo.plan(uuid(id));

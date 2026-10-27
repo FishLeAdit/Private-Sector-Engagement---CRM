@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { financePage, financeData } from "@/features/finance/context";
 import { contributionFilters } from "@/features/finance/schemas";
 import { FinanceProblem } from "@/components/finance/problem";
-import { money } from "@/features/finance/money";
+import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/dates";
+import { listHref, pageCount } from "@/lib/list-href";
+import { money } from "@/lib/money";
 export default async function Page({
   searchParams,
 }: {
@@ -16,9 +18,9 @@ export default async function Page({
   const input = parsed.data,
     result = await financeData(() => Promise.all([service.contributions(input), service.options()]));
   if (!result.ok) return <FinanceProblem message={result.error.message} />;
-  const [{ contributions, count }, options] = result.data,
-    pages = Math.max(1, Math.ceil(count / 20));
-  const link = (page: number) => `/contributions?${new URLSearchParams({ ...input, page: String(page) })}`;
+  const [{ contributions, count }, options] = result.data;
+  const pages = pageCount(count, 20);
+  const link = (page: number) => listHref("/contributions", input, page);
   if (input.page > pages) redirect(link(pages));
   return (
     <>
@@ -120,23 +122,13 @@ export default async function Page({
           </p>
         )}
       </div>
-      <div className="mt-5 flex items-center justify-between gap-3 text-sm">
-        <p>
-          {count} matching contributions · Page {input.page} of {pages}
-        </p>
-        <nav className="flex gap-3" aria-label="Contribution pages">
-          {input.page > 1 && (
-            <Link className="btn btn-outline btn-sm" href={link(input.page - 1)}>
-              Previous
-            </Link>
-          )}
-          {input.page < pages && (
-            <Link className="btn btn-outline btn-sm" href={link(input.page + 1)}>
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination
+        summary={`${count} matching contributions`}
+        page={input.page}
+        pages={pages}
+        label="Contribution pages"
+        href={link}
+      />
     </>
   );
 }

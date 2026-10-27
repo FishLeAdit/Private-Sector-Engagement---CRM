@@ -1,7 +1,9 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { activityStatuses, activityStatusLabels } from "@/features/activities/schemas";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
+
 export function ActivityStatus({ id, status }: { id: string; status: string }) {
   const label = useId(),
     router = useRouter();
@@ -64,80 +66,15 @@ export function ActivityStatus({ id, status }: { id: string; status: string }) {
     </div>
   );
 }
+
 export function DeleteActivityButton({ id, title }: { id: string; title: string }) {
-  const dialog = useRef<HTMLDialogElement>(null),
-    label = useId(),
-    description = useId(),
-    router = useRouter();
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  async function remove() {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch(`/api/activities/${id}`, { method: "DELETE", cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.error || "Activity could not be deleted.");
-        return;
-      }
-      dialog.current?.close();
-      router.replace("/activities?deleted=1");
-      router.refresh();
-    } catch {
-      setError("Activity could not be deleted. Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
-    <>
-      <button
-        type="button"
-        className="btn btn-error btn-outline"
-        onClick={() => {
-          setError("");
-          dialog.current?.showModal();
-        }}
-      >
-        Delete activity
-      </button>
-      <dialog
-        ref={dialog}
-        className="modal"
-        aria-labelledby={label}
-        aria-describedby={description}
-        onCancel={event => {
-          if (busy) event.preventDefault();
-        }}
-      >
-        <div className="modal-box">
-          <h2 id={label} className="text-xl font-bold">
-            Delete activity?
-          </h2>
-          <p className="mt-4 break-words">
-            You are about to delete <strong>{title}</strong>.
-          </p>
-          <p id={description} className="mt-3 text-sm text-base-content/70">
-            This permanently removes the activity. Audit history is retained. Linked contacts, opportunities, meetings
-            and financial contributions are kept.
-          </p>
-          {error && (
-            <p role="alert" className="mt-4 text-sm text-error">
-              {error}
-            </p>
-          )}
-          <div className="modal-action">
-            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => dialog.current?.close()}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-error" disabled={busy} onClick={remove}>
-              {busy ? "Deleting…" : "Delete permanently"}
-            </button>
-          </div>
-        </div>
-      </dialog>
-    </>
+    <ConfirmDeleteButton
+      noun="activity"
+      name={title}
+      endpoint={`/api/activities/${id}`}
+      redirectTo="/activities?deleted=1"
+      consequences="This permanently removes the activity. Audit history is retained. Linked contacts, opportunities, meetings and financial contributions are kept."
+    />
   );
 }

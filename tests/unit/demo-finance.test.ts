@@ -8,7 +8,7 @@ import {
   demoTargetIds,
   demoContributionIds,
 } from "../../scripts/lib/demo-finance";
-import { cents, performance } from "../../src/features/finance/money";
+import { cents, targetPerformance } from "../../src/lib/money";
 let db: PGlite;
 beforeAll(async () => {
   db = await createLocalDatabase();
@@ -175,7 +175,7 @@ describe("administrative seed permissions and persistence", () => {
       )
     ).rows[0].actuals;
     const q1 = rows.filter(a => a.quarter === 1).reduce((sum, a) => sum + cents(a.amount), 0n);
-    expect(performance(cents("150000"), q1).percentage).toBe("110.00");
+    expect(targetPerformance(cents("150000"), q1).percentage).toBe("110.00");
     expect(
       (
         await db.query<{ amount: string }>(

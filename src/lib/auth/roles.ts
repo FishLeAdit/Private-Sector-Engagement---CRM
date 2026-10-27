@@ -1,5 +1,6 @@
-import type { PseRole } from "@/types/domain";
 import type { Tables } from "@/types/database.types";
+
+export type PseRole = "pse_member" | "pse_manager" | "admin";
 
 export type AccessProfile = Pick<Tables<"profiles">, "id" | "display_name" | "department" | "role" | "active">;
 export type PseProfile = AccessProfile & { role: PseRole };

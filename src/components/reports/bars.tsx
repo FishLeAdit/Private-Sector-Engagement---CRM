@@ -1,4 +1,4 @@
-import { cents } from "@/features/finance/money";
+import { cents } from "@/lib/money";
 export function ReportBars({
   title,
   rows,

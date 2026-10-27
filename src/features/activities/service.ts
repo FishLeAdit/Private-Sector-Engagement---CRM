@@ -1,7 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
-import { isActivePseProfile, isPseManager } from "@/lib/auth/roles";
+import { assertVerifiedPse, isVerifiedPse } from "@/lib/auth/guards";
+import { isPseManager } from "@/lib/auth/roles";
+import { parseOrThrow, requireUuid } from "@/lib/validation";
 import {
   activityListSchema,
   activityOptionsSchema,
@@ -10,22 +12,14 @@ import {
   type ActivityInput,
 } from "./schemas";
 import { ActivityError, type ActivityRecord, type ActivityRepository, type ActivityWrite } from "./types";
-function parse<T>(schema: z.ZodType<T>, input: unknown): T {
-  const result = schema.safeParse(input);
-  if (result.success) return result.data;
-  const fields: Record<string, string[]> = {};
-  for (const issue of result.error.issues) (fields[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
-  throw new ActivityError(422, "Review the activity details.", fields);
-}
-function validId(id: string) {
-  if (!z.uuid().safeParse(id).success) throw new ActivityError(400, "Invalid activity ID.");
-  return id;
-}
+
+const parse = <T>(schema: z.ZodType<T>, input: unknown) =>
+  parseOrThrow(schema, input, ActivityError, "Review the activity details.");
+const validId = (id: string) => requireUuid(id, ActivityError, "Invalid activity ID.");
+
 export function canEditActivity(access: AccessResult, row: Pick<ActivityRecord, "owner_id" | "created_by">) {
   return (
-    access.status === "allowed" &&
-    isActivePseProfile(access.profile) &&
-    access.userId === access.profile.id &&
+    isVerifiedPse(access) &&
     (row.owner_id === access.userId || row.created_by === access.userId || isPseManager(access.profile))
   );
 }
@@ -59,14 +53,7 @@ function writeValues(input: ActivityInput): ActivityWrite {
   };
 }
 export function createActivitiesService(repository: ActivityRepository, access: AccessResult) {
-  function authorize() {
-    if (access.status !== "allowed" || !isActivePseProfile(access.profile) || access.userId !== access.profile.id)
-      throw new ActivityError(
-        access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403,
-        "PSE access is required.",
-      );
-    return access;
-  }
+  const authorize = () => assertVerifiedPse(access, ActivityError, "PSE access is required.");
   async function requireActivity(id: string) {
     const row = await repository.find(validId(id));
     if (!row) throw new ActivityError(404, "Activity not found.");

@@ -14,6 +14,7 @@ import {
 import { ActivityProblem } from "@/components/activities/activity-state";
 import { ActivityStatus, DeleteActivityButton } from "@/components/activities/activity-controls";
 import { MeetingContactInformation } from "@/components/meetings/contact-information";
+import { AuditHistory } from "@/components/ui/audit-history";
 import { formatDate } from "@/lib/dates";
 import type { Json } from "@/types/database.types";
 function status(value: Json) {
@@ -158,31 +159,18 @@ export default async function ActivityDetailsPage({
           )}
         </section>
       </div>
-      <section className="mt-6 rounded-xl border border-base-300 p-6">
-        <h2 className="text-lg font-semibold">Recent changes</h2>
-        <p className="mt-2 text-xs text-base-content/60">Latest 20 activity audit entries. Dates use Asia/Dhaka.</p>
-        <ul className="mt-5 space-y-4">
-          {audits.map(audit => {
-            const before = status(audit.before),
-              after = status(audit.after);
-            return (
-              <li key={audit.id} className="text-sm">
-                <p className="font-medium">
-                  {audit.action === "insert"
-                    ? "Activity created"
-                    : before !== after
-                      ? `Status: ${label(before)} → ${label(after)}`
-                      : "Activity details updated"}
-                </p>
-                <p className="mt-1 text-base-content/60">
-                  {audit.actor?.display_name ?? "System or unavailable user"} · {formatDate(audit.created_at, true)}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-        {!audits.length && <p className="mt-4 text-sm">No changes recorded.</p>}
-      </section>
+      <AuditHistory
+        className="mt-6"
+        audits={audits}
+        note="Latest 20 activity audit entries. Dates use Asia/Dhaka."
+        describe={audit => {
+          const before = status(audit.before);
+          const after = status(audit.after);
+          if (audit.action === "insert") return "Activity created";
+          if (before !== after) return `Status: ${label(before)} → ${label(after)}`;
+          return "Activity details updated";
+        }}
+      />
     </>
   );
 }

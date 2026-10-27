@@ -8,8 +8,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     request,
     async service => {
       const body = await financeJson(request);
-      if (!body || typeof body !== "object" || body.request_id !== (await params).id)
-        throw new FinanceError(422, "Submission ID must match the target plan.");
+      const requestId = body && typeof body === "object" && "request_id" in body ? body.request_id : undefined;
+      if (requestId !== (await params).id) throw new FinanceError(422, "Submission ID must match the target plan.");
       const result = await service.save(body);
       invalidateFinance();
       return result;

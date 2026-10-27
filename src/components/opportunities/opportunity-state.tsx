@@ -1,15 +1,16 @@
 import Link from "next/link";
+import { PageProblem } from "@/components/ui/page-problem";
+
 export function OpportunityProblem({ message }: { message: string }) {
   return (
-    <section role="alert" className="space-y-4 rounded-lg border border-base-300 p-6">
-      <h1 className="text-xl font-bold">Opportunities could not be loaded</h1>
-      <p>{message}</p>
-      <Link href="/opportunities" className="btn btn-outline">
-        Return to opportunities
-      </Link>
-    </section>
+    <PageProblem
+      title="Opportunities could not be loaded"
+      message={message}
+      links={[{ href: "/opportunities", label: "Return to opportunities" }]}
+    />
   );
 }
+
 export function PipelineSetupNeeded() {
   return (
     <section className="space-y-3 rounded-lg border border-warning bg-warning/10 p-6">

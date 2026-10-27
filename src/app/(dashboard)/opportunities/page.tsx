@@ -5,7 +5,9 @@ import { OPPORTUNITY_PAGE_SIZE, opportunityListSchema } from "@/features/opportu
 import { canEditOpportunity } from "@/features/opportunities/service";
 import { OpportunityProblem, PipelineSetupNeeded } from "@/components/opportunities/opportunity-state";
 import { StageMove } from "@/components/opportunities/stage-move";
-import { formatCents, formatMoney, toCents } from "@/lib/currency";
+import { Pagination } from "@/components/ui/pagination";
+import { listHref, pageCount } from "@/lib/list-href";
+import { cents, formatCents, money } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 
 export default async function OpportunitiesPage({
@@ -22,13 +24,12 @@ export default async function OpportunitiesPage({
   const result = await opportunityPageData(() => Promise.all([service.list(input), service.options()]));
   if (!result.ok) return <OpportunityProblem message={result.error.message} />;
   const [{ opportunities, count }, options] = result.data;
-  const pages = Math.max(1, Math.ceil(count / OPPORTUNITY_PAGE_SIZE));
-  const link = (page = input.page, mode = String(view)) =>
-    `/opportunities?${new URLSearchParams({ ...Object.fromEntries(Object.entries(input).map(([key, value]) => [key, String(value)])), view: mode, page: String(page) })}`;
+  const pages = pageCount(count, OPPORTUNITY_PAGE_SIZE);
+  const link = (page = input.page, mode = String(view)) => listHref("/opportunities", { ...input, view: mode }, page);
   if (input.page > pages) redirect(link(pages));
   const totals = new Map<string, bigint>();
   for (const row of opportunities)
-    totals.set(row.currency, (totals.get(row.currency) ?? BigInt(0)) + toCents(row.expected_amount));
+    totals.set(row.currency, (totals.get(row.currency) ?? BigInt(0)) + cents(row.expected_amount));
   const select = (
     name: "stage_id" | "owner_id" | "contribution_category_id",
     label: string,
@@ -141,7 +142,7 @@ export default async function OpportunitiesPage({
         </nav>
         <p className="text-xs text-base-content/65">
           Expected values on this page, all displayed stages:{" "}
-          {[...totals].map(([currency, cents]) => formatCents(cents, currency)).join(" · ") || "No deals"}
+          {[...totals].map(([currency, total]) => formatCents(total, currency)).join(" · ") || "No deals"}
         </p>
       </div>
       <p className="mb-4 text-xs text-base-content/60">
@@ -182,7 +183,7 @@ export default async function OpportunitiesPage({
                           <Link className="link link-hover font-semibold" href={`/opportunities/${row.id}`}>
                             {row.deal_name}
                           </Link>
-                          <p className="text-sm">{formatMoney(row.expected_amount, row.currency)}</p>
+                          <p className="text-sm">{money(row.expected_amount, row.currency)}</p>
                           <p className="text-xs text-base-content/65">
                             {row.contact?.name} · {row.owner?.display_name}
                             <br />
@@ -231,7 +232,7 @@ export default async function OpportunitiesPage({
                     <p className="mt-1 text-xs text-base-content/60">{row.contact?.name}</p>
                   </td>
                   <td>{row.stage?.name}</td>
-                  <td className="whitespace-nowrap">{formatMoney(row.expected_amount, row.currency)}</td>
+                  <td className="whitespace-nowrap">{money(row.expected_amount, row.currency)}</td>
                   <td>
                     {row.contribution_type === "cash" ? "Cash" : "Valued in-kind"}
                     <p className="mt-1 text-xs text-base-content/60">{row.category?.name}</p>
@@ -244,23 +245,13 @@ export default async function OpportunitiesPage({
           </table>
         </div>
       )}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p>
-          {count} matching deals · Page {input.page} of {pages}
-        </p>
-        <nav aria-label="Opportunity pages" className="flex gap-2">
-          {input.page > 1 && (
-            <Link className="btn btn-outline btn-sm" href={link(input.page - 1)}>
-              Previous
-            </Link>
-          )}
-          {input.page < pages && (
-            <Link className="btn btn-outline btn-sm" href={link(input.page + 1)}>
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination
+        summary={`${count} matching deals`}
+        page={input.page}
+        pages={pages}
+        label="Opportunity pages"
+        href={page => link(page)}
+      />
     </>
   );
 }

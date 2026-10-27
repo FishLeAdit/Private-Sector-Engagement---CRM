@@ -1,13 +1,8 @@
 import type { Tables } from "@/types/database.types";
-export class FinanceError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public fields: Record<string, string[]> = {},
-  ) {
-    super(message);
-    this.name = "FinanceError";
-  }
+import { AppError } from "@/lib/errors";
+
+export class FinanceError extends AppError {
+  name = "FinanceError";
 }
 export type FinanceOptions = {
   employees: Pick<Tables<"profiles">, "id" | "display_name" | "active">[];

@@ -1,59 +1,53 @@
-import { invalidateReportCache } from "@/lib/cache/invalidation";
 import "server-only";
-import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import { authorizeApi, requirePseUser } from "@/lib/auth/access";
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
+import { createApiHandler, readJsonBody } from "@/lib/api/handler";
+import type { AccessResult } from "@/lib/auth/session";
+import { invalidateReportCache } from "@/lib/cache/invalidation";
+import { revalidateSections } from "@/lib/cache/paths";
+import { createPageContext, loadPageData } from "@/lib/page-data";
 import { createFinanceRepository } from "./queries";
 import { createFinanceService } from "./service";
 import { FinanceError } from "./types";
-export async function financePage() {
-  const access = await requirePseUser();
-  return { access, service: createFinanceService(createFinanceRepository(await createClient()), access) };
+
+type FinanceService = ReturnType<typeof createFinanceService>;
+
+const createService = (client: SupabaseClient<Database>, access: AccessResult) =>
+  createFinanceService(createFinanceRepository(client), access);
+
+export const financePage = () => createPageContext(createService);
+
+export const financeData = <T>(load: () => Promise<T>) => loadPageData(FinanceError, load);
+
+// Target forms carry up to 4,000 allocation cells, hence the larger body limit.
+export function financeJson(request: Request) {
+  return readJsonBody(request, FinanceError, {
+    maxLength: 1000000,
+    notJson: "Send JSON.",
+    tooLarge: "This financial form is too large.",
+    invalid: "Invalid JSON.",
+  });
 }
-export async function financeData<T>(load: () => Promise<T>) {
-  try {
-    return { ok: true as const, data: await load() };
-  } catch (error) {
-    if (error instanceof FinanceError) return { ok: false as const, error };
-    throw error;
-  }
-}
-export async function financeJson(request: Request) {
-  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json")
-    throw new FinanceError(415, "Send JSON.");
-  const text = await request.text();
-  if (text.length > 1000000) throw new FinanceError(413, "This financial form is too large.");
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new FinanceError(400, "Invalid JSON.");
-  }
-}
-export async function financeApi(
+
+const handle = createApiHandler({
+  ErrorClass: FinanceError,
+  createService,
+  crossOriginMessage: "Submit from this CRM application.",
+  unavailableMessage: "Financial records are temporarily unavailable.",
+});
+
+// Finance routes return the service result as the response body and always answer 200 on success.
+export function financeApi(
   request: Request,
-  run: (service: ReturnType<typeof createFinanceService>) => Promise<unknown>,
+  run: (service: FinanceService) => Promise<unknown>,
   mutation = false,
   manager = false,
 ) {
-  const auth = await authorizeApi({ manager });
-  if (!auth.ok) return auth.response;
-  const headers = { "Cache-Control": "private, no-store" };
-  try {
-    if (mutation && request.headers.get("origin") !== new URL(request.url).origin)
-      throw new FinanceError(403, "Submit from this CRM application.");
-    return NextResponse.json(
-      await run(createFinanceService(createFinanceRepository(await createClient()), auth.access)),
-      { headers },
-    );
-  } catch (error) {
-    if (error instanceof FinanceError)
-      return NextResponse.json({ error: error.message, fields: error.fields }, { status: error.status, headers });
-    return NextResponse.json({ error: "Financial records are temporarily unavailable." }, { status: 503, headers });
-  }
+  return handle(request, async service => ({ data: await run(service) }), mutation, manager);
 }
+
+// Targets, receipts and verticals feed reports, deal pages and the vertical filter options.
 export function invalidateFinance() {
   invalidateReportCache(true);
-  for (const path of ["/targets", "/contributions", "/opportunities", "/dashboard", "/reports"])
-    revalidatePath(path, "layout");
+  revalidateSections("/targets", "/contributions", "/opportunities", "/dashboard", "/reports");
 }

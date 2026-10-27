@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { financePage, financeData } from "@/features/finance/context";
 import { FinanceProblem } from "@/components/finance/problem";
-import { money } from "@/features/finance/money";
+import { money } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service } = await financePage();

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
-import { cents, decimal, performance, percentAmount } from "../../src/features/finance/money";
+import { cents, decimal, targetPerformance, percentAmount } from "../../src/lib/money";
 import { contributionSchema, targetSchema } from "../../src/features/finance/schemas";
 let db: PGlite;
 beforeAll(async () => {
@@ -63,14 +63,14 @@ describe("exact decimal allocation and performance", () => {
     expect(() => percentAmount("10", "100.01")).toThrow();
   });
   it("retains 110% and exposes remaining/over without changing targets", () => {
-    expect(performance(cents("100"), cents("110"))).toEqual({
+    expect(targetPerformance(cents("100"), cents("110"))).toEqual({
       target: "100.00",
       actual: "110.00",
       remaining: "0.00",
       over: "10.00",
       percentage: "110.00",
     });
-    expect(performance(0n, 100n).percentage).toBeNull();
+    expect(targetPerformance(0n, 100n).percentage).toBeNull();
   });
   it.each(["NaN", "Infinity", "-1", "0", "1.001", "1000000000000"])("rejects contribution amount %s", amount => {
     expect(

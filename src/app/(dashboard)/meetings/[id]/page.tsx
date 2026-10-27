@@ -9,6 +9,7 @@ import { MeetingContactInformation } from "@/components/meetings/contact-informa
 import { MeetingStatus } from "@/components/meetings/meeting-status";
 import { FollowUpForm } from "@/components/meetings/follow-up-form";
 import { DeleteMeetingButton } from "@/components/meetings/delete-meeting-button";
+import { AuditHistory } from "@/components/ui/audit-history";
 import { formatDate } from "@/lib/dates";
 const statusLabel = (value: string | null) =>
   value === "done" ? "Done" : value === "scheduled" ? "Scheduled" : value === "cancelled" ? "Cancelled" : "Unknown";
@@ -144,31 +145,17 @@ export default async function MeetingDetailsPage({
             manager={isPseManager(access.profile)}
           />
         </section>
-        <section className="rounded-xl border border-base-300 p-6">
-          <h2 className="text-lg font-semibold">Recent changes</h2>
-          <p className="mt-2 text-xs text-base-content/60">Latest 20 meeting audit entries. Dates use Asia/Dhaka.</p>
-          <ul className="mt-5 space-y-4">
-            {history.audits.map(audit => {
-              const before = auditStatus(audit.before),
-                after = auditStatus(audit.after);
-              return (
-                <li key={audit.id} className="text-sm">
-                  <p className="font-medium">
-                    {audit.action === "insert"
-                      ? "Meeting created"
-                      : before !== after
-                        ? `Status: ${statusLabel(before)} → ${statusLabel(after)}`
-                        : "Meeting details updated"}
-                  </p>
-                  <p className="mt-1 text-base-content/60">
-                    {audit.actor?.display_name ?? "System or unavailable user"} · {formatDate(audit.created_at, true)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          {!history.audits.length && <p className="mt-4 text-sm">No changes recorded.</p>}
-        </section>
+        <AuditHistory
+          audits={history.audits}
+          note="Latest 20 meeting audit entries. Dates use Asia/Dhaka."
+          describe={audit => {
+            const before = auditStatus(audit.before);
+            const after = auditStatus(audit.after);
+            if (audit.action === "insert") return "Meeting created";
+            if (before !== after) return `Status: ${statusLabel(before)} → ${statusLabel(after)}`;
+            return "Meeting details updated";
+          }}
+        />
       </div>
     </>
   );

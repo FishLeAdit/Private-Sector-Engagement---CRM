@@ -1,4 +1,5 @@
 import type { Tables, TablesInsert } from "@/types/database.types";
+import { AppError } from "@/lib/errors";
 import type { MeetingListInput } from "./schemas";
 
 export type MeetingContact = Pick<
@@ -64,13 +65,6 @@ export interface MeetingRepository {
   history(id: string): Promise<MeetingHistory>;
   createFollowUp(input: FollowUpWrite, actorId: string): Promise<Tables<"activities">>;
 }
-export class MeetingError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public fields: Record<string, string[]> = {},
-  ) {
-    super(message);
-    this.name = "MeetingError";
-  }
+export class MeetingError extends AppError {
+  name = "MeetingError";
 }

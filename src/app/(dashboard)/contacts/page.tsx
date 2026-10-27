@@ -4,6 +4,8 @@ import { contactPageContext, contactPageData } from "@/features/contacts/context
 import { CONTACT_PAGE_SIZE, contactListSchema } from "@/features/contacts/schemas";
 import { ContactFilters } from "@/components/contacts/contact-filters";
 import { ContactProblem } from "@/components/contacts/contact-state";
+import { Pagination } from "@/components/ui/pagination";
+import { listHref, pageCount } from "@/lib/list-href";
 
 export default async function ContactsPage({
   searchParams,
@@ -21,9 +23,9 @@ export default async function ContactsPage({
   );
   if (!result.ok) return <ContactProblem message={result.error.message} />;
   const [{ contacts, count }, company] = result.data;
-  const pages = Math.max(1, Math.ceil(count / CONTACT_PAGE_SIZE));
+  const pages = pageCount(count, CONTACT_PAGE_SIZE);
   const pageLink = (page: number) =>
-    `/contacts?${new URLSearchParams({ q: input.q, kind: input.kind, company_id: input.company_id, page: String(page) })}`;
+    listHref("/contacts", { q: input.q, kind: input.kind, company_id: input.company_id }, page);
   if (input.page > pages) redirect(pageLink(pages));
   return (
     <>
@@ -108,23 +110,13 @@ export default async function ContactsPage({
           </div>
         )}
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="text-base-content/65">
-          {count} {count === 1 ? "contact" : "contacts"} · Page {input.page} of {pages}
-        </p>
-        <nav aria-label="Contact pages" className="flex gap-2">
-          {input.page > 1 && (
-            <Link href={pageLink(input.page - 1)} className="btn btn-outline btn-sm">
-              Previous
-            </Link>
-          )}
-          {input.page < pages && (
-            <Link href={pageLink(input.page + 1)} className="btn btn-outline btn-sm">
-              Next
-            </Link>
-          )}
-        </nav>
-      </div>
+      <Pagination
+        summary={`${count} ${count === 1 ? "contact" : "contacts"}`}
+        page={input.page}
+        pages={pages}
+        label="Contact pages"
+        href={pageLink}
+      />
     </>
   );
 }
