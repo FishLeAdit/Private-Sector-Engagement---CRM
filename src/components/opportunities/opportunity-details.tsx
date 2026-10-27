@@ -136,7 +136,7 @@ export function OpportunityContributions({ contributions }: { contributions: Opp
     <section className="rounded-xl border border-base-300 p-6">
       <h2 className="text-lg font-semibold">Recognized contributions</h2>
       <p className="mt-2 text-sm text-base-content/65">
-        Latest 10 recorded actuals, shown separately from expected value. Contribution entry is a later workflow.
+        Latest 10 recorded actuals, shown separately from expected value. Use Record contribution to add a receipt.
       </p>
       <ul className="mt-5 space-y-4">
         {contributions.map(item => (
