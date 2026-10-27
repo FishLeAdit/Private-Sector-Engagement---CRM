@@ -4,6 +4,7 @@ import { contactPageContext, contactPageData } from "@/features/contacts/context
 import { CONTACT_PAGE_SIZE, contactListSchema } from "@/features/contacts/schemas";
 import { ContactFilters } from "@/components/contacts/contact-filters";
 import { ContactProblem } from "@/components/contacts/contact-state";
+import { ListHeader, StatusNotice } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { listHref, pageCount } from "@/lib/list-href";
 
@@ -29,20 +30,12 @@ export default async function ContactsPage({
   if (input.page > pages) redirect(pageLink(pages));
   return (
     <>
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Contacts</h1>
-          <p className="mt-2 text-base-content/65">People, companies and the relationships behind your work.</p>
-        </div>
+      <ListHeader title="Contacts" description="People, companies and the relationships behind your work.">
         <Link href="/contacts/new" className="btn btn-primary">
           New contact
         </Link>
-      </div>
-      {deleted === "1" && (
-        <p className="mb-5 rounded-lg bg-success/10 p-4 text-success" role="status">
-          Contact deleted successfully.
-        </p>
-      )}
+      </ListHeader>
+      {deleted === "1" && <StatusNotice>Contact deleted successfully.</StatusNotice>}
       <ContactFilters key={`${input.q}:${input.kind}:${input.company_id}`} input={input} company={company} />
       <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100">
         {contacts.length ? (

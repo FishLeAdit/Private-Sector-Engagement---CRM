@@ -4,6 +4,7 @@ import { z } from "zod";
 import { financeData } from "@/features/finance/context";
 import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
+import { ListHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { isPseManager } from "@/lib/auth/roles";
 import { listHref, pageCount } from "@/lib/list-href";
@@ -26,13 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   if (page > pages) redirect(link(pages));
   return (
     <>
-      <div className="mb-6 flex flex-wrap justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Targets</h1>
-          <p className="mt-2 text-base-content/65">
-            Fixed annual and quarterly targets with employee/vertical allocation.
-          </p>
-        </div>
+      <ListHeader title="Targets" description="Fixed annual and quarterly targets with employee/vertical allocation.">
         {isPseManager(access.profile) && (
           <div className="flex gap-3">
             <Link href="/targets/verticals" className="btn btn-outline">
@@ -43,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
             </Link>
           </div>
         )}
-      </div>
+      </ListHeader>
       <div className="overflow-x-auto rounded-xl border border-base-300">
         <table className="table">
           <thead>

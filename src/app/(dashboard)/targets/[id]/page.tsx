@@ -4,6 +4,7 @@ import { financeData } from "@/features/finance/context";
 import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { ApproveTarget } from "@/components/targets/approve-target";
+import { AllocationPerformance, QuarterPerformance } from "@/components/targets/target-performance";
 import { isPseManager } from "@/lib/auth/roles";
 import { cents, money, targetPerformance } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
@@ -21,12 +22,6 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       cents(plan.annual_amount),
       actuals.reduce((sum, a) => sum + cents(a.amount), 0n),
     );
-  const keys = [
-    ...new Set([
-      ...allocations.map(a => `${a.quarter}:${a.employee_id}:${a.vertical_id}`),
-      ...actuals.map(a => `${a.quarter}:${a.employee_id}:${a.vertical_id ?? ""}`),
-    ]),
-  ].sort();
   return (
     <>
       <Link href="/targets" className="link text-sm">
@@ -67,89 +62,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         recognition year (Asia/Dhaka), including unassigned verticals. Forecasts and activities contribute zero. No
         currency conversion or carry-forward adjustment is applied.
       </p>
-      <section className="mb-6 overflow-x-auto rounded-xl border border-base-300 p-5">
-        <h2 className="mb-4 text-lg font-semibold">Quarter performance</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Quarter</th>
-              <th>Fixed target</th>
-              <th>Actual</th>
-              <th>Attainment</th>
-              <th>Remaining</th>
-              <th>Over</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[1, 2, 3, 4].map(q => {
-              const p = targetPerformance(
-                cents(plan.quarters.find(row => row.quarter === q)?.amount ?? 0),
-                actuals.filter(a => a.quarter === q).reduce((sum, a) => sum + cents(a.amount), 0n),
-              );
-              return (
-                <tr key={q}>
-                  <td>Q{q}</td>
-                  <td>{money(p.target, plan.currency)}</td>
-                  <td>{money(p.actual, plan.currency)}</td>
-                  <td>{p.percentage === null ? "No target" : `${p.percentage}%`}</td>
-                  <td>{money(p.remaining, plan.currency)}</td>
-                  <td>{money(p.over, plan.currency)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-      <section className="overflow-x-auto rounded-xl border border-base-300 p-5">
-        <h2 className="mb-4 text-lg font-semibold">Employee / vertical performance</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Quarter</th>
-              <th>Employee</th>
-              <th>Vertical</th>
-              <th>Target</th>
-              <th>Actual</th>
-              <th>Attainment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map(key => {
-              const [q, employee, vertical] = key.split(":"),
-                quarter = Number(q),
-                p = targetPerformance(
-                  allocations
-                    .filter(a => a.quarter === quarter && a.employee_id === employee && a.vertical_id === vertical)
-                    .reduce((sum, a) => sum + cents(a.amount), 0n),
-                  actuals
-                    .filter(
-                      a => a.quarter === quarter && a.employee_id === employee && (a.vertical_id ?? "") === vertical,
-                    )
-                    .reduce((sum, a) => sum + cents(a.amount), 0n),
-                );
-              return (
-                <tr key={key}>
-                  <td>Q{q}</td>
-                  <td>
-                    {options.employees.find(e => e.id === employee)?.display_name ??
-                      allocations.find(a => a.employee_id === employee)?.employee?.display_name ??
-                      "Historical employee"}
-                  </td>
-                  <td>
-                    {vertical
-                      ? (options.verticals.find(v => v.id === vertical)?.name ?? "Historical vertical")
-                      : "Unassigned"}
-                  </td>
-                  <td>{money(p.target, plan.currency)}</td>
-                  <td>{money(p.actual, plan.currency)}</td>
-                  <td>{p.percentage === null ? "No allocated target" : `${p.percentage}%`}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {!keys.length && <p className="mt-4 text-sm">No allocations or actual contributions yet.</p>}
-      </section>
+      <QuarterPerformance quarters={plan.quarters} actuals={actuals} currency={plan.currency} />
+      <AllocationPerformance allocations={allocations} actuals={actuals} options={options} currency={plan.currency} />
       {manager && plan.status === "draft" && <ApproveTarget id={id} stamp={plan.updated_at} />}
       <section className="mt-6 rounded-xl border border-base-300 p-5">
         <h2 className="font-semibold">Recent plan changes</h2>

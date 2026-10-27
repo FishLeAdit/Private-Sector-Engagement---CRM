@@ -8,14 +8,12 @@ import {
   activityTypes,
   activityStatusLabels,
   activityStatuses,
-  workCategoryLabels,
-  workCategories,
 } from "@/features/activities/schemas";
 import { ActivityProblem } from "@/components/activities/activity-state";
-import { ActivityStatus, DeleteActivityButton } from "@/components/activities/activity-controls";
-import { MeetingContactInformation } from "@/components/meetings/contact-information";
+import { DeleteActivityButton } from "@/components/activities/activity-controls";
+import { ActivityLinkedRecords, ActivityWorkDetails } from "@/components/activities/activity-details";
 import { AuditHistory } from "@/components/ui/audit-history";
-import { formatDate } from "@/lib/dates";
+import { SavedNotice } from "@/components/ui/page";
 import type { Json } from "@/types/database.types";
 function status(value: Json) {
   return value && typeof value === "object" && !Array.isArray(value) && typeof value.status === "string"
@@ -40,8 +38,6 @@ export default async function ActivityDetailsPage({
     editable = canEditActivity(access, row),
     title = activityTitle(row),
     saved = (await searchParams).saved;
-  const effectiveOpportunity = row.opportunity ?? row.meeting?.opportunity ?? null,
-    contact = row.contact ?? row.meeting?.contact ?? null;
   const label = (value: string | null) =>
     activityStatusLabels[value as (typeof activityStatuses)[number]] ?? value ?? "Unknown";
   return (
@@ -65,11 +61,7 @@ export default async function ActivityDetailsPage({
           </div>
         )}
       </div>
-      {["created", "updated"].includes(saved ?? "") && (
-        <p role="status" className="mb-5 rounded-lg bg-success/10 p-4 text-success">
-          Activity {saved === "created" ? "created" : "updated"} successfully.
-        </p>
-      )}
+      <SavedNotice saved={saved} noun="Activity" />
       {!row.contact_id &&
         !row.opportunity_id &&
         !row.meeting_id &&
@@ -80,84 +72,8 @@ export default async function ActivityDetailsPage({
           </p>
         )}
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-5 rounded-xl border border-base-300 p-6">
-          <h2 className="text-lg font-semibold">Work details</h2>
-          <dl className="grid gap-5 text-sm sm:grid-cols-2">
-            {[
-              ["Owner", row.owner?.display_name ?? "Former owner"],
-              ["Created by", row.creator?.display_name ?? "Former creator"],
-              ["Work category", workCategoryLabels[row.work_category as (typeof workCategories)[number]]],
-              ["Relevant date/time (Dhaka)", row.occurred_at ? formatDate(row.occurred_at, true) : "Not recorded"],
-              ["Related person", row.related_person_name || "Not provided"],
-              ["Related organization", row.related_organization_name || "Not provided"],
-            ].map(([name, value]) => (
-              <div key={name}>
-                <dt className="text-base-content/60">{name}</dt>
-                <dd className="mt-1">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Notes / context</h3>
-            <p className="whitespace-pre-wrap break-words text-sm leading-7">{row.notes || "No notes recorded."}</p>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Remaining work</h3>
-            <p className="whitespace-pre-wrap break-words text-sm leading-7">
-              {row.remaining_work || "No remaining work recorded."}
-            </p>
-          </div>
-          {editable && <ActivityStatus key={`${id}:${row.status}`} id={id} status={row.status} />}
-          <p className="text-xs text-base-content/60">
-            Completion changes work status only. It does not record fundraising achievement or change the relevant event
-            time.
-          </p>
-        </section>
-        <section className="space-y-5 rounded-xl border border-base-300 p-6">
-          <h2 className="text-lg font-semibold">Linked records</h2>
-          {row.meeting && (
-            <p className="text-sm">
-              Meeting:{" "}
-              <Link href={`/meetings/${row.meeting.id}`} className="link">
-                {row.meeting.title}
-              </Link>
-            </p>
-          )}
-          {effectiveOpportunity && (
-            <p className="text-sm">
-              Opportunity:{" "}
-              <Link href={`/opportunities/${effectiveOpportunity.id}`} className="link">
-                {effectiveOpportunity.deal_name}
-              </Link>
-              {!row.opportunity_id && " (through meeting)"}
-            </p>
-          )}
-          {contact || effectiveOpportunity ? (
-            <MeetingContactInformation contact={contact} opportunity={effectiveOpportunity} />
-          ) : (
-            <p className="text-sm text-base-content/65">Independent activity with no linked CRM record.</p>
-          )}
-          {!row.contact_id && (contact || effectiveOpportunity) && (
-            <p className="text-xs text-base-content/60">
-              Contact information is derived from linked records. Text context remains separate from contact identity.
-            </p>
-          )}
-          <h3 className="text-sm font-semibold">Document references</h3>
-          <ul className="space-y-2 text-sm">
-            {row.drive_urls.map((url, index) => (
-              <li key={`${index}:${url}`}>
-                <a href={url} target="_blank" rel="noreferrer" className="link break-all">
-                  {url}
-                </a>
-              </li>
-            ))}
-          </ul>
-          {!row.drive_urls.length && (
-            <p className="text-sm text-base-content/65">
-              No separate document URLs. References may also be recorded in Notes.
-            </p>
-          )}
-        </section>
+        <ActivityWorkDetails row={row} editable={editable} />
+        <ActivityLinkedRecords row={row} />
       </div>
       <AuditHistory
         className="mt-6"
