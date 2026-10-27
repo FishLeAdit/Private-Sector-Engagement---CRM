@@ -63,6 +63,15 @@ export type Report = {
       done_meetings: number;
     }[];
   };
+  // Provisional contacts-engaged figures from migration 0014. Absent from snapshots produced before it, so
+  // the dashboard hides the section rather than showing zeros.
+  engagement?: {
+    contacts: number;
+    individuals: number;
+    companies: number;
+    unlinked_named: number;
+    owners: { id: string; name: string; contacts: number }[];
+  };
   trends: {
     month: string;
     actual: string;

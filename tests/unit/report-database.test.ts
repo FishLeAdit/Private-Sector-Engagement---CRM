@@ -156,6 +156,57 @@ describe("caller-scoped SQL reporting", () => {
     expect(r.workload.meeting_statuses).toHaveLength(3);
     expect(r.workload.owners.length).toBeGreaterThan(0);
   });
+  it("counts each engaged contact once, through direct, meeting and deal links, and only for Done work", async () => {
+    const meeting = (actor: string, values: Record<string, string | null>) =>
+      asActor(db, actor, tx =>
+        tx.query<{ id: string }>(
+          "insert into public.meetings(title,owner_id,scheduled_at,status,contact_id,opportunity_id) values('Fictional engagement meeting',$1,$2,$3,$4,$5) returning id",
+          [actor, values.at, values.status, values.contact ?? null, values.opportunity ?? null],
+        ),
+      ).then(result => result.rows[0].id);
+    const activity = (actor: string, values: Record<string, string | null>) =>
+      asActor(db, actor, tx =>
+        tx.query(
+          "insert into public.activities(activity_type,owner_id,status,occurred_at,notes,contact_id,opportunity_id,meeting_id,related_person_name) values('call',$1,$2,'2039-03-01T04:00:00Z','Fictional engagement',$3,$4,$5,$6)",
+          [
+            actor,
+            values.status,
+            values.contact ?? null,
+            values.opportunity ?? null,
+            values.meeting ?? null,
+            values.person ?? null,
+          ],
+        ),
+      );
+    // The person is reached four ways (directly, through the cash deal's primary contact, through a meeting and
+    // through the in-kind deal) and the company once; the rest is not Done or has no CRM link.
+    const direct = await meeting(ids.member, { at: "2039-02-01T04:00:00Z", status: "done", contact: ids.person });
+    await meeting(ids.colleague, { at: "2039-02-01T05:00:00Z", status: "done", opportunity: ids.cashOpportunity });
+    await meeting(ids.member, { at: "2039-02-02T04:00:00Z", status: "scheduled", contact: ids.individual });
+    await activity(ids.member, { status: "done", contact: ids.company });
+    await activity(ids.member, { status: "done", meeting: direct });
+    await activity(ids.colleague, { status: "done", opportunity: ids.inKindOpportunity });
+    await activity(ids.member, { status: "cancelled", contact: ids.individual });
+    await activity(ids.member, { status: "open", contact: ids.secondary });
+    await activity(ids.member, { status: "done", person: "Fictional visitor" });
+
+    const all = await read(2039);
+    expect(all.engagement).toEqual({
+      contacts: 2,
+      individuals: 1,
+      companies: 1,
+      unlinked_named: 1,
+      owners: [
+        { id: ids.member, name: expect.any(String), contacts: 2 },
+        { id: ids.colleague, name: expect.any(String), contacts: 1 },
+      ],
+    });
+    // An owner filter narrows the interactions; a funding vertical never does.
+    expect((await read(2039, 0, 0, ids.colleague)).engagement).toMatchObject({ contacts: 1, unlinked_named: 0 });
+    expect((await read(2039, 0, 0, "", ids.vbd)).engagement).toEqual(all.engagement);
+    // February holds only the two Done meetings, which reached the same person.
+    expect((await read(2039, 0, 2)).engagement).toMatchObject({ contacts: 1, individuals: 1, companies: 0 });
+  });
   it.each([ids.outsider, ids.inactive, null])("denies report execution by restricted caller %s", async actor => {
     await expect(read(2026, 0, 0, "", "", "BDT", actor)).rejects.toThrow();
   });

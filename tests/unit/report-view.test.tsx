@@ -79,9 +79,29 @@ describe("dashboard and detailed reporting views", () => {
     render(<ReportView view="dashboard" filters={filters} report={reportFixture()} options={options} />);
     expect(screen.getByText(/older independent activity needs/)).toBeTruthy();
     expect(screen.getByText(/Undated activities across all dates/)).toBeTruthy();
-    expect(screen.getByText(/Lead, contacts-engaged and follow-up-rate KPIs are awaiting/)).toBeTruthy();
+    expect(screen.getByText(/Lead and follow-up-rate KPIs are awaiting/)).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Leads" })).toBeNull();
+  });
+  it("shows contacts engaged as a provisional figure, with owners in the detailed report", () => {
+    const { unmount } = render(
+      <ReportView view="dashboard" filters={filters} report={reportFixture()} options={options} />,
+    );
+    const section = screen.getByRole("region", { name: "Contacts engaged" });
+    expect(section.textContent).toContain("Provisional — awaiting PSE definition");
+    expect(section.textContent).toContain("Named, unlinked interactions");
+    expect(screen.queryByRole("table", { name: "Contacts engaged by owner" })).toBeNull();
+    unmount();
+    render(<ReportView view="reports" filters={filters} report={reportFixture()} options={options} />);
+    const table = screen.getByRole("table", { name: "Contacts engaged by owner" });
+    expect(table.textContent).toContain("Fictional Employee");
+    expect(table.textContent).toContain("5");
+  });
+  it("hides contacts engaged for a snapshot made before the figures existed", () => {
+    const r = reportFixture();
+    delete r.engagement;
+    render(<ReportView view="reports" filters={filters} report={r} options={options} />);
     expect(screen.queryByRole("heading", { name: "Contacts engaged" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Non-monetary work" })).toBeTruthy();
   });
   it("refreshes current data and renders chart values as accessible text", async () => {
     render(<ReportView view="dashboard" filters={filters} report={reportFixture()} options={options} />);

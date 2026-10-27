@@ -23,9 +23,13 @@ export function ReportDefinitions({ report }: { report: Report }) {
           Undated and missing-context counts span all dates for the selected owner, as labeled.
         </p>
         <p>
-          Lead, contacts-engaged and follow-up-rate KPIs are awaiting approved definitions and are not calculated here.
-          Existing record types and configurable labels are retained without declaring provisional stages or verticals
-          final.
+          Contacts engaged uses a provisional definition awaiting PSE confirmation: distinct CRM contacts reached by
+          Done meetings and Done activities in the period, as described under that section.
+        </p>
+        <p>
+          Lead and follow-up-rate KPIs are awaiting approved definitions and are not calculated here; leads are shown
+          only as the pipeline by stage. Existing record types and configurable labels are retained without declaring
+          provisional stages or verticals final.
         </p>
       </div>
     </details>

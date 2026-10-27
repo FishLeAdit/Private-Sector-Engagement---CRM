@@ -74,6 +74,13 @@ export function reportFixture(): Report {
         },
       ],
     },
+    engagement: {
+      contacts: 5,
+      individuals: 3,
+      companies: 2,
+      unlinked_named: 1,
+      owners: [{ id: "00000000-0000-4000-8000-000000000002", name: "Fictional Employee", contacts: 5 }],
+    },
     trends: [
       { month: "2026-01", actual: "100000", activities: 2, completed_activities: 1, meetings: 1, done_meetings: 1 },
       { month: "2026-02", actual: "0", activities: 0, completed_activities: 0, meetings: 0, done_meetings: 0 },

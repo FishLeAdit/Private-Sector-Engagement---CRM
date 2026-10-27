@@ -95,6 +95,7 @@ describe("private report caching", () => {
       cache = createReportCache(backend, scope(), () => clock);
     const first = await createReportsService(repo, access(), cache).read(filters);
     expect(first.report.fundraising.dimensions[0].employee_name).toBe("Fresh employee name");
+    expect(first.report.engagement?.owners[0].name).toBe("Fresh employee name");
     expect(JSON.stringify(backend.values())).not.toContain("Fresh employee name");
     expect(JSON.stringify(backend.values())).not.toContain("Fictional Employee");
     repo.employees.mockResolvedValueOnce([
@@ -102,7 +103,20 @@ describe("private report caching", () => {
     ]);
     const second = await createReportsService(repo, access(), cache).read(filters);
     expect(second.report.fundraising.dimensions[0].employee_name).toBe("Historical employee");
+    expect(second.report.engagement?.owners[0].name).toBe("Historical owner");
     expect(repo.read).toHaveBeenCalledTimes(1);
+  });
+  it("passes through a snapshot made before contacts engaged existed without inventing the figures", async () => {
+    const repo = repository(),
+      older = reportFixture();
+    delete older.engagement;
+    repo.read.mockResolvedValue(older);
+    const { report } = await createReportsService(
+      repo,
+      access(),
+      createReportCache(backend, scope(), () => clock),
+    ).read(filters);
+    expect(report).not.toHaveProperty("engagement");
   });
   it.each(["anonymous", "forbidden", "unavailable"] as const)(
     "denies %s before consulting a warm cache",

@@ -12,6 +12,12 @@ function redactProfiles(report: Report): Report {
       dimensions: report.fundraising.dimensions.map(row => ({ ...row, employee_name: "Historical employee" })),
     },
     workload: { ...report.workload, owners: report.workload.owners.map(row => ({ ...row, name: "Historical owner" })) },
+    ...(report.engagement && {
+      engagement: {
+        ...report.engagement,
+        owners: report.engagement.owners.map(row => ({ ...row, name: "Historical owner" })),
+      },
+    }),
   };
 }
 export function hydrateProfiles(report: Report, employees: ReportOptions["employees"]): Report {
@@ -29,6 +35,12 @@ export function hydrateProfiles(report: Report, employees: ReportOptions["employ
       ...report.workload,
       owners: report.workload.owners.map(row => ({ ...row, name: names.get(row.id) ?? "Historical owner" })),
     },
+    ...(report.engagement && {
+      engagement: {
+        ...report.engagement,
+        owners: report.engagement.owners.map(row => ({ ...row, name: names.get(row.id) ?? "Historical owner" })),
+      },
+    }),
   };
 }
 export function createReportCache(backend: CacheBackend, scope: CacheScope, now: () => number = Date.now) {
