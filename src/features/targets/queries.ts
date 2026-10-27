@@ -1,8 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "@/types/database.types";
+import type { Database, Json, Tables } from "@/types/database.types";
 import { financeDatabaseError, loadFinanceOptions } from "@/features/finance/queries";
 import { FinanceError } from "@/features/finance/types";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import type { TargetInput, VerticalInput } from "./schemas";
 import type { Actual, Allocation } from "./types";
 
@@ -10,13 +11,14 @@ export function createTargetRepository(client: SupabaseClient<Database>) {
   return {
     options: () => loadFinanceOptions(client),
 
-    async plans(page: number) {
+    async plans(page: number): Promise<{ plans: Tables<"target_plans">[]; count: number }> {
       const { data, count, error } = await client
         .from("target_plans")
         .select("*", { count: "exact" })
         .order("year", { ascending: false })
         .order("currency")
         .range((page - 1) * 20, page * 20 - 1);
+      if (isPastLastPage(error) && page > 1) return { plans: [], count: (await this.plans(1)).count };
       if (error) financeDatabaseError(error);
       return { plans: data ?? [], count: count ?? 0 };
     },

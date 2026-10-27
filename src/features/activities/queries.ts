@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import { fromDhakaDateTimeInput } from "@/lib/dates";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import { quotedContains } from "@/features/contacts/queries";
 import { ACTIVITY_PAGE_SIZE } from "./schemas";
 import { ActivityError, type ActivityRepository } from "./types";
@@ -49,6 +50,8 @@ export function createActivityRepository(client: SupabaseClient<Database>): Acti
         .order("created_at", { ascending: false })
         .order("id")
         .range(start, start + ACTIVITY_PAGE_SIZE - 1);
+      if (isPastLastPage(error) && input.page > 1)
+        return { activities: [], count: (await this.list({ ...input, page: 1 })).count };
       if (error) databaseError(error);
       return { activities: data ?? [], count: count ?? 0 };
     },

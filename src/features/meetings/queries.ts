@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import { fromDhakaDateTimeInput } from "@/lib/dates";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import { MEETING_PAGE_SIZE } from "./schemas";
 import { MeetingError, type MeetingRepository } from "./types";
 
@@ -46,6 +47,8 @@ export function createMeetingRepository(client: SupabaseClient<Database>): Meeti
         .order("scheduled_at")
         .order("id")
         .range(start, start + MEETING_PAGE_SIZE - 1);
+      if (isPastLastPage(error) && input.page > 1)
+        return { meetings: [], count: (await this.list({ ...input, page: 1 }, now)).count };
       if (error) databaseError(error);
       return { meetings: data ?? [], count: count ?? 0 };
     },

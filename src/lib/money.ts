@@ -34,6 +34,19 @@ export function targetPerformance(target: bigint, actual: bigint) {
   };
 }
 
+// The share `amount` is of `total`, as a percentage rounded to two decimals without trailing zeros
+// ("50", "12.5", "33.33"). Empty when either value is invalid or the total is zero.
+export function percentOf(amount: string, total: string) {
+  try {
+    const whole = cents(total);
+    if (!whole) return "";
+    const hundredths = (cents(amount) * 10000n + whole / 2n) / whole;
+    return decimal(hundredths).replace(/\.?0+$/, "");
+  } catch {
+    return "";
+  }
+}
+
 // Rounds down to the cent; the caller shows any remainder so a manager can assign it explicitly.
 export function percentAmount(amount: string, percentage: string) {
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(percentage) || cents(percentage) > 10000n)

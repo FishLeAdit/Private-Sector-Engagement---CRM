@@ -32,6 +32,9 @@ test("fictional company/person can be created, linked, edited, searched, dedupli
     process.env.E2E_CONTACT_WRITES !== "1" || !process.env.E2E_PSE_EMAIL || !process.env.E2E_PSE_PASSWORD,
     "Live contact writes require an explicit E2E_CONTACT_WRITES=1 opt-in and private demo credentials.",
   );
+  // The whole workflow visits about a dozen pages; a dev server compiling each one on first visit
+  // needs roughly a minute, which is longer than Playwright's 30-second default.
+  test.setTimeout(120_000);
   const token = Date.now();
   const companyName = `E2E Fictional Company ${token}`;
   const personName = `E2E Fictional Person ${token}`;

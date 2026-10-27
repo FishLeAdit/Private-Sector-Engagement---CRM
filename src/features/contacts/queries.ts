@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import { CONTACT_PAGE_SIZE, type ContactListInput } from "./schemas";
 import { ContactError, type ContactRepository } from "./types";
 
@@ -55,6 +56,8 @@ export function createContactRepository(client: SupabaseClient<Database>): Conta
         .order("name")
         .order("id")
         .range(start, start + CONTACT_PAGE_SIZE - 1);
+      if (isPastLastPage(error) && input.page > 1)
+        return { contacts: [], count: (await this.list({ ...input, page: 1 })).count };
       if (error) databaseError(error);
       return { contacts: data ?? [], count: count ?? 0 };
     },

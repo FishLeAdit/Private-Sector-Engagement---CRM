@@ -39,7 +39,7 @@ Next.js 16 uses `src/proxy.ts` instead of `src/middleware.ts`. Tailwind CSS 4 us
 - `npm run format` / `npm run format:check`: apply or verify Prettier formatting. Migrations, docs, Markdown and generated files (`src/types/database.types.ts`, `next-env.d.ts`) are excluded in `.prettierignore`.
 - `npm run typecheck`: TypeScript.
 - `npm run build`: production build.
-- `npm test`: run 618 database, authentication, Contacts/Opportunities/Meetings/Activities service/API/query, form and demo-seed checks.
+- `npm test`: run 636 database, authentication, Contacts/Opportunities/Meetings/Activities service/API/query, form and demo-seed checks.
 - `npm.cmd run test:e2e -- sign-in.spec.ts contacts.spec.ts opportunities.spec.ts meetings.spec.ts activities.spec.ts contributions.spec.ts targets.spec.ts reports.spec.ts`: run browser checks; starts a local server on port 3100 automatically. Install Chromium with `npx playwright install chromium` first. If your app is already running on port 3000, set `E2E_BASE_URL=http://localhost:3000` in the test terminal. Live cases skip without demo credentials; contact writes additionally require `E2E_CONTACT_WRITES=1`.
 - `npm.cmd run benchmark:reports`: reproduce the isolated 10,002-receipt SQL/cache-policy timing and privacy/correctness checks; no hosted credentials or writes.
 - `npm run validate:seed`: apply migrations and fictional seed, then verify financial totals, target reconciliation and basic visibility.
@@ -86,7 +86,7 @@ The [database schema](docs/03-database-schema.md) describes the current storage 
 
 The requirements register distinguishes confirmed Word-assessment requirements from proposed technical choices and unverified recruitment email requirements. Secondary company contacts remain optional pending confirmation. Creator/owner/manager edit rules and manager-only pipeline configuration are implementation choices. The board and currency subtotals cover the current page of up to 20 deals; they are not full-pipeline reporting. Direct uploads, external autofill, Gmail sync and unapproved lead/follow-up KPIs are excluded.
 
-All 618 unit/database/service/API/form/demo-seed checks, nineteen anonymous browser checks, seed/type checks, lint, typecheck and production build passed. Three optional live cases were skipped. See [verification details](docs/07-testing-and-limitations.md) and the [user guide](docs/06-user-guide.md). Next checkpoint: signed-in acceptance and deployment preparation.
+All 636 unit/database/service/API/form/demo-seed checks, nineteen anonymous browser checks, seed/type checks, lint, typecheck and production build passed. Three optional live cases were skipped. See [verification details](docs/07-testing-and-limitations.md) and the [user guide](docs/06-user-guide.md). Next checkpoint: signed-in acceptance and deployment preparation.
 
 
 Open **Targets** to view performance or, as an authorized manager, configure verticals and create a draft. From an opportunity, choose **Record contribution** to enter actual received support; expected value is never prefilled as achievement. See [Phase 10 manual checks](docs/06-user-guide.md#try-phase-10-contributions-and-targets). Financial receipts are append-only: refunds/corrections are outside this release. The subsequent requested finance seed added six fictional receipts and two draft target plans. See the demo dataset below.

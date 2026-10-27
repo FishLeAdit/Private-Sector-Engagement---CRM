@@ -2,6 +2,20 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Bug fixes on 28 October 2026
+
+Three known issues were fixed after the readability refactor (details under [remaining checks and limitations](#remaining-checks-and-limitations)): target allocation percentages, list pages past the last one, and the live contact workflow test's time limit.
+
+| Check | Result |
+|---|---|
+| `npm test` | 636 passed across 48 files; 18 added checks (12 pagination, 6 target percentage) |
+| `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| New tests against the previous code | Pagination: 6 failed; target percentages: 7 failed (the original percentage test no longer clicks Apply) |
+| Full Playwright suite with live credentials, default configuration | 21 passed, 1 skipped (no restricted account); the contact workflow passed in 52.7 s under its own 2-minute limit |
+| Signed-in checks on a production build | All six lists redirect from a page past the end to the last page with filters kept; target rows show their saved share, flag invalid percentages and save typed percentages; regression checks passed |
+
+The pagination tests drive each list query through the real Supabase client with a transport that answers like PostgREST (416/`PGRST103` past the end), and confirm the retry repeats the same filters on page 1 while a failure on page 1 is still reported. The target form save during signed-in checking re-entered an existing row's percentage, so no hosted amounts changed; no contribution was recorded and no plan approved.
+
 ## Phase 12 performance and caching on 27 October 2026
 
 | Check | Result |
@@ -236,9 +250,9 @@ The TypeScript runner initially could not read Windows user information inside t
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Percentage entry/rounding is a later application workflow; canonical allocation amounts are stored once. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
 - Refund/contribution correction and deletion workflows are not implemented. Application clients cannot edit/delete realized contributions or approved targets.
-- Known issue (found in manual testing, 27 October 2026; fix pending): the target form's "% of quarter" box is a one-shot calculator. It starts blank, does not show the share the saved amount represents, and only changes the amount when "Apply percentage" is clicked. A typed but unapplied percentage is discarded on save without warning, removing any row clears every typed percentage, and changing a quarter total does not refresh the percentages. Saved amounts and approval reconciliation are unaffected. Planned fix: derive the percentage from the amount and quarter total, and update the amount immediately when a percentage is typed.
-- Known issue (found in signed-in acceptance testing, 28 October 2026; fix pending): requesting a list page beyond the last one (for example `/activities?page=5` when one page exists) shows "temporarily unavailable" instead of redirecting to the last page. PostgREST rejects the out-of-range request with HTTP 416 before the page's redirect check runs. Affects all six paginated lists; no data is changed.
-- Known issue (same run; fix pending): the opt-in live contact workflow browser test needs about 56 seconds against the development server, which compiles each route on first visit, but runs under Playwright's 30-second default limit. With a longer limit it passes; the application behavior is correct.
+- Fixed 28 October 2026 (found in manual testing, 27 October): the target form's "% of quarter" box was a one-shot calculator that dropped a typed but unapplied percentage on save. Each box now shows the share its saved amount represents, typing a percentage updates the amount immediately (the Apply button is gone), invalid percentages are flagged under the box without changing the amount, and removing rows or changing quarter totals keeps every row's percentage correct.
+- Fixed 28 October 2026 (found in signed-in acceptance testing): a list page beyond the last one (for example `/activities?page=5` when one page exists) showed "temporarily unavailable". PostgREST answers such a request with HTTP 416 (`PGRST103`) and no row count; all six list queries now re-read page 1 for the total, so the page redirects to the real last page with its filters kept.
+- Fixed 28 October 2026: the opt-in live contact workflow browser test, which takes about a minute against a compiling development server, now sets its own 2-minute limit instead of Playwright's 30-second default.
 - The seed contains fixed fictional Auth/profile identifiers, not login credentials. Hosted import requires trusted identity provisioning and reviewed mappings. No real JAAGO/Odoo data was migrated.
 
 ## Earlier scaffold verification

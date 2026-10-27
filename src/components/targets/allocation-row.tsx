@@ -4,28 +4,31 @@ import type { TargetInput } from "@/features/targets/schemas";
 
 type Allocation = TargetInput["allocations"][number];
 
-// One employee × vertical cell for a quarter. The percentage box only calculates an amount when
-// "Apply percentage" is pressed; the stored amount is the source of truth.
+// One employee × vertical cell for a quarter. The amount is what gets saved; the percentage box shows
+// that amount's share of the quarter target, and typing a percentage updates the amount immediately.
 export function AllocationRow({
   index,
   allocation,
   options,
   percentage,
+  percentageError,
   onChange,
   onPercentageChange,
-  onApplyPercentage,
+  onPercentageBlur,
   onRemove,
 }: {
   index: number;
   allocation: Allocation;
   options: FinanceOptions;
   percentage: string;
+  percentageError: string;
   onChange: (values: Partial<Allocation>) => void;
   onPercentageChange: (value: string) => void;
-  onApplyPercentage: () => void;
+  onPercentageBlur: () => void;
   onRemove: () => void;
 }) {
   const label = (part: string) => `Allocation ${index + 1} ${part}`;
+  const errorId = `allocation-${index + 1}-percentage-error`;
   return (
     <div className="grid gap-3 rounded-lg bg-base-200 p-4 sm:grid-cols-3 lg:grid-cols-6">
       <label className="text-xs">
@@ -85,11 +88,16 @@ export function AllocationRow({
           inputMode="decimal"
           className="input input-bordered mt-1 w-full"
           value={percentage}
+          aria-invalid={!!percentageError}
+          aria-describedby={percentageError ? errorId : undefined}
           onChange={e => onPercentageChange(e.target.value)}
+          onBlur={onPercentageBlur}
         />
-        <button type="button" className="btn btn-ghost btn-xs mt-1" onClick={onApplyPercentage}>
-          Apply percentage
-        </button>
+        {percentageError && (
+          <span id={errorId} role="alert" className="mt-1 block text-error">
+            {percentageError}
+          </span>
+        )}
       </label>
       <label className="text-xs">
         Amount

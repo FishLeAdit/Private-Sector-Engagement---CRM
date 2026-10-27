@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
 import { targetSchema, type TargetInput } from "@/features/targets/schemas";
-import { cents, decimal, percentAmount } from "@/lib/money";
+import { cents, decimal, percentAmount, percentOf } from "@/lib/money";
 import { sendJson } from "@/lib/send-json";
 import { AllocationRow } from "./allocation-row";
 
@@ -32,10 +32,28 @@ export function TargetForm({
       },
     ),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [percentages, setPercentages] = useState<Record<number, string>>({});
+    [error, setError] = useState("");
+  // The percentage box currently being typed in. Every other box shows its row's amount as a share of the quarter.
+  const [typing, setTyping] = useState<{ index: number; text: string; error: string } | null>(null);
+  const quarterTarget = (quarter: number) => draft.quarters.find(q => q.quarter === quarter)?.amount ?? "";
+
   function allocation(index: number, values: Partial<TargetInput["allocations"][number]>) {
     setDraft(d => ({ ...d, allocations: d.allocations.map((a, i) => (i === index ? { ...a, ...values } : a)) }));
+  }
+  // Typing a percentage sets the amount straight away, so nothing typed can be lost on save.
+  function typePercentage(index: number, text: string) {
+    const value = text.trim();
+    let problem = "";
+    // Empty, or a trailing dot still being typed, leaves the amount as it is.
+    if (value && !/^\d{1,3}\.$/.test(value)) {
+      const target = quarterTarget(draft.allocations[index].quarter);
+      try {
+        allocation(index, { amount: percentAmount(target, value) });
+      } catch (failure) {
+        problem = /^\d+(\.\d{1,2})?$/.test(target) ? (failure as Error).message : "Enter a valid quarter target first.";
+      }
+    }
+    setTyping({ index, text, error: problem });
   }
   function remainder(quarter?: number) {
     try {
@@ -150,9 +168,9 @@ export function TargetForm({
         <section className="space-y-4 rounded-lg border border-base-300 p-5">
           <h2 className="text-lg font-semibold">Employee × vertical allocations</h2>
           <p className="text-sm text-base-content/65">
-            Add a row for each employee/vertical pair in a quarter. Percentage inputs calculate an amount from that
-            quarter’s target, rounded down to cents. Assign the displayed remainder explicitly before approval. Stored
-            amounts are the source of truth; percentages are calculation aids.
+            Add a row for each employee/vertical pair in a quarter. Enter either the amount or a percentage of that
+            quarter’s target; the other updates to match. Percentages round down to the cent, so assign any remaining
+            cents explicitly before approval. The amount is what gets saved.
           </p>
           {[1, 2, 3, 4].map(q => (
             <p key={q} className="text-sm">
@@ -171,25 +189,14 @@ export function TargetForm({
                 index={index}
                 allocation={a}
                 options={options}
-                percentage={percentages[index] ?? ""}
+                percentage={typing?.index === index ? typing.text : percentOf(a.amount, quarterTarget(a.quarter))}
+                percentageError={typing?.index === index ? typing.error : ""}
                 onChange={values => allocation(index, values)}
-                onPercentageChange={value => setPercentages(p => ({ ...p, [index]: value }))}
-                onApplyPercentage={() => {
-                  try {
-                    allocation(index, {
-                      amount: percentAmount(
-                        draft.quarters.find(q => q.quarter === a.quarter)!.amount,
-                        percentages[index] ?? "",
-                      ),
-                    });
-                    setError("");
-                  } catch (error) {
-                    setError((error as Error).message);
-                  }
-                }}
+                onPercentageChange={value => typePercentage(index, value)}
+                onPercentageBlur={() => setTyping(null)}
                 onRemove={() => {
                   setDraft(d => ({ ...d, allocations: d.allocations.filter((_, i) => i !== index) }));
-                  setPercentages({});
+                  setTyping(null);
                 }}
               />
             ))}

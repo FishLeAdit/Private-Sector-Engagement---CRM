@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import { OPPORTUNITY_PAGE_SIZE } from "./schemas";
 import { OpportunityError, type OpportunityRepository } from "./types";
 
@@ -47,6 +48,8 @@ export function createOpportunityRepository(client: SupabaseClient<Database>): O
         .order("created_at", { ascending: false })
         .order("id")
         .range(start, start + OPPORTUNITY_PAGE_SIZE - 1);
+      if (isPastLastPage(error) && input.page > 1)
+        return { opportunities: [], count: (await this.list({ ...input, page: 1 })).count };
       if (error) databaseError(error);
       return { opportunities: data ?? [], count: count ?? 0 };
     },

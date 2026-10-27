@@ -111,9 +111,81 @@ describe("target entry and locked approval", () => {
     fireEvent.change(screen.getByLabelText("Q1 target"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: "Add allocation" }));
     fireEvent.change(screen.getByLabelText("Allocation 1 percentage"), { target: { value: "33.33" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply percentage" }));
     expect((screen.getByLabelText("Allocation 1 amount") as HTMLInputElement).value).toBe("3.33");
     expect(screen.getByText("Q1 left to allocate: 6.67 BDT")).toBeTruthy();
+  });
+});
+
+describe("allocation percentages stay in step with saved amounts", () => {
+  const draft = {
+    request_id: id,
+    expected_updated_at: "2026-10-27T04:00:00Z",
+    year: 2026,
+    currency: "BDT",
+    annual_amount: "600000",
+    quarters: [
+      { quarter: 1, amount: "150000" },
+      { quarter: 2, amount: "150000" },
+      { quarter: 3, amount: "150000" },
+      { quarter: 4, amount: "150000" },
+    ],
+    allocations: [
+      { quarter: 1, employee_id: member, vertical_id: vertical, amount: "75000" },
+      { quarter: 2, employee_id: member, vertical_id: vertical, amount: "30000" },
+    ],
+  };
+  const percentage = (row: number) => screen.getByLabelText(`Allocation ${row} percentage`) as HTMLInputElement;
+  const amount = (row: number) => screen.getByLabelText(`Allocation ${row} amount`) as HTMLInputElement;
+
+  it("shows the share each saved amount already represents", () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    expect(percentage(1).value).toBe("50");
+    expect(percentage(2).value).toBe("20");
+  });
+
+  it("saves a typed percentage without any extra step", async () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    fireEvent.change(percentage(1), { target: { value: "12" } });
+    expect(amount(1).value).toBe("18000.00");
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalled());
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).allocations[0].amount).toBe("18000.00");
+  });
+
+  it("keeps the typed text while editing and shows the saved share afterwards", () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    fireEvent.change(percentage(1), { target: { value: "12." } });
+    expect(percentage(1).value).toBe("12.");
+    expect(amount(1).value).toBe("75000");
+    fireEvent.change(percentage(1), { target: { value: "12.5" } });
+    fireEvent.blur(percentage(1));
+    expect(percentage(1).value).toBe("12.5");
+    expect(amount(1).value).toBe("18750.00");
+  });
+
+  it("flags an invalid percentage and leaves the amount unchanged", () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    fireEvent.change(percentage(1), { target: { value: "150" } });
+    expect(screen.getByRole("alert").textContent).toContain("Use a percentage from 0 to 100");
+    expect(percentage(1).getAttribute("aria-invalid")).toBe("true");
+    expect(amount(1).value).toBe("75000");
+    fireEvent.blur(percentage(1));
+    expect(percentage(1).value).toBe("50");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps other rows' percentages when a row is removed", () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove allocation 1" }));
+    expect(amount(1).value).toBe("30000");
+    expect(percentage(1).value).toBe("20");
+  });
+
+  it("recalculates percentages when a quarter target changes, keeping the saved amounts", () => {
+    render(<TargetForm initial={draft} options={options} year={2026} />);
+    fireEvent.change(screen.getByLabelText("Q1 target"), { target: { value: "300000" } });
+    expect(percentage(1).value).toBe("25");
+    expect(amount(1).value).toBe("75000");
   });
   it("preserves entered amounts after a stale-version conflict", async () => {
     fetcher.mockResolvedValueOnce(Response.json({ error: "Draft has changed. Reload and review." }, { status: 409 }));

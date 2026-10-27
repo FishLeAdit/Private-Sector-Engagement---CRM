@@ -20,6 +20,7 @@ test-results/
 
 # Private development instructions and planning
 /AGENTS.md
+/CLAUDE.md
 /.agents/
 /.codex/
 /PSE_CRM_Implementation_Plan.md

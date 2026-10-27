@@ -4,7 +4,9 @@ import type { Database } from "@/types/database.types";
 import { financeDatabaseError, loadFinanceOptions } from "@/features/finance/queries";
 import { FinanceError } from "@/features/finance/types";
 import { fromDhakaDateTimeInput } from "@/lib/dates";
+import { isPastLastPage } from "@/lib/supabase/pagination";
 import type { ContributionFilters, ContributionInput } from "./schemas";
+import type { Contribution } from "./types";
 
 const contributionSelect =
   "*,opportunity:opportunity_id(id,deal_name),employee:employee_id(display_name),vertical:target_vertical_id(name),recorder:recorded_by(display_name)" as const;
@@ -34,7 +36,7 @@ export function createContributionRepository(client: SupabaseClient<Database>) {
     },
 
     // Date filters are whole Asia/Dhaka days: from midnight on "from" to midnight after "to".
-    async contributions(input: ContributionFilters) {
+    async contributions(input: ContributionFilters): Promise<{ contributions: Contribution[]; count: number }> {
       let query = client.from("recognized_contributions").select(contributionSelect, { count: "exact" });
       for (const key of ["opportunity_id", "employee_id", "target_vertical_id", "currency"] as const)
         if (input[key]) query = query.eq(key, input[key]);
@@ -48,6 +50,8 @@ export function createContributionRepository(client: SupabaseClient<Database>) {
         .order("recognized_at", { ascending: false })
         .order("id")
         .range((input.page - 1) * 20, input.page * 20 - 1);
+      if (isPastLastPage(error) && input.page > 1)
+        return { contributions: [], count: (await this.contributions({ ...input, page: 1 })).count };
       if (error) financeDatabaseError(error);
       return { contributions: data ?? [], count: count ?? 0 };
     },
