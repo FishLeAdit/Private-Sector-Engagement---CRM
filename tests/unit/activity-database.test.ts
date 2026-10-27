@@ -1,33 +1,256 @@
-import { afterAll,beforeAll,describe,expect,it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
-import { asActor,createLocalDatabase,fixtureIds as ids } from "../../scripts/lib/local-database";
-import { buildDemoActivities,demoActivityIds } from "../../scripts/lib/demo-activities";
+import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
+import { buildDemoActivities, demoActivityIds } from "../../scripts/lib/demo-activities";
 import { activityTypes } from "../../src/features/activities/schemas";
-let db:PGlite;
-beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
-async function activity(actor:string=ids.member,owner:string=actor,links:{contact?:string;opportunity?:string;meeting?:string}={}){return(await asActor(db,actor,tx=>tx.query<{id:string}>("insert into public.activities(activity_type,owner_id,contact_id,opportunity_id,meeting_id,notes,related_organization_name) values('general',$1,$2,$3,$4,'Fictional activity','Fictional team') returning id",[owner,links.contact??null,links.opportunity??null,links.meeting??null]))).rows[0].id;}
-const remove=(id:string,actor:string|null=ids.member)=>asActor(db,actor,tx=>tx.query("delete from public.activities where id=$1 returning id",[id]));
-const contacts=[{id:ids.person,kind:"individual"},{id:ids.company,kind:"company"}];
-const opportunities=[{id:ids.cashOpportunity,contact_id:ids.company,primary_contact_id:ids.person,secondary_contact_id:ids.secondary}];
-const meetings=[{id:ids.meeting,contact_id:ids.person,opportunity_id:ids.cashOpportunity,status:"scheduled"}];
-const data=()=>buildDemoActivities(ids.manager,contacts,opportunities,meetings,new Date("2026-10-27T20:00:00Z"));
-async function financialState(){return(await db.query("select * from (select 'actual' as entity,to_jsonb(x) as value from public.recognized_contributions x union all select 'opportunity',to_jsonb(x) from public.opportunities x union all select 'target',to_jsonb(x) from public.target_allocations x) snapshots order by entity,value::text")).rows;}
-async function seed(){await asActor(db,ids.manager,async tx=>{for(const row of data()){const columns=Object.keys(row);await tx.query(`insert into public.activities(${columns.join(",")}) select ${columns.map(key=>`x.${key}`).join(",")} from jsonb_populate_record(null::public.activities,$1::jsonb) x on conflict(id) do nothing`,[JSON.stringify(row)]);}});}
-describe("Activities SQL permissions, integrity and financial separation",()=>{
-  it("allows independent work with no contact, opportunity, meeting or time",async()=>{const id=await activity();expect((await asActor(db,ids.colleague,tx=>tx.query("select contact_id,opportunity_id,meeting_id,occurred_at from public.activities where id=$1",[id]))).rows).toEqual([{contact_id:null,opportunity_id:null,meeting_id:null,occurred_at:null}]);});
-  it("retains parent links and deletion actor/before snapshots",async()=>{const id=await activity(ids.member,ids.member,{contact:ids.person,opportunity:ids.cashOpportunity,meeting:ids.meeting});expect((await remove(id)).rows).toEqual([{id}]);expect((await asActor(db,ids.colleague,tx=>tx.query("select actor_id,before->>'id' as id,after from public.audit_logs where entity='activities' and entity_id=$1 and action='delete'",[id]))).rows).toEqual([{actor_id:ids.member,id,after:null}]);for(const[table,parent]of[["contacts",ids.person],["opportunities",ids.cashOpportunity],["meetings",ids.meeting]])expect((await db.query(`select id from public.${table} where id=$1`,[parent])).rows).toHaveLength(1);});
-  it("permits manager, assigned owner and retained creator deletion",async()=>{expect((await remove(await activity(),ids.manager)).rows).toHaveLength(1);expect((await remove(await activity(ids.manager,ids.colleague),ids.colleague)).rows).toHaveLength(1);const id=await activity();await asActor(db,ids.manager,tx=>tx.query("update public.activities set owner_id=$1 where id=$2",[ids.colleague,id]));expect((await remove(id)).rows).toHaveLength(1);});
-  it.each([ids.colleague,ids.outsider,ids.inactive])("denies unrelated/restricted actor %s mutation",async actor=>{const id=await activity();expect((await remove(id,actor)).rows).toHaveLength(0);expect((await asActor(db,actor,tx=>tx.query("update public.activities set status='done' where id=$1 returning id",[id]))).rows).toHaveLength(0);});
-  it("denies anonymous deletion and non-PSE reads",async()=>{await expect(remove(await activity(),null)).rejects.toThrow(/permission/i);expect((await asActor(db,ids.outsider,tx=>tx.query("select id from public.activities"))).rows).toHaveLength(0);});
-  it.each(["inactive","non-PSE"])("revokes %s owner access immediately",async restriction=>{const id=await activity();await db.query("update public.profiles set active=$1,department=$2 where id=$3",[restriction!=="inactive",restriction==="non-PSE"?"HR":"PSE",ids.member]);try{expect((await remove(id)).rows).toHaveLength(0);}finally{await db.query("update public.profiles set active=true,department='PSE' where id=$1",[ids.member]);}});
-  it("blocks incompatible direct or meeting-derived relationships",async()=>{for(const links of [{contact:ids.individual,opportunity:ids.cashOpportunity},{contact:ids.individual,meeting:ids.meeting},{meeting:ids.meeting,opportunity:ids.inKindOpportunity}])await expect(activity(ids.member,ids.member,links)).rejects.toMatchObject({code:expect.stringMatching(/23514/)});});
-  it("protects creator identity and owner assignments",async()=>{await expect(activity(ids.member,ids.colleague)).rejects.toMatchObject({code:"42501"});const id=await activity();await expect(asActor(db,ids.member,tx=>tx.query("update public.activities set created_by=$1 where id=$2",[ids.colleague,id]))).rejects.toThrow();await expect(asActor(db,ids.member,tx=>tx.query("update public.activities set owner_id=$1 where id=$2",[ids.colleague,id]))).rejects.toThrow();});
-  it("does not recognize money, change forecast/targets or erase a legacy estimate on completion",async()=>{const before=await financialState(),id=await activity();await db.query("update public.activities set estimated_nonmonetary_value=5000 where id=$1",[id]);await asActor(db,ids.member,tx=>tx.query("update public.activities set status='done' where id=$1",[id]));expect((await db.query<{estimated_nonmonetary_value:string}>("select estimated_nonmonetary_value from public.activities where id=$1",[id])).rows[0].estimated_nonmonetary_value).toBe("5000.00");await remove(id);expect(await financialState()).toEqual(before);});
-  it("lets activity deletion unblock meeting deletion without a cascade",async()=>{const meeting=(await asActor(db,ids.member,tx=>tx.query<{id:string}>("insert into public.meetings(title,contact_id,scheduled_at,owner_id) values('Fictional leaf test',$1,now(),$2) returning id",[ids.person,ids.member]))).rows[0].id;const id=await activity(ids.member,ids.member,{meeting});await expect(asActor(db,ids.member,tx=>tx.query("delete from public.meetings where id=$1",[meeting]))).rejects.toMatchObject({code:expect.stringMatching(/23503|23001/)});await remove(id);expect((await asActor(db,ids.member,tx=>tx.query("delete from public.meetings where id=$1 returning id",[meeting]))).rows).toHaveLength(1);});
+let db: PGlite;
+beforeAll(async () => {
+  db = await createLocalDatabase();
 });
-describe("fictional Activities seed",()=>{
-  it("builds every required activity type, varied statuses and Dhaka UTC dates",()=>{const rows=data();expect(rows).toHaveLength(11);expect(rows.map(row=>row.activity_type)).toEqual([...activityTypes]);expect(rows.every(row=>row.notes?.startsWith("Demo | ")&&row.owner_id===ids.manager&&row.created_by===ids.manager)).toBe(true);expect(rows[0].occurred_at).toBe("2026-10-29T04:00:00.000Z");expect(rows[10].occurred_at).toBeNull();expect(new Set(rows.map(row=>row.status)).size).toBe(4);expect(rows.every(row=>!("estimated_nonmonetary_value"in row))).toBe(true);});
-  it("falls back to independent work without recreating deleted parents",()=>{expect(buildDemoActivities(ids.manager,[],[],[]).every(row=>!row.contact_id&&!row.opportunity_id&&!row.meeting_id)).toBe(true);});
-  it("persists all demo relationships and shares them with PSE only",async()=>{const before=await financialState();await seed();expect((await asActor(db,ids.colleague,tx=>tx.query("select id from public.activities where id=any($1::uuid[])",[demoActivityIds]))).rows).toHaveLength(11);expect((await asActor(db,ids.outsider,tx=>tx.query("select id from public.activities where id=any($1::uuid[])",[demoActivityIds]))).rows).toHaveLength(0);expect(await financialState()).toEqual(before);});
-  it("preserves user edits and parent/financial rows on rerun",async()=>{await asActor(db,ids.manager,tx=>tx.query("update public.activities set notes='Demo | Edited activity' where id=$1",[demoActivityIds[0]]));const before=await financialState();await seed();expect((await db.query<{notes:string}>("select notes from public.activities where id=$1",[demoActivityIds[0]])).rows[0].notes).toBe("Demo | Edited activity");expect(await financialState()).toEqual(before);expect((await db.query("select (select count(*)::int from public.contacts) as contacts,(select count(*)::int from public.meetings) as meetings")).rows).toEqual([{contacts:4,meetings:2}]);});
+afterAll(async () => {
+  await db?.close();
+});
+async function activity(
+  actor: string = ids.member,
+  owner: string = actor,
+  links: { contact?: string; opportunity?: string; meeting?: string } = {},
+) {
+  return (
+    await asActor(db, actor, tx =>
+      tx.query<{ id: string }>(
+        "insert into public.activities(activity_type,owner_id,contact_id,opportunity_id,meeting_id,notes,related_organization_name) values('general',$1,$2,$3,$4,'Fictional activity','Fictional team') returning id",
+        [owner, links.contact ?? null, links.opportunity ?? null, links.meeting ?? null],
+      ),
+    )
+  ).rows[0].id;
+}
+const remove = (id: string, actor: string | null = ids.member) =>
+  asActor(db, actor, tx => tx.query("delete from public.activities where id=$1 returning id", [id]));
+const contacts = [
+  { id: ids.person, kind: "individual" },
+  { id: ids.company, kind: "company" },
+];
+const opportunities = [
+  {
+    id: ids.cashOpportunity,
+    contact_id: ids.company,
+    primary_contact_id: ids.person,
+    secondary_contact_id: ids.secondary,
+  },
+];
+const meetings = [
+  { id: ids.meeting, contact_id: ids.person, opportunity_id: ids.cashOpportunity, status: "scheduled" },
+];
+const data = () =>
+  buildDemoActivities(ids.manager, contacts, opportunities, meetings, new Date("2026-10-27T20:00:00Z"));
+async function financialState() {
+  return (
+    await db.query(
+      "select * from (select 'actual' as entity,to_jsonb(x) as value from public.recognized_contributions x union all select 'opportunity',to_jsonb(x) from public.opportunities x union all select 'target',to_jsonb(x) from public.target_allocations x) snapshots order by entity,value::text",
+    )
+  ).rows;
+}
+async function seed() {
+  await asActor(db, ids.manager, async tx => {
+    for (const row of data()) {
+      const columns = Object.keys(row);
+      await tx.query(
+        `insert into public.activities(${columns.join(",")}) select ${columns.map(key => `x.${key}`).join(",")} from jsonb_populate_record(null::public.activities,$1::jsonb) x on conflict(id) do nothing`,
+        [JSON.stringify(row)],
+      );
+    }
+  });
+}
+describe("Activities SQL permissions, integrity and financial separation", () => {
+  it("allows independent work with no contact, opportunity, meeting or time", async () => {
+    const id = await activity();
+    expect(
+      (
+        await asActor(db, ids.colleague, tx =>
+          tx.query("select contact_id,opportunity_id,meeting_id,occurred_at from public.activities where id=$1", [id]),
+        )
+      ).rows,
+    ).toEqual([{ contact_id: null, opportunity_id: null, meeting_id: null, occurred_at: null }]);
+  });
+  it("retains parent links and deletion actor/before snapshots", async () => {
+    const id = await activity(ids.member, ids.member, {
+      contact: ids.person,
+      opportunity: ids.cashOpportunity,
+      meeting: ids.meeting,
+    });
+    expect((await remove(id)).rows).toEqual([{ id }]);
+    expect(
+      (
+        await asActor(db, ids.colleague, tx =>
+          tx.query(
+            "select actor_id,before->>'id' as id,after from public.audit_logs where entity='activities' and entity_id=$1 and action='delete'",
+            [id],
+          ),
+        )
+      ).rows,
+    ).toEqual([{ actor_id: ids.member, id, after: null }]);
+    for (const [table, parent] of [
+      ["contacts", ids.person],
+      ["opportunities", ids.cashOpportunity],
+      ["meetings", ids.meeting],
+    ])
+      expect((await db.query(`select id from public.${table} where id=$1`, [parent])).rows).toHaveLength(1);
+  });
+  it("permits manager, assigned owner and retained creator deletion", async () => {
+    expect((await remove(await activity(), ids.manager)).rows).toHaveLength(1);
+    expect((await remove(await activity(ids.manager, ids.colleague), ids.colleague)).rows).toHaveLength(1);
+    const id = await activity();
+    await asActor(db, ids.manager, tx =>
+      tx.query("update public.activities set owner_id=$1 where id=$2", [ids.colleague, id]),
+    );
+    expect((await remove(id)).rows).toHaveLength(1);
+  });
+  it.each([ids.colleague, ids.outsider, ids.inactive])("denies unrelated/restricted actor %s mutation", async actor => {
+    const id = await activity();
+    expect((await remove(id, actor)).rows).toHaveLength(0);
+    expect(
+      (
+        await asActor(db, actor, tx =>
+          tx.query("update public.activities set status='done' where id=$1 returning id", [id]),
+        )
+      ).rows,
+    ).toHaveLength(0);
+  });
+  it("denies anonymous deletion and non-PSE reads", async () => {
+    await expect(remove(await activity(), null)).rejects.toThrow(/permission/i);
+    expect((await asActor(db, ids.outsider, tx => tx.query("select id from public.activities"))).rows).toHaveLength(0);
+  });
+  it.each(["inactive", "non-PSE"])("revokes %s owner access immediately", async restriction => {
+    const id = await activity();
+    await db.query("update public.profiles set active=$1,department=$2 where id=$3", [
+      restriction !== "inactive",
+      restriction === "non-PSE" ? "HR" : "PSE",
+      ids.member,
+    ]);
+    try {
+      expect((await remove(id)).rows).toHaveLength(0);
+    } finally {
+      await db.query("update public.profiles set active=true,department='PSE' where id=$1", [ids.member]);
+    }
+  });
+  it("blocks incompatible direct or meeting-derived relationships", async () => {
+    for (const links of [
+      { contact: ids.individual, opportunity: ids.cashOpportunity },
+      { contact: ids.individual, meeting: ids.meeting },
+      { meeting: ids.meeting, opportunity: ids.inKindOpportunity },
+    ])
+      await expect(activity(ids.member, ids.member, links)).rejects.toMatchObject({
+        code: expect.stringMatching(/23514/),
+      });
+  });
+  it("protects creator identity and owner assignments", async () => {
+    await expect(activity(ids.member, ids.colleague)).rejects.toMatchObject({ code: "42501" });
+    const id = await activity();
+    await expect(
+      asActor(db, ids.member, tx =>
+        tx.query("update public.activities set created_by=$1 where id=$2", [ids.colleague, id]),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asActor(db, ids.member, tx =>
+        tx.query("update public.activities set owner_id=$1 where id=$2", [ids.colleague, id]),
+      ),
+    ).rejects.toThrow();
+  });
+  it("does not recognize money, change forecast/targets or erase a legacy estimate on completion", async () => {
+    const before = await financialState(),
+      id = await activity();
+    await db.query("update public.activities set estimated_nonmonetary_value=5000 where id=$1", [id]);
+    await asActor(db, ids.member, tx => tx.query("update public.activities set status='done' where id=$1", [id]));
+    expect(
+      (
+        await db.query<{ estimated_nonmonetary_value: string }>(
+          "select estimated_nonmonetary_value from public.activities where id=$1",
+          [id],
+        )
+      ).rows[0].estimated_nonmonetary_value,
+    ).toBe("5000.00");
+    await remove(id);
+    expect(await financialState()).toEqual(before);
+  });
+  it("lets activity deletion unblock meeting deletion without a cascade", async () => {
+    const meeting = (
+      await asActor(db, ids.member, tx =>
+        tx.query<{ id: string }>(
+          "insert into public.meetings(title,contact_id,scheduled_at,owner_id) values('Fictional leaf test',$1,now(),$2) returning id",
+          [ids.person, ids.member],
+        ),
+      )
+    ).rows[0].id;
+    const id = await activity(ids.member, ids.member, { meeting });
+    await expect(
+      asActor(db, ids.member, tx => tx.query("delete from public.meetings where id=$1", [meeting])),
+    ).rejects.toMatchObject({ code: expect.stringMatching(/23503|23001/) });
+    await remove(id);
+    expect(
+      (await asActor(db, ids.member, tx => tx.query("delete from public.meetings where id=$1 returning id", [meeting])))
+        .rows,
+    ).toHaveLength(1);
+  });
+});
+describe("fictional Activities seed", () => {
+  it("builds every required activity type, varied statuses and Dhaka UTC dates", () => {
+    const rows = data();
+    expect(rows).toHaveLength(11);
+    expect(rows.map(row => row.activity_type)).toEqual([...activityTypes]);
+    expect(
+      rows.every(
+        row => row.notes?.startsWith("Demo | ") && row.owner_id === ids.manager && row.created_by === ids.manager,
+      ),
+    ).toBe(true);
+    expect(rows[0].occurred_at).toBe("2026-10-29T04:00:00.000Z");
+    expect(rows[10].occurred_at).toBeNull();
+    expect(new Set(rows.map(row => row.status)).size).toBe(4);
+    expect(rows.every(row => !("estimated_nonmonetary_value" in row))).toBe(true);
+  });
+  it("falls back to independent work without recreating deleted parents", () => {
+    expect(
+      buildDemoActivities(ids.manager, [], [], []).every(
+        row => !row.contact_id && !row.opportunity_id && !row.meeting_id,
+      ),
+    ).toBe(true);
+  });
+  it("persists all demo relationships and shares them with PSE only", async () => {
+    const before = await financialState();
+    await seed();
+    expect(
+      (
+        await asActor(db, ids.colleague, tx =>
+          tx.query("select id from public.activities where id=any($1::uuid[])", [demoActivityIds]),
+        )
+      ).rows,
+    ).toHaveLength(11);
+    expect(
+      (
+        await asActor(db, ids.outsider, tx =>
+          tx.query("select id from public.activities where id=any($1::uuid[])", [demoActivityIds]),
+        )
+      ).rows,
+    ).toHaveLength(0);
+    expect(await financialState()).toEqual(before);
+  });
+  it("preserves user edits and parent/financial rows on rerun", async () => {
+    await asActor(db, ids.manager, tx =>
+      tx.query("update public.activities set notes='Demo | Edited activity' where id=$1", [demoActivityIds[0]]),
+    );
+    const before = await financialState();
+    await seed();
+    expect(
+      (await db.query<{ notes: string }>("select notes from public.activities where id=$1", [demoActivityIds[0]]))
+        .rows[0].notes,
+    ).toBe("Demo | Edited activity");
+    expect(await financialState()).toEqual(before);
+    expect(
+      (
+        await db.query(
+          "select (select count(*)::int from public.contacts) as contacts,(select count(*)::int from public.meetings) as meetings",
+        )
+      ).rows,
+    ).toEqual([{ contacts: 4, meetings: 2 }]);
+  });
 });

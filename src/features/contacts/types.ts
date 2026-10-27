@@ -8,7 +8,10 @@ export type ContactRecord = ContactRow & {
 };
 export type CompanyOption = { id: string; name: string };
 export type DuplicateContact = { id: string; name: string; fields: ("email" | "phone")[] };
-export type ContactWrite = Pick<TablesInsert<"contacts">, "kind" | "name" | "email" | "phone" | "company_id" | "designation" | "website" | "industry" | "notes">;
+export type ContactWrite = Pick<
+  TablesInsert<"contacts">,
+  "kind" | "name" | "email" | "phone" | "company_id" | "designation" | "website" | "industry" | "notes"
+>;
 export type ContactHistory = {
   opportunities: Pick<Tables<"opportunities">, "id" | "deal_name" | "expected_amount" | "currency" | "created_at">[];
   meetings: Pick<Tables<"meetings">, "id" | "title" | "scheduled_at" | "status">[];
@@ -17,7 +20,11 @@ export type ContactHistory = {
 export interface ContactRepository {
   list(input: ContactListInput): Promise<{ contacts: ContactRecord[]; count: number }>;
   find(id: string): Promise<ContactRecord | null>;
-  duplicates(email: string | null, phone: string | null, exclude?: string): Promise<Pick<ContactRow, "id" | "name" | "email_normalized" | "phone_normalized">[]>;
+  duplicates(
+    email: string | null,
+    phone: string | null,
+    exclude?: string,
+  ): Promise<Pick<ContactRow, "id" | "name" | "email_normalized" | "phone_normalized">[]>;
   create(input: ContactWrite, actorId: string): Promise<ContactRecord>;
   update(id: string, input: ContactWrite): Promise<ContactRecord | null>;
   remove(id: string): Promise<boolean>;
@@ -30,7 +37,10 @@ export class ContactError extends Error {
     message: string,
     public fields: Record<string, string[]> = {},
     public duplicates: DuplicateContact[] = [],
-  ) { super(message); this.name = "ContactError"; }
+  ) {
+    super(message);
+    this.name = "ContactError";
+  }
 }
 
 export type ContactApiError = { error: string; fields?: Record<string, string[]>; duplicates?: DuplicateContact[] };

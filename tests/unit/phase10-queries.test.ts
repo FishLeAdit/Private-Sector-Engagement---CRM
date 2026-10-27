@@ -1,16 +1,108 @@
-import { describe,expect,it,vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../src/types/database.types";
-vi.mock("server-only",()=>({}));
+vi.mock("server-only", () => ({}));
 import { createFinanceRepository } from "../../src/features/finance/queries";
 import { contributionFilters } from "../../src/features/finance/schemas";
-const id="f1000000-0000-4000-8000-000000000001";
-function repository(body:unknown=[],status=200){const fetcher=vi.fn().mockImplementation(async()=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json","Content-Range":"0-0/0"}}));return{fetcher,repo:createFinanceRepository(createClient<Database>("https://example.supabase.co","sb_publishable_fictional",{global:{fetch:fetcher},auth:{persistSession:false,autoRefreshToken:false}}))};}
-describe("financial Supabase contracts",()=>{
- it("reads more than 1,000 allocation cells in complete bounded pages",async()=>{const fetcher=vi.fn().mockImplementation(async(url:string)=>{const start=Number(new URL(url).searchParams.get("offset")??0);const rows=Array.from({length:start===0?1000:1},(_,i)=>({id:`cell-${start+i}`}));return new Response(JSON.stringify(rows),{headers:{"content-type":"application/json","content-range":`${start}-${start+rows.length-1}/1001`}});});const repo=createFinanceRepository(createClient<Database>("https://example.supabase.co","sb_publishable_fictional",{global:{fetch:fetcher},auth:{persistSession:false,autoRefreshToken:false}}));const rows=await repo.allocations(id);expect(rows).toHaveLength(1001);expect(rows.at(-1)?.id).toBe("cell-1000");expect(fetcher).toHaveBeenCalledTimes(2);expect(new URL(fetcher.mock.calls[1][0]).searchParams.get("offset")).toBe("1000");});
- it("paginates receipts and filters inclusive Dhaka recognition days",async()=>{const{repo,fetcher}=repository();await repo.contributions(contributionFilters.parse({page:2,from:"2026-10-27",to:"2026-10-27",employee_id:id,currency:"BDT"}));const url=new URL(fetcher.mock.calls[0][0]);expect(url.searchParams.getAll("recognized_at")).toEqual(["gte.2026-10-26T18:00:00.000Z","lt.2026-10-27T18:00:00.000Z"]);expect(url.searchParams.get("offset")).toBe("20");expect(url.searchParams.get("limit")).toBe("20");expect(url.searchParams.get("employee_id")).toBe(`eq.${id}`);expect(url.searchParams.get("select")).toContain("recorder:recorded_by");});
- it("uses one atomic snapshot RPC with decimal strings and version",async()=>{const{repo,fetcher}=repository(id);await repo.save({request_id:id,expected_updated_at:"",year:2026,currency:"BDT",annual_amount:"0.30",quarters:[1,2,3,4].map(quarter=>({quarter,amount:"0.00"})),allocations:[]});const[url,init]=fetcher.mock.calls[0];expect(String(url)).toContain("rpc/save_target_draft");expect(JSON.parse(init.body)).toMatchObject({p_id:id,p_expected_updated_at:"",p_values:{annual_amount:"0.30"}});});
- it("uses versioned approval and SQL aggregation RPCs",async()=>{const{repo,fetcher}=repository(id);await repo.approve(id,"version");await repo.actuals(id);expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({p_plan_id:id,p_expected_updated_at:"version"});expect(String(fetcher.mock.calls[1][0])).toContain("rpc/target_actuals");});
- it.each([["42501",403],["23505",409],["40001",409],["23514",422],["P0002",404],["XX000",503]])("scrubs provider error %s",async(code,status)=>{await expect(repository({code,message:"Sensitive details"},400).repo.approve(id,"")).rejects.toMatchObject({status});});
- it("bounds lookups/history and detects oversized allocation reads",async()=>{const{repo,fetcher}=repository();await repo.options();await repo.history(id);for(const[url]of fetcher.mock.calls.slice(0,2))expect(new URL(url).searchParams.get("limit")).toBe("1000");expect(new URL(fetcher.mock.calls[2][0]).searchParams.get("limit")).toBe("20");await expect(repository(Array(4001).fill({})).repo.allocations(id)).rejects.toMatchObject({status:422});});
+const id = "f1000000-0000-4000-8000-000000000001";
+function repository(body: unknown = [], status = 200) {
+  const fetcher = vi.fn().mockImplementation(
+    async () =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/json", "Content-Range": "0-0/0" },
+      }),
+  );
+  return {
+    fetcher,
+    repo: createFinanceRepository(
+      createClient<Database>("https://example.supabase.co", "sb_publishable_fictional", {
+        global: { fetch: fetcher },
+        auth: { persistSession: false, autoRefreshToken: false },
+      }),
+    ),
+  };
+}
+describe("financial Supabase contracts", () => {
+  it("reads more than 1,000 allocation cells in complete bounded pages", async () => {
+    const fetcher = vi.fn().mockImplementation(async (url: string) => {
+      const start = Number(new URL(url).searchParams.get("offset") ?? 0);
+      const rows = Array.from({ length: start === 0 ? 1000 : 1 }, (_, i) => ({ id: `cell-${start + i}` }));
+      return new Response(JSON.stringify(rows), {
+        headers: { "content-type": "application/json", "content-range": `${start}-${start + rows.length - 1}/1001` },
+      });
+    });
+    const repo = createFinanceRepository(
+      createClient<Database>("https://example.supabase.co", "sb_publishable_fictional", {
+        global: { fetch: fetcher },
+        auth: { persistSession: false, autoRefreshToken: false },
+      }),
+    );
+    const rows = await repo.allocations(id);
+    expect(rows).toHaveLength(1001);
+    expect(rows.at(-1)?.id).toBe("cell-1000");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(new URL(fetcher.mock.calls[1][0]).searchParams.get("offset")).toBe("1000");
+  });
+  it("paginates receipts and filters inclusive Dhaka recognition days", async () => {
+    const { repo, fetcher } = repository();
+    await repo.contributions(
+      contributionFilters.parse({ page: 2, from: "2026-10-27", to: "2026-10-27", employee_id: id, currency: "BDT" }),
+    );
+    const url = new URL(fetcher.mock.calls[0][0]);
+    expect(url.searchParams.getAll("recognized_at")).toEqual([
+      "gte.2026-10-26T18:00:00.000Z",
+      "lt.2026-10-27T18:00:00.000Z",
+    ]);
+    expect(url.searchParams.get("offset")).toBe("20");
+    expect(url.searchParams.get("limit")).toBe("20");
+    expect(url.searchParams.get("employee_id")).toBe(`eq.${id}`);
+    expect(url.searchParams.get("select")).toContain("recorder:recorded_by");
+  });
+  it("uses one atomic snapshot RPC with decimal strings and version", async () => {
+    const { repo, fetcher } = repository(id);
+    await repo.save({
+      request_id: id,
+      expected_updated_at: "",
+      year: 2026,
+      currency: "BDT",
+      annual_amount: "0.30",
+      quarters: [1, 2, 3, 4].map(quarter => ({ quarter, amount: "0.00" })),
+      allocations: [],
+    });
+    const [url, init] = fetcher.mock.calls[0];
+    expect(String(url)).toContain("rpc/save_target_draft");
+    expect(JSON.parse(init.body)).toMatchObject({
+      p_id: id,
+      p_expected_updated_at: "",
+      p_values: { annual_amount: "0.30" },
+    });
+  });
+  it("uses versioned approval and SQL aggregation RPCs", async () => {
+    const { repo, fetcher } = repository(id);
+    await repo.approve(id, "version");
+    await repo.actuals(id);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ p_plan_id: id, p_expected_updated_at: "version" });
+    expect(String(fetcher.mock.calls[1][0])).toContain("rpc/target_actuals");
+  });
+  it.each([
+    ["42501", 403],
+    ["23505", 409],
+    ["40001", 409],
+    ["23514", 422],
+    ["P0002", 404],
+    ["XX000", 503],
+  ])("scrubs provider error %s", async (code, status) => {
+    await expect(repository({ code, message: "Sensitive details" }, 400).repo.approve(id, "")).rejects.toMatchObject({
+      status,
+    });
+  });
+  it("bounds lookups/history and detects oversized allocation reads", async () => {
+    const { repo, fetcher } = repository();
+    await repo.options();
+    await repo.history(id);
+    for (const [url] of fetcher.mock.calls.slice(0, 2)) expect(new URL(url).searchParams.get("limit")).toBe("1000");
+    expect(new URL(fetcher.mock.calls[2][0]).searchParams.get("limit")).toBe("20");
+    await expect(repository(Array(4001).fill({})).repo.allocations(id)).rejects.toMatchObject({ status: 422 });
+  });
 });

@@ -1,36 +1,287 @@
-import { afterAll,beforeAll,describe,expect,it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
-import { asActor,createLocalDatabase,fixtureIds as ids } from "../../scripts/lib/local-database";
-import { cents,decimal,performance,percentAmount } from "../../src/features/finance/money";
-import { contributionSchema,targetSchema } from "../../src/features/finance/schemas";
-let db:PGlite;beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
-let serial=0;const uuid=()=>`e1000000-0000-4000-8000-${String(++serial).padStart(12,"0")}`;
-const draft=()=>({year:2035+serial,currency:"BDT",annual_amount:"1000.00",quarters:[1,2,3,4].map(quarter=>({quarter,amount:"250.00"})),allocations:[1,2,3,4].map(quarter=>({quarter,employee_id:ids.member as string,vertical_id:ids.dsp as string,amount:"250.00"}))});
-const contribution=()=>({opportunity_id:ids.cashOpportunity,employee_id:ids.member,target_vertical_id:ids.dsp,amount:"100.00",currency:"BDT",recognized_at:"2026-03-31T18:00:00Z",contribution_type:"cash",approved_value_note:null,valuation_reference_url:null,notes:"Fictional received contribution"});
-const save=(id:string,values:unknown,stamp="",actor:string|null=ids.manager)=>asActor(db,actor,tx=>tx.query("select public.save_target_draft($1,$2::jsonb,$3)",[id,JSON.stringify(values),stamp]));
-const record=(id:string,values:unknown,actor:string|null=ids.member)=>asActor(db,actor,tx=>tx.query("select public.record_contribution($1,$2::jsonb)",[id,JSON.stringify(values)]));
-async function stamp(id:string){return(await db.query<{stamp:string}>("select to_char(updated_at,'YYYY-MM-DD\"T\"HH24:MI:SS.USOF') as stamp from public.target_plans where id=$1",[id])).rows[0].stamp;}
-const approve=(id:string,version:string,actor:string|null=ids.manager)=>asActor(db,actor,tx=>tx.query("select public.approve_target_draft($1,$2)",[id,version]));
-describe("exact decimal allocation and performance",()=>{
- it("keeps cents exact through maximum supported amounts",()=>{expect(decimal(cents("999999999999.99"))).toBe("999999999999.99");expect(decimal(cents("0.10")+cents("0.20"))).toBe("0.30");});
- it("floors percentage conversion and makes the remainder explicit",()=>{expect(percentAmount("10.00","33.33")).toBe("3.33");expect(decimal(cents("10")-cents("3.33")*3n)).toBe("0.01");expect(()=>percentAmount("10","100.01")).toThrow();});
- it("retains 110% and exposes remaining/over without changing targets",()=>{expect(performance(cents("100"),cents("110"))).toEqual({target:"100.00",actual:"110.00",remaining:"0.00",over:"10.00",percentage:"110.00"});expect(performance(0n,100n).percentage).toBeNull();});
- it.each(["NaN","Infinity","-1","0","1.001","1000000000000"])("rejects contribution amount %s",amount=>{expect(contributionSchema.safeParse({...contribution(),request_id:uuid(),target_vertical_id:ids.dsp,approved_value_note:"",valuation_reference_url:"",amount}).success).toBe(false);});
- it("rejects duplicate allocation keys and quarters",()=>{const data=draft();expect(targetSchema.safeParse({...data,request_id:uuid(),expected_updated_at:"",quarters:[data.quarters[0],...data.quarters.slice(0,3)]}).success).toBe(false);expect(targetSchema.safeParse({...data,request_id:uuid(),expected_updated_at:"",allocations:[data.allocations[0],data.allocations[0]]}).success).toBe(false);});
+import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
+import { cents, decimal, performance, percentAmount } from "../../src/features/finance/money";
+import { contributionSchema, targetSchema } from "../../src/features/finance/schemas";
+let db: PGlite;
+beforeAll(async () => {
+  db = await createLocalDatabase();
 });
-describe("atomic target snapshots and approval",()=>{
- it("persists all quarters/cells and preserves the verified creator",async()=>{const id=uuid(),values=draft();await save(id,values);expect((await db.query("select created_by,status from public.target_plans where id=$1",[id])).rows).toEqual([{created_by:ids.manager,status:"draft"}]);expect((await db.query("select quarter,amount::text from public.target_quarters where plan_id=$1 order by quarter",[id])).rows).toHaveLength(4);});
- it("replaces a draft matrix atomically and removes old cells",async()=>{const id=uuid(),values=draft();await save(id,values);const version=await stamp(id);values.allocations[0].vertical_id=ids.vbd;await save(id,values,version);expect((await db.query("select vertical_id from public.target_allocations where plan_id=$1 and quarter=1",[id])).rows).toEqual([{vertical_id:ids.vbd}]);});
- it("rolls back the entire snapshot on an invalid replacement",async()=>{const id=uuid(),values=draft();await save(id,values);const before=(await db.query("select * from public.target_allocations where plan_id=$1 order by id",[id])).rows;values.allocations[0].employee_id=ids.outsider;await expect(save(id,{...values,annual_amount:"2000"},await stamp(id))).rejects.toThrow(/active PSE/i);expect((await db.query("select * from public.target_allocations where plan_id=$1 order by id",[id])).rows).toEqual(before);expect((await db.query<{amount:string}>("select annual_amount::text as amount from public.target_plans where id=$1",[id])).rows[0].amount).toBe("1000.00");});
- it("detects stale saves, including changes through direct child writes",async()=>{const id=uuid(),values=draft();await save(id,values);const version=await stamp(id);await asActor(db,ids.manager,tx=>tx.query("update public.target_quarters set amount=249 where plan_id=$1 and quarter=1",[id]));await expect(save(id,values,version)).rejects.toMatchObject({code:"40001"});await expect(approve(id,version)).rejects.toMatchObject({code:"40001"});});
- it.each([ids.member,ids.outsider,ids.inactive,null])("denies target snapshot/approval by %s",async actor=>{await expect(save(uuid(),draft(),"",actor)).rejects.toThrow();await expect(approve(ids.approvedPlan,await stamp(ids.approvedPlan),actor)).rejects.toThrow();});
- it("allows incomplete draft saves but rejects approval until all totals reconcile",async()=>{const id=uuid(),values=draft();await save(id,{...values,allocations:[]});await expect(approve(id,await stamp(id))).rejects.toThrow(/reconcile/i);await save(id,{...values,annual_amount:"1000.01"},await stamp(id));await expect(approve(id,await stamp(id))).rejects.toThrow(/reconcile/i);await save(id,values,await stamp(id));await approve(id,await stamp(id));expect((await db.query("select status,approved_by from public.target_plans where id=$1",[id])).rows).toEqual([{status:"approved",approved_by:ids.manager}]);await expect(save(id,values,await stamp(id))).rejects.toThrow(/fixed/i);});
- it("rejects identity fields, fractional cents and duplicate cells via direct RPC",async()=>{for(const extra of[{created_by:ids.member},{annual_amount:"0.001"},{quarters:[{quarter:1,amount:"0.001"},{quarter:2,amount:"0"},{quarter:3,amount:"0"},{quarter:4,amount:"0"}]}])await expect(save(uuid(),{...draft(),...extra})).rejects.toThrow();});
+afterAll(async () => {
+  await db?.close();
 });
-describe("contribution receipt and accurate plan actuals",()=>{
- it("records once on identical retries and preserves verified recorder",async()=>{const id=uuid(),values=contribution();await record(id,values);await record(id,values);expect((await db.query("select recorded_by,amount::text from public.recognized_contributions where id=$1",[id])).rows).toEqual([{recorded_by:ids.member,amount:"100.00"}]);expect((await db.query("select id from public.audit_logs where entity='recognized_contributions' and entity_id=$1",[id])).rows).toHaveLength(1);await expect(record(id,{...values,amount:"101"})).rejects.toMatchObject({code:"23505"});await expect(record(id,values,ids.colleague)).rejects.toMatchObject({code:"23505"});});
- it.each([ids.outsider,ids.inactive,null])("denies contribution entry by %s",async actor=>{await expect(record(uuid(),contribution(),actor)).rejects.toThrow();});
- it("rejects forged identity, wrong currency/type and fractional cents",async()=>{for(const extra of[{recorded_by:ids.manager},{amount:"0.001"},{currency:"USD"},{contribution_type:"valued_in_kind"}])await expect(record(uuid(),{...contribution(),...extra})).rejects.toThrow();});
- it("retains independently entered in-kind agreement evidence",async()=>{const id=uuid();await record(id,{...contribution(),opportunity_id:ids.inKindOpportunity,contribution_type:"valued_in_kind",approved_value_note:"Fictional operational-team inventory and agreed value",valuation_reference_url:"https://drive.google.com/fictional-inventory"});expect((await db.query<{note:string}>("select approved_value_note as note from public.recognized_contributions where id=$1",[id])).rows[0].note).toContain("operational-team");});
- it("aggregates Dhaka quarter boundaries, unassigned verticals and every row beyond REST limits",async()=>{const id=uuid(),values={...draft(),year:2040};await save(id,values);await record(uuid(),{...contribution(),recognized_at:"2040-03-31T17:59:00Z",amount:"275",target_vertical_id:null});await record(uuid(),{...contribution(),recognized_at:"2040-03-31T18:00:00Z",amount:"25"});await record(uuid(),{...contribution(),recognized_at:"2040-01-01T00:00:00Z",amount:"999",currency:"USD",opportunity_id:ids.usdOpportunity});await asActor(db,ids.member,tx=>tx.query("insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) select $1,$2,0.01,'2040-02-01Z','cash' from generate_series(1,1001)",[ids.cashOpportunity,ids.member]));const actuals=(await asActor(db,ids.member,tx=>tx.query<{value:{quarter:number;amount:string}[]}>("select public.target_actuals($1) as value",[id]))).rows[0].value;expect(actuals.filter(a=>a.quarter===1).reduce((n,a)=>n+cents(a.amount),0n)).toBe(cents("285.01"));expect(actuals.filter(a=>a.quarter===2).reduce((n,a)=>n+cents(a.amount),0n)).toBe(cents("25"));expect((await db.query<{amount:string}>("select amount::text from public.target_quarters where plan_id=$1 and quarter=2",[id])).rows[0].amount).toBe("250.00");});
+let serial = 0;
+const uuid = () => `e1000000-0000-4000-8000-${String(++serial).padStart(12, "0")}`;
+const draft = () => ({
+  year: 2035 + serial,
+  currency: "BDT",
+  annual_amount: "1000.00",
+  quarters: [1, 2, 3, 4].map(quarter => ({ quarter, amount: "250.00" })),
+  allocations: [1, 2, 3, 4].map(quarter => ({
+    quarter,
+    employee_id: ids.member as string,
+    vertical_id: ids.dsp as string,
+    amount: "250.00",
+  })),
+});
+const contribution = () => ({
+  opportunity_id: ids.cashOpportunity,
+  employee_id: ids.member,
+  target_vertical_id: ids.dsp,
+  amount: "100.00",
+  currency: "BDT",
+  recognized_at: "2026-03-31T18:00:00Z",
+  contribution_type: "cash",
+  approved_value_note: null,
+  valuation_reference_url: null,
+  notes: "Fictional received contribution",
+});
+const save = (id: string, values: unknown, stamp = "", actor: string | null = ids.manager) =>
+  asActor(db, actor, tx =>
+    tx.query("select public.save_target_draft($1,$2::jsonb,$3)", [id, JSON.stringify(values), stamp]),
+  );
+const record = (id: string, values: unknown, actor: string | null = ids.member) =>
+  asActor(db, actor, tx => tx.query("select public.record_contribution($1,$2::jsonb)", [id, JSON.stringify(values)]));
+async function stamp(id: string) {
+  return (
+    await db.query<{ stamp: string }>(
+      "select to_char(updated_at,'YYYY-MM-DD\"T\"HH24:MI:SS.USOF') as stamp from public.target_plans where id=$1",
+      [id],
+    )
+  ).rows[0].stamp;
+}
+const approve = (id: string, version: string, actor: string | null = ids.manager) =>
+  asActor(db, actor, tx => tx.query("select public.approve_target_draft($1,$2)", [id, version]));
+describe("exact decimal allocation and performance", () => {
+  it("keeps cents exact through maximum supported amounts", () => {
+    expect(decimal(cents("999999999999.99"))).toBe("999999999999.99");
+    expect(decimal(cents("0.10") + cents("0.20"))).toBe("0.30");
+  });
+  it("floors percentage conversion and makes the remainder explicit", () => {
+    expect(percentAmount("10.00", "33.33")).toBe("3.33");
+    expect(decimal(cents("10") - cents("3.33") * 3n)).toBe("0.01");
+    expect(() => percentAmount("10", "100.01")).toThrow();
+  });
+  it("retains 110% and exposes remaining/over without changing targets", () => {
+    expect(performance(cents("100"), cents("110"))).toEqual({
+      target: "100.00",
+      actual: "110.00",
+      remaining: "0.00",
+      over: "10.00",
+      percentage: "110.00",
+    });
+    expect(performance(0n, 100n).percentage).toBeNull();
+  });
+  it.each(["NaN", "Infinity", "-1", "0", "1.001", "1000000000000"])("rejects contribution amount %s", amount => {
+    expect(
+      contributionSchema.safeParse({
+        ...contribution(),
+        request_id: uuid(),
+        target_vertical_id: ids.dsp,
+        approved_value_note: "",
+        valuation_reference_url: "",
+        amount,
+      }).success,
+    ).toBe(false);
+  });
+  it("rejects duplicate allocation keys and quarters", () => {
+    const data = draft();
+    expect(
+      targetSchema.safeParse({
+        ...data,
+        request_id: uuid(),
+        expected_updated_at: "",
+        quarters: [data.quarters[0], ...data.quarters.slice(0, 3)],
+      }).success,
+    ).toBe(false);
+    expect(
+      targetSchema.safeParse({
+        ...data,
+        request_id: uuid(),
+        expected_updated_at: "",
+        allocations: [data.allocations[0], data.allocations[0]],
+      }).success,
+    ).toBe(false);
+  });
+});
+describe("atomic target snapshots and approval", () => {
+  it("persists all quarters/cells and preserves the verified creator", async () => {
+    const id = uuid(),
+      values = draft();
+    await save(id, values);
+    expect((await db.query("select created_by,status from public.target_plans where id=$1", [id])).rows).toEqual([
+      { created_by: ids.manager, status: "draft" },
+    ]);
+    expect(
+      (
+        await db.query("select quarter,amount::text from public.target_quarters where plan_id=$1 order by quarter", [
+          id,
+        ])
+      ).rows,
+    ).toHaveLength(4);
+  });
+  it("replaces a draft matrix atomically and removes old cells", async () => {
+    const id = uuid(),
+      values = draft();
+    await save(id, values);
+    const version = await stamp(id);
+    values.allocations[0].vertical_id = ids.vbd;
+    await save(id, values, version);
+    expect(
+      (await db.query("select vertical_id from public.target_allocations where plan_id=$1 and quarter=1", [id])).rows,
+    ).toEqual([{ vertical_id: ids.vbd }]);
+  });
+  it("rolls back the entire snapshot on an invalid replacement", async () => {
+    const id = uuid(),
+      values = draft();
+    await save(id, values);
+    const before = (await db.query("select * from public.target_allocations where plan_id=$1 order by id", [id])).rows;
+    values.allocations[0].employee_id = ids.outsider;
+    await expect(save(id, { ...values, annual_amount: "2000" }, await stamp(id))).rejects.toThrow(/active PSE/i);
+    expect((await db.query("select * from public.target_allocations where plan_id=$1 order by id", [id])).rows).toEqual(
+      before,
+    );
+    expect(
+      (
+        await db.query<{ amount: string }>(
+          "select annual_amount::text as amount from public.target_plans where id=$1",
+          [id],
+        )
+      ).rows[0].amount,
+    ).toBe("1000.00");
+  });
+  it("detects stale saves, including changes through direct child writes", async () => {
+    const id = uuid(),
+      values = draft();
+    await save(id, values);
+    const version = await stamp(id);
+    await asActor(db, ids.manager, tx =>
+      tx.query("update public.target_quarters set amount=249 where plan_id=$1 and quarter=1", [id]),
+    );
+    await expect(save(id, values, version)).rejects.toMatchObject({ code: "40001" });
+    await expect(approve(id, version)).rejects.toMatchObject({ code: "40001" });
+  });
+  it.each([ids.member, ids.outsider, ids.inactive, null])("denies target snapshot/approval by %s", async actor => {
+    await expect(save(uuid(), draft(), "", actor)).rejects.toThrow();
+    await expect(approve(ids.approvedPlan, await stamp(ids.approvedPlan), actor)).rejects.toThrow();
+  });
+  it("allows incomplete draft saves but rejects approval until all totals reconcile", async () => {
+    const id = uuid(),
+      values = draft();
+    await save(id, { ...values, allocations: [] });
+    await expect(approve(id, await stamp(id))).rejects.toThrow(/reconcile/i);
+    await save(id, { ...values, annual_amount: "1000.01" }, await stamp(id));
+    await expect(approve(id, await stamp(id))).rejects.toThrow(/reconcile/i);
+    await save(id, values, await stamp(id));
+    await approve(id, await stamp(id));
+    expect((await db.query("select status,approved_by from public.target_plans where id=$1", [id])).rows).toEqual([
+      { status: "approved", approved_by: ids.manager },
+    ]);
+    await expect(save(id, values, await stamp(id))).rejects.toThrow(/fixed/i);
+  });
+  it("rejects identity fields, fractional cents and duplicate cells via direct RPC", async () => {
+    for (const extra of [
+      { created_by: ids.member },
+      { annual_amount: "0.001" },
+      {
+        quarters: [
+          { quarter: 1, amount: "0.001" },
+          { quarter: 2, amount: "0" },
+          { quarter: 3, amount: "0" },
+          { quarter: 4, amount: "0" },
+        ],
+      },
+    ])
+      await expect(save(uuid(), { ...draft(), ...extra })).rejects.toThrow();
+  });
+});
+describe("contribution receipt and accurate plan actuals", () => {
+  it("records once on identical retries and preserves verified recorder", async () => {
+    const id = uuid(),
+      values = contribution();
+    await record(id, values);
+    await record(id, values);
+    expect(
+      (await db.query("select recorded_by,amount::text from public.recognized_contributions where id=$1", [id])).rows,
+    ).toEqual([{ recorded_by: ids.member, amount: "100.00" }]);
+    expect(
+      (
+        await db.query("select id from public.audit_logs where entity='recognized_contributions' and entity_id=$1", [
+          id,
+        ])
+      ).rows,
+    ).toHaveLength(1);
+    await expect(record(id, { ...values, amount: "101" })).rejects.toMatchObject({ code: "23505" });
+    await expect(record(id, values, ids.colleague)).rejects.toMatchObject({ code: "23505" });
+  });
+  it.each([ids.outsider, ids.inactive, null])("denies contribution entry by %s", async actor => {
+    await expect(record(uuid(), contribution(), actor)).rejects.toThrow();
+  });
+  it("rejects forged identity, wrong currency/type and fractional cents", async () => {
+    for (const extra of [
+      { recorded_by: ids.manager },
+      { amount: "0.001" },
+      { currency: "USD" },
+      { contribution_type: "valued_in_kind" },
+    ])
+      await expect(record(uuid(), { ...contribution(), ...extra })).rejects.toThrow();
+  });
+  it("retains independently entered in-kind agreement evidence", async () => {
+    const id = uuid();
+    await record(id, {
+      ...contribution(),
+      opportunity_id: ids.inKindOpportunity,
+      contribution_type: "valued_in_kind",
+      approved_value_note: "Fictional operational-team inventory and agreed value",
+      valuation_reference_url: "https://drive.google.com/fictional-inventory",
+    });
+    expect(
+      (
+        await db.query<{ note: string }>(
+          "select approved_value_note as note from public.recognized_contributions where id=$1",
+          [id],
+        )
+      ).rows[0].note,
+    ).toContain("operational-team");
+  });
+  it("aggregates Dhaka quarter boundaries, unassigned verticals and every row beyond REST limits", async () => {
+    const id = uuid(),
+      values = { ...draft(), year: 2040 };
+    await save(id, values);
+    await record(uuid(), {
+      ...contribution(),
+      recognized_at: "2040-03-31T17:59:00Z",
+      amount: "275",
+      target_vertical_id: null,
+    });
+    await record(uuid(), { ...contribution(), recognized_at: "2040-03-31T18:00:00Z", amount: "25" });
+    await record(uuid(), {
+      ...contribution(),
+      recognized_at: "2040-01-01T00:00:00Z",
+      amount: "999",
+      currency: "USD",
+      opportunity_id: ids.usdOpportunity,
+    });
+    await asActor(db, ids.member, tx =>
+      tx.query(
+        "insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) select $1,$2,0.01,'2040-02-01Z','cash' from generate_series(1,1001)",
+        [ids.cashOpportunity, ids.member],
+      ),
+    );
+    const actuals = (
+      await asActor(db, ids.member, tx =>
+        tx.query<{ value: { quarter: number; amount: string }[] }>("select public.target_actuals($1) as value", [id]),
+      )
+    ).rows[0].value;
+    expect(actuals.filter(a => a.quarter === 1).reduce((n, a) => n + cents(a.amount), 0n)).toBe(cents("285.01"));
+    expect(actuals.filter(a => a.quarter === 2).reduce((n, a) => n + cents(a.amount), 0n)).toBe(cents("25"));
+    expect(
+      (
+        await db.query<{ amount: string }>(
+          "select amount::text from public.target_quarters where plan_id=$1 and quarter=2",
+          [id],
+        )
+      ).rows[0].amount,
+    ).toBe("250.00");
+  });
 });

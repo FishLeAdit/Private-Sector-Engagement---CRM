@@ -1,38 +1,269 @@
-import { beforeEach,describe,expect,it,vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { FinanceError } from "../../src/features/finance/types";
-const mocks=vi.hoisted(()=>({authorize:vi.fn(),client:vi.fn(),repo:vi.fn(),revalidate:vi.fn()}));
-vi.mock("../../src/lib/cache/invalidation",()=>({invalidateReportCache:vi.fn()}));
-vi.mock("server-only",()=>({}));vi.mock("../../src/lib/auth/access",()=>({authorizeApi:mocks.authorize}));vi.mock("../../src/lib/supabase/server",()=>({createClient:mocks.client}));vi.mock("../../src/features/finance/queries",()=>({createFinanceRepository:mocks.repo}));vi.mock("next/cache",()=>({revalidatePath:mocks.revalidate}));
-import { GET as CONTRIBUTIONS,POST as RECORD } from "../../src/app/api/contributions/route";
+const mocks = vi.hoisted(() => ({ authorize: vi.fn(), client: vi.fn(), repo: vi.fn(), revalidate: vi.fn() }));
+vi.mock("../../src/lib/cache/invalidation", () => ({ invalidateReportCache: vi.fn() }));
+vi.mock("server-only", () => ({}));
+vi.mock("../../src/lib/auth/access", () => ({ authorizeApi: mocks.authorize }));
+vi.mock("../../src/lib/supabase/server", () => ({ createClient: mocks.client }));
+vi.mock("../../src/features/finance/queries", () => ({ createFinanceRepository: mocks.repo }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
+import { GET as CONTRIBUTIONS, POST as RECORD } from "../../src/app/api/contributions/route";
 import { GET as CONTRIBUTION } from "../../src/app/api/contributions/[id]/route";
-import { GET as TARGETS,POST as SAVE } from "../../src/app/api/targets/route";
-import { GET as TARGET,PATCH } from "../../src/app/api/targets/[id]/route";
+import { GET as TARGETS, POST as SAVE } from "../../src/app/api/targets/route";
+import { GET as TARGET, PATCH } from "../../src/app/api/targets/[id]/route";
 import { POST as APPROVE } from "../../src/app/api/targets/[id]/approve/route";
 import { POST as VERTICAL } from "../../src/app/api/targets/verticals/route";
 import { GET as OPTIONS } from "../../src/app/api/targets/options/route";
-const id="f1000000-0000-4000-8000-000000000001",member="00000000-0000-4000-8000-000000000002",other="00000000-0000-4000-8000-000000000003",vertical="50000000-0000-4000-8000-000000000001",opportunity="20000000-0000-4000-8000-000000000001",stamp="2026-10-27T04:00:00.123456Z";
-const receipt={request_id:id,opportunity_id:opportunity,employee_id:member,target_vertical_id:vertical,amount:"100.01",currency:"BDT",contribution_type:"cash",recognized_at:"2026-10-27T10:00:00+06:00",approved_value_note:"",valuation_reference_url:"",notes:"Fictional receipt"};
-const snapshot={request_id:id,expected_updated_at:stamp,year:2026,currency:"BDT",annual_amount:"1000",quarters:[1,2,3,4].map(quarter=>({quarter,amount:"250"})),allocations:[1,2,3,4].map(quarter=>({quarter,employee_id:member,vertical_id:vertical,amount:"250"}))};
-let repo:Record<"options"|"opportunity"|"contributions"|"contribution"|"record"|"plans"|"plan"|"allocations"|"actuals"|"save"|"approve"|"vertical"|"history",ReturnType<typeof vi.fn>>;
-let actor:{status:"allowed";userId:string;profile:{id:string;display_name:string;department:string;role:string;active:boolean}};
-beforeEach(()=>{vi.clearAllMocks();actor={status:"allowed",userId:member,profile:{id:member,display_name:"Fictional Employee",department:"PSE",role:"pse_member",active:true}};mocks.authorize.mockImplementation(async({manager=false}={})=>manager&&actor.profile.role==="pse_member"?{ok:false,response:NextResponse.json({error:"Denied"},{status:403})}:{ok:true,access:actor});repo={options:vi.fn().mockResolvedValue({employees:[{id:member,active:true},{id:other,active:false}],verticals:[{id:vertical,active:true}]}),opportunity:vi.fn().mockResolvedValue({id:opportunity,currency:"BDT",contribution_type:"cash"}),contributions:vi.fn().mockResolvedValue({contributions:[],count:0}),contribution:vi.fn().mockResolvedValue({...receipt,id,recorded_by:member}),record:vi.fn().mockResolvedValue({...receipt,id,recorded_by:member}),plans:vi.fn().mockResolvedValue({plans:[],count:0}),plan:vi.fn().mockResolvedValue({...snapshot,id,status:"draft",updated_at:stamp}),allocations:vi.fn().mockResolvedValue(snapshot.allocations),actuals:vi.fn().mockResolvedValue([]),save:vi.fn().mockResolvedValue(id),approve:vi.fn().mockResolvedValue(id),vertical:vi.fn().mockResolvedValue({id:vertical}),history:vi.fn().mockResolvedValue([])};mocks.repo.mockReturnValue(repo);});
-const context=(value=id)=>({params:Promise.resolve({id:value})});
-function request(method="GET",data?:unknown,origin="http://localhost"){return new Request("http://localhost/api/targets",{method,headers:{origin,"content-type":"application/json"},body:data===undefined?undefined:JSON.stringify(data)});}
-describe("Phase 10 server boundaries",()=>{
- it("rejects a target detail assembled across different draft versions",async()=>{repo.plan.mockResolvedValueOnce({...snapshot,id,status:"draft",updated_at:stamp}).mockResolvedValueOnce({...snapshot,id,status:"draft",updated_at:"2026-10-28T04:00:00Z"});expect((await TARGET(request(),context())).status).toBe(409);});
- it.each([401,403,503])("denies auth state %s before database access",async status=>{mocks.authorize.mockResolvedValue({ok:false,response:NextResponse.json({error:"Denied"},{status})});for(const response of[await TARGETS(request()),await CONTRIBUTIONS(request()),await RECORD(request("POST",receipt)),await SAVE(request("POST",snapshot)),await APPROVE(request("POST",{expected_updated_at:stamp}),context()),await OPTIONS(request()),await VERTICAL(request("POST",{}))])expect(response.status).toBe(status);expect(mocks.client).not.toHaveBeenCalled();});
- it("allows PSE team reads with private no-store headers",async()=>{for(const response of[await TARGETS(request()),await CONTRIBUTIONS(request()),await TARGET(request(),context()),await CONTRIBUTION(request(),context()),await OPTIONS(request())]){expect(response.status).toBe(200);expect(response.headers.get("cache-control")).toContain("no-store");}});
- it("binds recorder, normalizes time and keeps explicit attribution",async()=>{const response=await RECORD(request("POST",receipt));expect(response.status).toBe(200);expect(repo.record).toHaveBeenCalledWith({...receipt,recognized_at:"2026-10-27T04:00:00.000Z"},member);for(const path of["/contributions","/targets","/opportunities","/dashboard","/reports"])expect(mocks.revalidate).toHaveBeenCalledWith(path,"layout");});
- it.each([{recorded_by:other},{amount:"0"},{amount:"1.001"},{currency:"USD"},{employee_id:other},{target_vertical_id:other},{recognized_at:"2026-10-27T10:00"},{valuation_reference_url:"javascript:bad"}])("rejects invalid receipt fields %j",async values=>{expect((await RECORD(request("POST",{...receipt,...values}))).status).toBe(422);expect(repo.record).not.toHaveBeenCalled();});
- it("requires explicit in-kind valuation evidence",async()=>{repo.opportunity.mockResolvedValue({...receipt,id:opportunity,contribution_type:"valued_in_kind"});expect((await RECORD(request("POST",{...receipt,contribution_type:"valued_in_kind"}))).status).toBe(422);expect((await RECORD(request("POST",{...receipt,contribution_type:"valued_in_kind",approved_value_note:"Fictional operational-team estimate and agreed amount"}))).status).toBe(200);});
- it("denies target saves, approval and configuration to ordinary members",async()=>{for(const response of[await SAVE(request("POST",snapshot)),await PATCH(request("PATCH",snapshot),context()),await APPROVE(request("POST",{expected_updated_at:stamp}),context()),await VERTICAL(request("POST",{}))])expect(response.status).toBe(403);expect(repo.save).not.toHaveBeenCalled();expect(repo.approve).not.toHaveBeenCalled();});
- it("saves validated snapshots and supplies the exact approval version as manager",async()=>{actor.profile.role="pse_manager";expect((await SAVE(request("POST",snapshot))).status).toBe(200);expect(repo.save).toHaveBeenCalledWith(snapshot);expect((await PATCH(request("PATCH",snapshot),context())).status).toBe(200);expect((await APPROVE(request("POST",{expected_updated_at:stamp}),context())).status).toBe(200);expect(repo.approve).toHaveBeenCalledWith(id,stamp);});
- it("rejects mismatch of path and snapshot ID and protected approval fields",async()=>{actor.profile.role="pse_manager";expect((await PATCH(request("PATCH",snapshot),context(other))).status).toBe(422);for(const extra of[{status:"approved"},{created_by:other},{approved_by:member},{allocations:[snapshot.allocations[0],snapshot.allocations[0]]}])expect((await SAVE(request("POST",{...snapshot,...extra}))).status).toBe(422);expect(repo.save).not.toHaveBeenCalled();});
- it("refuses unbalanced or approved plans before calling approval RPC",async()=>{actor.profile.role="pse_manager";repo.plan.mockResolvedValueOnce({...snapshot,id,status:"approved"});expect((await APPROVE(request("POST",{expected_updated_at:stamp}),context())).status).toBe(409);repo.plan.mockResolvedValueOnce({...snapshot,id,status:"draft",annual_amount:999});expect((await APPROVE(request("POST",{expected_updated_at:stamp}),context())).status).toBe(422);repo.allocations.mockResolvedValueOnce([]);expect((await APPROVE(request("POST",{expected_updated_at:stamp}),context())).status).toBe(422);expect(repo.approve).not.toHaveBeenCalled();});
- it("enforces origin for all financial mutations",async()=>{actor.profile.role="pse_manager";for(const origin of["","https://evil.invalid"]){expect((await RECORD(request("POST",receipt,origin))).status).toBe(403);expect((await SAVE(request("POST",snapshot,origin))).status).toBe(403);expect((await APPROVE(request("POST",{expected_updated_at:stamp},origin),context())).status).toBe(403);}expect(repo.save).not.toHaveBeenCalled();});
- it("validates JSON, content type and payload limit",async()=>{const wrong=request("POST",receipt);wrong.headers.set("content-type","text/plain");expect((await RECORD(wrong)).status).toBe(415);expect((await RECORD(new Request("http://localhost/api/contributions",{method:"POST",headers:{origin:"http://localhost","content-type":"application/json"},body:"{"}))).status).toBe(400);expect((await RECORD(request("POST",{notes:"x".repeat(1000001)}))).status).toBe(413);});
- it("returns safe stale-write and provider failures",async()=>{actor.profile.role="pse_manager";repo.save.mockRejectedValueOnce(new FinanceError(409,"Draft has changed."));expect((await SAVE(request("POST",snapshot))).status).toBe(409);repo.record.mockRejectedValueOnce(new Error("Sensitive connection details"));const response=await RECORD(request("POST",receipt));expect(response.status).toBe(503);expect(JSON.stringify(await response.json())).not.toContain("Sensitive");});
- it("handles missing/invalid IDs and filters",async()=>{repo.plan.mockResolvedValueOnce(null);expect((await TARGET(request(),context())).status).toBe(404);expect((await CONTRIBUTION(request(),context("bad"))).status).toBe(400);for(const query of["page=0","employee_id=bad","from=2026-10-28&to=2026-10-27","unexpected=1"])expect((await CONTRIBUTIONS(new Request("http://localhost/api/contributions?"+query))).status).toBe(422);});
- it("checks fresh membership and profile identity again in service",async()=>{actor.profile.id=other;expect((await CONTRIBUTIONS(request())).status).toBe(403);actor.profile.id=member;actor.profile.active=false;expect((await CONTRIBUTIONS(request())).status).toBe(403);expect(repo.contributions).not.toHaveBeenCalled();});
+const id = "f1000000-0000-4000-8000-000000000001",
+  member = "00000000-0000-4000-8000-000000000002",
+  other = "00000000-0000-4000-8000-000000000003",
+  vertical = "50000000-0000-4000-8000-000000000001",
+  opportunity = "20000000-0000-4000-8000-000000000001",
+  stamp = "2026-10-27T04:00:00.123456Z";
+const receipt = {
+  request_id: id,
+  opportunity_id: opportunity,
+  employee_id: member,
+  target_vertical_id: vertical,
+  amount: "100.01",
+  currency: "BDT",
+  contribution_type: "cash",
+  recognized_at: "2026-10-27T10:00:00+06:00",
+  approved_value_note: "",
+  valuation_reference_url: "",
+  notes: "Fictional receipt",
+};
+const snapshot = {
+  request_id: id,
+  expected_updated_at: stamp,
+  year: 2026,
+  currency: "BDT",
+  annual_amount: "1000",
+  quarters: [1, 2, 3, 4].map(quarter => ({ quarter, amount: "250" })),
+  allocations: [1, 2, 3, 4].map(quarter => ({ quarter, employee_id: member, vertical_id: vertical, amount: "250" })),
+};
+let repo: Record<
+  | "options"
+  | "opportunity"
+  | "contributions"
+  | "contribution"
+  | "record"
+  | "plans"
+  | "plan"
+  | "allocations"
+  | "actuals"
+  | "save"
+  | "approve"
+  | "vertical"
+  | "history",
+  ReturnType<typeof vi.fn>
+>;
+let actor: {
+  status: "allowed";
+  userId: string;
+  profile: { id: string; display_name: string; department: string; role: string; active: boolean };
+};
+beforeEach(() => {
+  vi.clearAllMocks();
+  actor = {
+    status: "allowed",
+    userId: member,
+    profile: { id: member, display_name: "Fictional Employee", department: "PSE", role: "pse_member", active: true },
+  };
+  mocks.authorize.mockImplementation(async ({ manager = false } = {}) =>
+    manager && actor.profile.role === "pse_member"
+      ? { ok: false, response: NextResponse.json({ error: "Denied" }, { status: 403 }) }
+      : { ok: true, access: actor },
+  );
+  repo = {
+    options: vi.fn().mockResolvedValue({
+      employees: [
+        { id: member, active: true },
+        { id: other, active: false },
+      ],
+      verticals: [{ id: vertical, active: true }],
+    }),
+    opportunity: vi.fn().mockResolvedValue({ id: opportunity, currency: "BDT", contribution_type: "cash" }),
+    contributions: vi.fn().mockResolvedValue({ contributions: [], count: 0 }),
+    contribution: vi.fn().mockResolvedValue({ ...receipt, id, recorded_by: member }),
+    record: vi.fn().mockResolvedValue({ ...receipt, id, recorded_by: member }),
+    plans: vi.fn().mockResolvedValue({ plans: [], count: 0 }),
+    plan: vi.fn().mockResolvedValue({ ...snapshot, id, status: "draft", updated_at: stamp }),
+    allocations: vi.fn().mockResolvedValue(snapshot.allocations),
+    actuals: vi.fn().mockResolvedValue([]),
+    save: vi.fn().mockResolvedValue(id),
+    approve: vi.fn().mockResolvedValue(id),
+    vertical: vi.fn().mockResolvedValue({ id: vertical }),
+    history: vi.fn().mockResolvedValue([]),
+  };
+  mocks.repo.mockReturnValue(repo);
+});
+const context = (value = id) => ({ params: Promise.resolve({ id: value }) });
+function request(method = "GET", data?: unknown, origin = "http://localhost") {
+  return new Request("http://localhost/api/targets", {
+    method,
+    headers: { origin, "content-type": "application/json" },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  });
+}
+describe("Phase 10 server boundaries", () => {
+  it("rejects a target detail assembled across different draft versions", async () => {
+    repo.plan
+      .mockResolvedValueOnce({ ...snapshot, id, status: "draft", updated_at: stamp })
+      .mockResolvedValueOnce({ ...snapshot, id, status: "draft", updated_at: "2026-10-28T04:00:00Z" });
+    expect((await TARGET(request(), context())).status).toBe(409);
+  });
+  it.each([401, 403, 503])("denies auth state %s before database access", async status => {
+    mocks.authorize.mockResolvedValue({ ok: false, response: NextResponse.json({ error: "Denied" }, { status }) });
+    for (const response of [
+      await TARGETS(request()),
+      await CONTRIBUTIONS(request()),
+      await RECORD(request("POST", receipt)),
+      await SAVE(request("POST", snapshot)),
+      await APPROVE(request("POST", { expected_updated_at: stamp }), context()),
+      await OPTIONS(request()),
+      await VERTICAL(request("POST", {})),
+    ])
+      expect(response.status).toBe(status);
+    expect(mocks.client).not.toHaveBeenCalled();
+  });
+  it("allows PSE team reads with private no-store headers", async () => {
+    for (const response of [
+      await TARGETS(request()),
+      await CONTRIBUTIONS(request()),
+      await TARGET(request(), context()),
+      await CONTRIBUTION(request(), context()),
+      await OPTIONS(request()),
+    ]) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+    }
+  });
+  it("binds recorder, normalizes time and keeps explicit attribution", async () => {
+    const response = await RECORD(request("POST", receipt));
+    expect(response.status).toBe(200);
+    expect(repo.record).toHaveBeenCalledWith({ ...receipt, recognized_at: "2026-10-27T04:00:00.000Z" }, member);
+    for (const path of ["/contributions", "/targets", "/opportunities", "/dashboard", "/reports"])
+      expect(mocks.revalidate).toHaveBeenCalledWith(path, "layout");
+  });
+  it.each([
+    { recorded_by: other },
+    { amount: "0" },
+    { amount: "1.001" },
+    { currency: "USD" },
+    { employee_id: other },
+    { target_vertical_id: other },
+    { recognized_at: "2026-10-27T10:00" },
+    { valuation_reference_url: "javascript:bad" },
+  ])("rejects invalid receipt fields %j", async values => {
+    expect((await RECORD(request("POST", { ...receipt, ...values }))).status).toBe(422);
+    expect(repo.record).not.toHaveBeenCalled();
+  });
+  it("requires explicit in-kind valuation evidence", async () => {
+    repo.opportunity.mockResolvedValue({ ...receipt, id: opportunity, contribution_type: "valued_in_kind" });
+    expect((await RECORD(request("POST", { ...receipt, contribution_type: "valued_in_kind" }))).status).toBe(422);
+    expect(
+      (
+        await RECORD(
+          request("POST", {
+            ...receipt,
+            contribution_type: "valued_in_kind",
+            approved_value_note: "Fictional operational-team estimate and agreed amount",
+          }),
+        )
+      ).status,
+    ).toBe(200);
+  });
+  it("denies target saves, approval and configuration to ordinary members", async () => {
+    for (const response of [
+      await SAVE(request("POST", snapshot)),
+      await PATCH(request("PATCH", snapshot), context()),
+      await APPROVE(request("POST", { expected_updated_at: stamp }), context()),
+      await VERTICAL(request("POST", {})),
+    ])
+      expect(response.status).toBe(403);
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(repo.approve).not.toHaveBeenCalled();
+  });
+  it("saves validated snapshots and supplies the exact approval version as manager", async () => {
+    actor.profile.role = "pse_manager";
+    expect((await SAVE(request("POST", snapshot))).status).toBe(200);
+    expect(repo.save).toHaveBeenCalledWith(snapshot);
+    expect((await PATCH(request("PATCH", snapshot), context())).status).toBe(200);
+    expect((await APPROVE(request("POST", { expected_updated_at: stamp }), context())).status).toBe(200);
+    expect(repo.approve).toHaveBeenCalledWith(id, stamp);
+  });
+  it("rejects mismatch of path and snapshot ID and protected approval fields", async () => {
+    actor.profile.role = "pse_manager";
+    expect((await PATCH(request("PATCH", snapshot), context(other))).status).toBe(422);
+    for (const extra of [
+      { status: "approved" },
+      { created_by: other },
+      { approved_by: member },
+      { allocations: [snapshot.allocations[0], snapshot.allocations[0]] },
+    ])
+      expect((await SAVE(request("POST", { ...snapshot, ...extra }))).status).toBe(422);
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+  it("refuses unbalanced or approved plans before calling approval RPC", async () => {
+    actor.profile.role = "pse_manager";
+    repo.plan.mockResolvedValueOnce({ ...snapshot, id, status: "approved" });
+    expect((await APPROVE(request("POST", { expected_updated_at: stamp }), context())).status).toBe(409);
+    repo.plan.mockResolvedValueOnce({ ...snapshot, id, status: "draft", annual_amount: 999 });
+    expect((await APPROVE(request("POST", { expected_updated_at: stamp }), context())).status).toBe(422);
+    repo.allocations.mockResolvedValueOnce([]);
+    expect((await APPROVE(request("POST", { expected_updated_at: stamp }), context())).status).toBe(422);
+    expect(repo.approve).not.toHaveBeenCalled();
+  });
+  it("enforces origin for all financial mutations", async () => {
+    actor.profile.role = "pse_manager";
+    for (const origin of ["", "https://evil.invalid"]) {
+      expect((await RECORD(request("POST", receipt, origin))).status).toBe(403);
+      expect((await SAVE(request("POST", snapshot, origin))).status).toBe(403);
+      expect((await APPROVE(request("POST", { expected_updated_at: stamp }, origin), context())).status).toBe(403);
+    }
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+  it("validates JSON, content type and payload limit", async () => {
+    const wrong = request("POST", receipt);
+    wrong.headers.set("content-type", "text/plain");
+    expect((await RECORD(wrong)).status).toBe(415);
+    expect(
+      (
+        await RECORD(
+          new Request("http://localhost/api/contributions", {
+            method: "POST",
+            headers: { origin: "http://localhost", "content-type": "application/json" },
+            body: "{",
+          }),
+        )
+      ).status,
+    ).toBe(400);
+    expect((await RECORD(request("POST", { notes: "x".repeat(1000001) }))).status).toBe(413);
+  });
+  it("returns safe stale-write and provider failures", async () => {
+    actor.profile.role = "pse_manager";
+    repo.save.mockRejectedValueOnce(new FinanceError(409, "Draft has changed."));
+    expect((await SAVE(request("POST", snapshot))).status).toBe(409);
+    repo.record.mockRejectedValueOnce(new Error("Sensitive connection details"));
+    const response = await RECORD(request("POST", receipt));
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(await response.json())).not.toContain("Sensitive");
+  });
+  it("handles missing/invalid IDs and filters", async () => {
+    repo.plan.mockResolvedValueOnce(null);
+    expect((await TARGET(request(), context())).status).toBe(404);
+    expect((await CONTRIBUTION(request(), context("bad"))).status).toBe(400);
+    for (const query of ["page=0", "employee_id=bad", "from=2026-10-28&to=2026-10-27", "unexpected=1"])
+      expect((await CONTRIBUTIONS(new Request("http://localhost/api/contributions?" + query))).status).toBe(422);
+  });
+  it("checks fresh membership and profile identity again in service", async () => {
+    actor.profile.id = other;
+    expect((await CONTRIBUTIONS(request())).status).toBe(403);
+    actor.profile.id = member;
+    actor.profile.active = false;
+    expect((await CONTRIBUTIONS(request())).status).toBe(403);
+    expect(repo.contributions).not.toHaveBeenCalled();
+  });
 });

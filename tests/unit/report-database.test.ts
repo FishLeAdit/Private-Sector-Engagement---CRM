@@ -1,24 +1,174 @@
-import { afterAll,beforeAll,describe,expect,it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
-import { asActor,createLocalDatabase,fixtureIds as ids } from "../../scripts/lib/local-database";
+import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
 import type { Report } from "../../src/features/reports/types";
-let db:PGlite;beforeAll(async()=>{db=await createLocalDatabase();});afterAll(async()=>{await db?.close();});
-const read=(year=2026,quarter=0,month=0,employee="",vertical="",currency="BDT",actor:string|null=ids.member)=>asActor(db,actor,async tx=>(await tx.query<{data:Report}>("select public.pse_report($1,$2,$3,$4,$5,$6) as data",[year,quarter,month,employee,vertical,currency])).rows[0].data);
-describe("caller-scoped SQL reporting",()=>{
- it("aggregates more than 1,000 eligible receipts without REST truncation",async()=>{await asActor(db,ids.member,tx=>tx.query("insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) select $1,$2,0.01,'2040-02-01Z','cash' from generate_series(1,1101)",[ids.cashOpportunity,ids.member]));const r=await read(2040);expect(r.fundraising).toMatchObject({actual:"11.01",receipt_count:1101,target:null});expect(r.trends[1].actual).toBe("11.01");});
- it("uses inclusive/exclusive Dhaka quarter boundaries",async()=>{await asActor(db,ids.member,tx=>tx.query("insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) values($1,$2,10,'2038-03-31T17:59:59Z','cash'),($1,$2,20,'2038-03-31T18:00:00Z','cash')",[ids.cashOpportunity,ids.member]));expect((await read(2038,1)).fundraising.actual).toBe("10.00");expect((await read(2038,2)).fundraising.actual).toBe("20.00");});
- it("returns fresh actuals after a write and never mutates audit or future baselines",async()=>{expect((await read(2037)).fundraising.actual).toBe("0");await asActor(db,ids.member,tx=>tx.query("insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type)values($1,$2,10,'2037-01-01Z','cash')",[ids.cashOpportunity,ids.member]));const before=(await db.query("select count(*)::integer as count from public.audit_logs")).rows;expect((await read(2037)).fundraising.actual).toBe("10.00");expect((await db.query("select count(*)::integer as count from public.audit_logs")).rows).toEqual(before);expect((await db.query<{amount:string}>("select amount::text from public.target_quarters where plan_id=$1 and quarter=2",[ids.approvedPlan])).rows[0].amount).toBe("250000.00");});
- it("excludes undated work from period counts while keeping it in the data-quality count",async()=>{await asActor(db,ids.member,tx=>tx.query("insert into public.activities(activity_type,owner_id,related_organization_name,notes)values('general',$1,'Fictional team','Fictional undated work')",[ids.member]));const r=await read(2036);expect(r.workload.activity_count).toBe(0);expect(r.workload.undated_activities).toBe(1);});
- it("keeps actuals, annual targets and forecast separate",async()=>{const r=await read();expect(r.fundraising).toMatchObject({target:"1000000.00",actual:"205000.00",receipt_count:2,target_status:"approved"});expect(r.fundraising.types.find(t=>t.key==="cash")?.amount).toBe("165000.00");expect(r.fundraising.types.find(t=>t.key==="valued_in_kind")?.amount).toBe("40000.00");expect(r.trends).toHaveLength(12);});
- it("preserves Q1 110% and fixed Q2 even when reporting another quarter",async()=>{const q1=await read(2026,1),q2=await read(2026,2);expect(q1.fundraising).toMatchObject({target:"150000.00",actual:"165000.00"});expect(q2.fundraising).toMatchObject({target:"250000.00",actual:"40000.00"});expect(q1.trends).toHaveLength(3);});
- it("reports monthly actuals without inventing monthly targets",async()=>{const r=await read(2026,0,3);expect(r.fundraising.target).toBeNull();expect(r.fundraising.actual).toBe("165000.00");expect(r.trends).toHaveLength(1);expect(r.start_date).toBe("2026-03-01");expect(r.end_date_exclusive).toBe("2026-04-01");});
- it("keeps currencies separate and includes unassigned receipts",async()=>{const r=await read(2026,0,0,"","","USD");expect(r.fundraising).toMatchObject({actual:"200.00",target:null,unassigned_actual:"200.00"});const unassigned=await read(2026,0,0,"","unassigned","USD");expect(unassigned.fundraising.dimensions[0]).toMatchObject({vertical_id:null,target:null,actual:"200.00"});});
- it("filters target and receipt attribution by employee and explicit vertical",async()=>{const r=await read(2026,0,0,ids.colleague,ids.dsp);expect(r.fundraising).toMatchObject({target:null,actual:"0"});const employee=await read(2026,0,0,ids.member);expect(employee.fundraising.target).toBe("500000.00");expect(employee.fundraising.actual).toBe("165000.00");});
- it("retains configurable stages and classifies current outcomes without calling them leads",async()=>{await db.query("update public.opportunities set expected_close_at='2026-10-01' where currency='BDT'");const r=await read();expect(r.pipeline.count).toBe(2);expect(r.pipeline.expected).toBe("580000.00");expect(r.pipeline.stages.reduce((sum,s)=>sum+s.count,0)).toBe(2);expect(r.pipeline.outcomes.map(o=>o.key).sort()).toEqual(["abandoned","junk","lost","open","won"]);});
- it("does not invent a category-to-vertical mapping for pipeline or workload",async()=>{const all=await read(),filtered=await read(2026,0,0,"",ids.vbd);expect(filtered.pipeline).toEqual(all.pipeline);expect(filtered.workload).toEqual(all.workload);});
- it("counts undated deals separately and filters expected closing dates",async()=>{await db.query("update public.opportunities set expected_close_at=null where id=$1",[ids.cashOpportunity]);const r=await read(2026,4);expect(r.pipeline.undated_count).toBe(1);expect(r.pipeline.undated_expected).toBe("500000.00");expect(r.pipeline.count).toBe(1);});
- it("uses activity relevant time and keeps canonical meetings separate",async()=>{const r=await read();expect(r.workload.activity_count).toBe(3);expect(r.workload.independent_count).toBe(2);expect(r.workload.types).toHaveLength(11);expect(r.workload.categories).toHaveLength(3);expect(r.workload.meeting_statuses).toHaveLength(3);expect(r.workload.owners.length).toBeGreaterThan(0);});
- it.each([ids.outsider,ids.inactive,null])("denies report execution by restricted caller %s",async actor=>{await expect(read(2026,0,0,"","","BDT",actor)).rejects.toThrow();});
- it.each([[0,0,0],[2026,1,1],[2026,5,0],[2026,0,13]])("rejects invalid period %s/%s/%s",async(y,q,m)=>{await expect(read(y,q,m)).rejects.toMatchObject({code:"22023"});});
- it("rejects malformed IDs and currencies",async()=>{await expect(read(2026,0,0,"bad")).rejects.toThrow();await expect(read(2026,0,0,"","","BDT,USD")).rejects.toMatchObject({code:"22023"});});
+let db: PGlite;
+beforeAll(async () => {
+  db = await createLocalDatabase();
+});
+afterAll(async () => {
+  await db?.close();
+});
+const read = (
+  year = 2026,
+  quarter = 0,
+  month = 0,
+  employee = "",
+  vertical = "",
+  currency = "BDT",
+  actor: string | null = ids.member,
+) =>
+  asActor(
+    db,
+    actor,
+    async tx =>
+      (
+        await tx.query<{ data: Report }>("select public.pse_report($1,$2,$3,$4,$5,$6) as data", [
+          year,
+          quarter,
+          month,
+          employee,
+          vertical,
+          currency,
+        ])
+      ).rows[0].data,
+  );
+describe("caller-scoped SQL reporting", () => {
+  it("aggregates more than 1,000 eligible receipts without REST truncation", async () => {
+    await asActor(db, ids.member, tx =>
+      tx.query(
+        "insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) select $1,$2,0.01,'2040-02-01Z','cash' from generate_series(1,1101)",
+        [ids.cashOpportunity, ids.member],
+      ),
+    );
+    const r = await read(2040);
+    expect(r.fundraising).toMatchObject({ actual: "11.01", receipt_count: 1101, target: null });
+    expect(r.trends[1].actual).toBe("11.01");
+  });
+  it("uses inclusive/exclusive Dhaka quarter boundaries", async () => {
+    await asActor(db, ids.member, tx =>
+      tx.query(
+        "insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type) values($1,$2,10,'2038-03-31T17:59:59Z','cash'),($1,$2,20,'2038-03-31T18:00:00Z','cash')",
+        [ids.cashOpportunity, ids.member],
+      ),
+    );
+    expect((await read(2038, 1)).fundraising.actual).toBe("10.00");
+    expect((await read(2038, 2)).fundraising.actual).toBe("20.00");
+  });
+  it("returns fresh actuals after a write and never mutates audit or future baselines", async () => {
+    expect((await read(2037)).fundraising.actual).toBe("0");
+    await asActor(db, ids.member, tx =>
+      tx.query(
+        "insert into public.recognized_contributions(opportunity_id,employee_id,amount,recognized_at,contribution_type)values($1,$2,10,'2037-01-01Z','cash')",
+        [ids.cashOpportunity, ids.member],
+      ),
+    );
+    const before = (await db.query("select count(*)::integer as count from public.audit_logs")).rows;
+    expect((await read(2037)).fundraising.actual).toBe("10.00");
+    expect((await db.query("select count(*)::integer as count from public.audit_logs")).rows).toEqual(before);
+    expect(
+      (
+        await db.query<{ amount: string }>(
+          "select amount::text from public.target_quarters where plan_id=$1 and quarter=2",
+          [ids.approvedPlan],
+        )
+      ).rows[0].amount,
+    ).toBe("250000.00");
+  });
+  it("excludes undated work from period counts while keeping it in the data-quality count", async () => {
+    await asActor(db, ids.member, tx =>
+      tx.query(
+        "insert into public.activities(activity_type,owner_id,related_organization_name,notes)values('general',$1,'Fictional team','Fictional undated work')",
+        [ids.member],
+      ),
+    );
+    const r = await read(2036);
+    expect(r.workload.activity_count).toBe(0);
+    expect(r.workload.undated_activities).toBe(1);
+  });
+  it("keeps actuals, annual targets and forecast separate", async () => {
+    const r = await read();
+    expect(r.fundraising).toMatchObject({
+      target: "1000000.00",
+      actual: "205000.00",
+      receipt_count: 2,
+      target_status: "approved",
+    });
+    expect(r.fundraising.types.find(t => t.key === "cash")?.amount).toBe("165000.00");
+    expect(r.fundraising.types.find(t => t.key === "valued_in_kind")?.amount).toBe("40000.00");
+    expect(r.trends).toHaveLength(12);
+  });
+  it("preserves Q1 110% and fixed Q2 even when reporting another quarter", async () => {
+    const q1 = await read(2026, 1),
+      q2 = await read(2026, 2);
+    expect(q1.fundraising).toMatchObject({ target: "150000.00", actual: "165000.00" });
+    expect(q2.fundraising).toMatchObject({ target: "250000.00", actual: "40000.00" });
+    expect(q1.trends).toHaveLength(3);
+  });
+  it("reports monthly actuals without inventing monthly targets", async () => {
+    const r = await read(2026, 0, 3);
+    expect(r.fundraising.target).toBeNull();
+    expect(r.fundraising.actual).toBe("165000.00");
+    expect(r.trends).toHaveLength(1);
+    expect(r.start_date).toBe("2026-03-01");
+    expect(r.end_date_exclusive).toBe("2026-04-01");
+  });
+  it("keeps currencies separate and includes unassigned receipts", async () => {
+    const r = await read(2026, 0, 0, "", "", "USD");
+    expect(r.fundraising).toMatchObject({ actual: "200.00", target: null, unassigned_actual: "200.00" });
+    const unassigned = await read(2026, 0, 0, "", "unassigned", "USD");
+    expect(unassigned.fundraising.dimensions[0]).toMatchObject({ vertical_id: null, target: null, actual: "200.00" });
+  });
+  it("filters target and receipt attribution by employee and explicit vertical", async () => {
+    const r = await read(2026, 0, 0, ids.colleague, ids.dsp);
+    expect(r.fundraising).toMatchObject({ target: null, actual: "0" });
+    const employee = await read(2026, 0, 0, ids.member);
+    expect(employee.fundraising.target).toBe("500000.00");
+    expect(employee.fundraising.actual).toBe("165000.00");
+  });
+  it("retains configurable stages and classifies current outcomes without calling them leads", async () => {
+    await db.query("update public.opportunities set expected_close_at='2026-10-01' where currency='BDT'");
+    const r = await read();
+    expect(r.pipeline.count).toBe(2);
+    expect(r.pipeline.expected).toBe("580000.00");
+    expect(r.pipeline.stages.reduce((sum, s) => sum + s.count, 0)).toBe(2);
+    expect(r.pipeline.outcomes.map(o => o.key).sort()).toEqual(["abandoned", "junk", "lost", "open", "won"]);
+  });
+  it("does not invent a category-to-vertical mapping for pipeline or workload", async () => {
+    const all = await read(),
+      filtered = await read(2026, 0, 0, "", ids.vbd);
+    expect(filtered.pipeline).toEqual(all.pipeline);
+    expect(filtered.workload).toEqual(all.workload);
+  });
+  it("counts undated deals separately and filters expected closing dates", async () => {
+    await db.query("update public.opportunities set expected_close_at=null where id=$1", [ids.cashOpportunity]);
+    const r = await read(2026, 4);
+    expect(r.pipeline.undated_count).toBe(1);
+    expect(r.pipeline.undated_expected).toBe("500000.00");
+    expect(r.pipeline.count).toBe(1);
+  });
+  it("uses activity relevant time and keeps canonical meetings separate", async () => {
+    const r = await read();
+    expect(r.workload.activity_count).toBe(3);
+    expect(r.workload.independent_count).toBe(2);
+    expect(r.workload.types).toHaveLength(11);
+    expect(r.workload.categories).toHaveLength(3);
+    expect(r.workload.meeting_statuses).toHaveLength(3);
+    expect(r.workload.owners.length).toBeGreaterThan(0);
+  });
+  it.each([ids.outsider, ids.inactive, null])("denies report execution by restricted caller %s", async actor => {
+    await expect(read(2026, 0, 0, "", "", "BDT", actor)).rejects.toThrow();
+  });
+  it.each([
+    [0, 0, 0],
+    [2026, 1, 1],
+    [2026, 5, 0],
+    [2026, 0, 13],
+  ])("rejects invalid period %s/%s/%s", async (y, q, m) => {
+    await expect(read(y, q, m)).rejects.toMatchObject({ code: "22023" });
+  });
+  it("rejects malformed IDs and currencies", async () => {
+    await expect(read(2026, 0, 0, "bad")).rejects.toThrow();
+    await expect(read(2026, 0, 0, "", "", "BDT,USD")).rejects.toMatchObject({ code: "22023" });
+  });
 });

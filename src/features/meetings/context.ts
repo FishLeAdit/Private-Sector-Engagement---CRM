@@ -10,6 +10,10 @@ export async function meetingPageContext() {
   return { access, service: createMeetingsService(createMeetingRepository(await createClient()), access) };
 }
 export async function meetingPageData<T>(load: () => Promise<T>) {
-  try { return { ok: true as const, data: await load() }; }
-  catch (error) { if (error instanceof MeetingError) return { ok: false as const, error }; throw error; }
+  try {
+    return { ok: true as const, data: await load() };
+  } catch (error) {
+    if (error instanceof MeetingError) return { ok: false as const, error };
+    throw error;
+  }
 }

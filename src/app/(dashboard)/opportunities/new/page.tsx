@@ -8,7 +8,17 @@ export default async function NewOpportunityPage() {
   const result = await opportunityPageData(() => service.options());
   if (!result.ok) return <OpportunityProblem message={result.error.message} />;
   const options = result.data;
-  return <><Link href="/opportunities" className="link text-sm">← Opportunities</Link><h1 className="mb-7 mt-4 text-3xl font-bold">New deal</h1>
-    {options.stages.some(row => row.active) && options.categories.some(row => row.active) ? <OpportunityForm options={options} userId={access.userId} manager={isPseManager(access.profile)} /> : <PipelineSetupNeeded />}
-  </>;
+  return (
+    <>
+      <Link href="/opportunities" className="link text-sm">
+        ← Opportunities
+      </Link>
+      <h1 className="mb-7 mt-4 text-3xl font-bold">New deal</h1>
+      {options.stages.some(row => row.active) && options.categories.some(row => row.active) ? (
+        <OpportunityForm options={options} userId={access.userId} manager={isPseManager(access.profile)} />
+      ) : (
+        <PipelineSetupNeeded />
+      )}
+    </>
+  );
 }

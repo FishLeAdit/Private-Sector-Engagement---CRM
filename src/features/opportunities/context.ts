@@ -10,6 +10,10 @@ export async function opportunityPageContext() {
   return { access, service: createOpportunitiesService(createOpportunityRepository(await createClient()), access) };
 }
 export async function opportunityPageData<T>(load: () => Promise<T>) {
-  try { return { ok: true as const, data: await load() }; }
-  catch (error) { if (error instanceof OpportunityError) return { ok: false as const, error }; throw error; }
+  try {
+    return { ok: true as const, data: await load() };
+  } catch (error) {
+    if (error instanceof OpportunityError) return { ok: false as const, error };
+    throw error;
+  }
 }

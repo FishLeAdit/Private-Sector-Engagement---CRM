@@ -11,12 +11,24 @@ const originalShow = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype
 const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
 beforeAll(() => {
   // jsdom does not implement native modal focus/top-layer behavior.
-  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.open = true; } });
-  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.open = false; } });
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.open = true;
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.open = false;
+    },
+  });
 });
 afterAll(() => {
-  if (originalShow) Object.defineProperty(HTMLDialogElement.prototype, "showModal", originalShow); else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
-  if (originalClose) Object.defineProperty(HTMLDialogElement.prototype, "close", originalClose); else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+  if (originalShow) Object.defineProperty(HTMLDialogElement.prototype, "showModal", originalShow);
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  if (originalClose) Object.defineProperty(HTMLDialogElement.prototype, "close", originalClose);
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
 });
 let fetcher: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -24,7 +36,10 @@ beforeEach(() => {
   fetcher = vi.fn().mockResolvedValue(Response.json({ deleted: true, id }));
   vi.stubGlobal("fetch", fetcher);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("contact deletion confirmation", () => {
   it("names the contact and lets the user cancel without a request", () => {
@@ -47,7 +62,9 @@ describe("contact deletion confirmation", () => {
     expect(navigation.refresh).toHaveBeenCalled();
   });
   it("keeps the dialog open and displays linked-record errors", async () => {
-    fetcher.mockResolvedValueOnce(Response.json({ error: "This contact is linked to other records." }, { status: 409 }));
+    fetcher.mockResolvedValueOnce(
+      Response.json({ error: "This contact is linked to other records." }, { status: 409 }),
+    );
     render(<DeleteContactButton contactId={id} name="Fictional Linked Contact" />);
     fireEvent.click(screen.getByRole("button", { name: "Delete contact" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete permanently" }));
@@ -57,7 +74,12 @@ describe("contact deletion confirmation", () => {
   });
   it("prevents duplicate submissions while deletion is pending", async () => {
     let complete!: (value: Response) => void;
-    fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { complete = resolve; }));
+    fetcher.mockImplementationOnce(
+      () =>
+        new Promise<Response>(resolve => {
+          complete = resolve;
+        }),
+    );
     render(<DeleteContactButton contactId={id} name="Fictional Pending Contact" />);
     fireEvent.click(screen.getByRole("button", { name: "Delete contact" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete permanently" }));

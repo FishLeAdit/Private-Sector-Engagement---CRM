@@ -11,7 +11,11 @@ test("meeting data, edits and follow-up creation require authentication", async 
   expect((await request.post("/api/meetings", { data: { title: "Fictional anonymous meeting" } })).status()).toBe(401);
   expect((await request.patch(`/api/meetings/${id}`, { data: { status: "done" } })).status()).toBe(401);
   expect((await request.delete(`/api/meetings/${id}`)).status()).toBe(401);
-  expect((await request.post(`/api/meetings/${id}/follow-ups`, { data: { notes: "Fictional anonymous follow-up" } })).status()).toBe(401);
+  expect(
+    (
+      await request.post(`/api/meetings/${id}/follow-ups`, { data: { notes: "Fictional anonymous follow-up" } })
+    ).status(),
+  ).toBe(401);
 });
 
 test("meeting list, new, detail and edit pages require sign-in", async ({ page }) => {

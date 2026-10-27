@@ -1,4 +1,19 @@
-import { expect,test } from "@playwright/test";
-const id="f1000000-0000-4000-8000-000000000001";
-test("target APIs, draft saves, approval and configuration require authentication",async({request})=>{for(const path of["/api/targets",`/api/targets/${id}`,"/api/targets/options"]){const response=await request.get(path);expect(response.status()).toBe(401);expect(response.headers()["cache-control"]).toContain("no-store");}expect((await request.post("/api/targets",{data:{}})).status()).toBe(401);expect((await request.patch(`/api/targets/${id}`,{data:{}})).status()).toBe(401);expect((await request.post(`/api/targets/${id}/approve`,{data:{}})).status()).toBe(401);expect((await request.post("/api/targets/verticals",{data:{}})).status()).toBe(401);});
-test("target pages require sign-in",async({page})=>{for(const path of["/targets","/targets/new","/targets/verticals",`/targets/${id}`,`/targets/${id}/edit`]){await page.goto(path);await expect(page).toHaveURL(/\/login\?/);}});
+import { expect, test } from "@playwright/test";
+const id = "f1000000-0000-4000-8000-000000000001";
+test("target APIs, draft saves, approval and configuration require authentication", async ({ request }) => {
+  for (const path of ["/api/targets", `/api/targets/${id}`, "/api/targets/options"]) {
+    const response = await request.get(path);
+    expect(response.status()).toBe(401);
+    expect(response.headers()["cache-control"]).toContain("no-store");
+  }
+  expect((await request.post("/api/targets", { data: {} })).status()).toBe(401);
+  expect((await request.patch(`/api/targets/${id}`, { data: {} })).status()).toBe(401);
+  expect((await request.post(`/api/targets/${id}/approve`, { data: {} })).status()).toBe(401);
+  expect((await request.post("/api/targets/verticals", { data: {} })).status()).toBe(401);
+});
+test("target pages require sign-in", async ({ page }) => {
+  for (const path of ["/targets", "/targets/new", "/targets/verticals", `/targets/${id}`, `/targets/${id}/edit`]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login\?/);
+  }
+});

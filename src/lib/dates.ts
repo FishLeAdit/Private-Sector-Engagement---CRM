@@ -2,7 +2,11 @@ export function formatDate(value: string | null, includeTime = false) {
   if (!value) return "Not recorded";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not recorded";
-  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", ...(includeTime ? { timeStyle: "short" as const } : {}), timeZone: "Asia/Dhaka" }).format(date);
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    ...(includeTime ? { timeStyle: "short" as const } : {}),
+    timeZone: "Asia/Dhaka",
+  }).format(date);
 }
 
 // datetime-local has no timezone. Interpret meeting input explicitly in Dhaka,
@@ -11,7 +15,15 @@ export function toDhakaDateTimeInput(value: string | null | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value ?? "";
   return `${get("year").padStart(4, "0")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }

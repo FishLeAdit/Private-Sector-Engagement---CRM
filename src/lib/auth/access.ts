@@ -19,8 +19,11 @@ export async function getClientAccess(supabase: SupabaseClient<Database>): Promi
       return data.user;
     },
     async loadProfile(userId) {
-      const { data, error } = await supabase.from("profiles")
-        .select("id,display_name,department,role,active").eq("id", userId).maybeSingle();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,display_name,department,role,active")
+        .eq("id", userId)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -29,8 +32,9 @@ export async function getClientAccess(supabase: SupabaseClient<Database>): Promi
 
 // React cache deduplicates only within a render pass, never across users/requests.
 export const getAccess = cache(async (): Promise<AccessResult> => {
-  try { return await getClientAccess(await createClient()); }
-  catch (error) {
+  try {
+    return await getClientAccess(await createClient());
+  } catch (error) {
     // Preserve Next.js request-only rendering and redirect control-flow errors.
     unstable_rethrow(error);
     return { status: "unavailable" };
@@ -52,5 +56,8 @@ export async function authorizeApi({ manager = false } = {}) {
   }
   const status = access.status === "anonymous" ? 401 : access.status === "unavailable" ? 503 : 403;
   const error = status === 401 ? "Sign in required" : status === 503 ? "Sign-in services unavailable" : "Access denied";
-  return { ok: false as const, response: NextResponse.json({ error }, { status, headers: { "Cache-Control": "private, no-store" } }) };
+  return {
+    ok: false as const,
+    response: NextResponse.json({ error }, { status, headers: { "Cache-Control": "private, no-store" } }),
+  };
 }

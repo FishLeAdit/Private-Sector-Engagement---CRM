@@ -7,15 +7,24 @@ export type Category = Tables<"contribution_categories">;
 export type Owner = Pick<Tables<"profiles">, "id" | "display_name" | "active">;
 export type OpportunityOptions = { stages: Stage[]; categories: Category[]; owners: Owner[] };
 export type OpportunityRecord = Tables<"opportunities"> & {
-  contact: Party | null; primary_contact: Party | null; secondary_contact: Party | null;
-  owner: Pick<Owner, "id" | "display_name"> | null; stage: Stage | null; category: Category | null;
+  contact: Party | null;
+  primary_contact: Party | null;
+  secondary_contact: Party | null;
+  owner: Pick<Owner, "id" | "display_name"> | null;
+  stage: Stage | null;
+  category: Category | null;
 };
 export type OpportunityWrite = Omit<TablesInsert<"opportunities">, "id" | "created_by" | "created_at" | "updated_at">;
 export type StageWrite = Pick<Stage, "name" | "position" | "outcome" | "is_closed" | "active" | "is_provisional">;
 export type CategoryWrite = Pick<Category, "code" | "name" | "active" | "is_provisional">;
 export type OpportunityHistory = {
-  contributions: Pick<Tables<"recognized_contributions">, "id" | "amount" | "currency" | "recognized_at" | "contribution_type" | "notes">[];
-  audits: (Pick<Tables<"audit_logs">, "id" | "action" | "before" | "after" | "created_at"> & { actor: { display_name: string } | null })[];
+  contributions: Pick<
+    Tables<"recognized_contributions">,
+    "id" | "amount" | "currency" | "recognized_at" | "contribution_type" | "notes"
+  >[];
+  audits: (Pick<Tables<"audit_logs">, "id" | "action" | "before" | "after" | "created_at"> & {
+    actor: { display_name: string } | null;
+  })[];
 };
 export interface OpportunityRepository {
   list(input: OpportunityListInput): Promise<{ opportunities: OpportunityRecord[]; count: number }>;
@@ -30,5 +39,12 @@ export interface OpportunityRepository {
   saveCategory(input: CategoryWrite, id?: string): Promise<void>;
 }
 export class OpportunityError extends Error {
-  constructor(public status: number, message: string, public fields: Record<string, string[]> = {}) { super(message); this.name = "OpportunityError"; }
+  constructor(
+    public status: number,
+    message: string,
+    public fields: Record<string, string[]> = {},
+  ) {
+    super(message);
+    this.name = "OpportunityError";
+  }
 }

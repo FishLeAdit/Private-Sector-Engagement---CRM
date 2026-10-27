@@ -1,0 +1,13 @@
+# Prettier also skips everything in .gitignore.
+
+# Generated files: db:types:check compares database.types.ts byte-for-byte.
+package-lock.json
+next-env.d.ts
+src/types/database.types.ts
+
+# Applied migrations stay byte-identical to what ran on the hosted database.
+/supabase/
+
+# Prose and benchmark evidence are edited by hand.
+/docs/
+*.md

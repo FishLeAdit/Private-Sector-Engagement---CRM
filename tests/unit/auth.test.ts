@@ -13,7 +13,13 @@ import { resolveAccess, safeReturnPath } from "../../src/lib/auth/session";
 import { parseSupabaseConfig } from "../../src/lib/supabase/config";
 import { signInWithAccess } from "../../src/features/auth/service";
 
-const profile: AccessProfile = { id: "demo-user", display_name: "Fictional Member", department: "PSE", role: "pse_member", active: true };
+const profile: AccessProfile = {
+  id: "demo-user",
+  display_name: "Fictional Member",
+  department: "PSE",
+  role: "pse_member",
+  active: true,
+};
 
 function clientFor(p: AccessProfile | null = profile, user: { id: string } | null = { id: profile.id }) {
   const auth = {
@@ -34,10 +40,15 @@ describe("verified user and PSE membership", () => {
   it.each(["pse_member", "pse_manager", "admin"])("allows active PSE role %s", async role => {
     expect((await getClientAccess(clientFor({ ...profile, role }).client)).status).toBe("allowed");
   });
-  it.each([null, { ...profile, active: false }, { ...profile, department: "HR" }, { ...profile, role: "unknown" }, { ...profile, id: "someone-else" }])(
-    "denies missing, inactive, non-PSE, invalid or mismatched membership %#", async p => {
-      expect((await getClientAccess(clientFor(p).client)).status).toBe("forbidden");
-    });
+  it.each([
+    null,
+    { ...profile, active: false },
+    { ...profile, department: "HR" },
+    { ...profile, role: "unknown" },
+    { ...profile, id: "someone-else" },
+  ])("denies missing, inactive, non-PSE, invalid or mismatched membership %#", async p => {
+    expect((await getClientAccess(clientFor(p).client)).status).toBe("forbidden");
+  });
   it("does not query profiles when there is no verified user", async () => {
     const fixture = clientFor(null, null);
     expect((await getClientAccess(fixture.client)).status).toBe("anonymous");
@@ -54,7 +65,16 @@ describe("verified user and PSE membership", () => {
     expect((await getClientAccess(fixture.client)).status).toBe("unavailable");
     fixture.maybeSingle.mockResolvedValueOnce({ data: null, error: { message: "Database unavailable" } });
     expect((await getClientAccess(fixture.client)).status).toBe("unavailable");
-    expect((await resolveAccess({ verifyUser: async () => { throw new Error("Offline"); }, loadProfile: async () => profile })).status).toBe("unavailable");
+    expect(
+      (
+        await resolveAccess({
+          verifyUser: async () => {
+            throw new Error("Offline");
+          },
+          loadProfile: async () => profile,
+        })
+      ).status,
+    ).toBe("unavailable");
   });
   it("treats rejected sessions as anonymous", async () => {
     const fixture = clientFor();
@@ -115,7 +135,10 @@ describe("sign-in service", () => {
   });
   it("does not return provider errors or supplied credentials", async () => {
     const fixture = clientFor();
-    fixture.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: null }, error: { message: "Sensitive provider error" } });
+    fixture.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "Sensitive provider error" },
+    });
     const result = await signInWithAccess(fixture.client, "demo@example.invalid", "fictional-password");
     expect(result.ok).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/Sensitive|fictional-password|demo@example/);
@@ -124,8 +147,17 @@ describe("sign-in service", () => {
 });
 
 describe("safe redirect and public configuration", () => {
-  it.each(["https://evil.invalid", "//evil.invalid", "/\\evil.invalid", "/contacts/../../login", "/login", "/api/contacts", "/dashboard\nLocation:evil", undefined, ["/contacts"]])(
-    "rejects unsafe return path %#", value => expect(safeReturnPath(value)).toBe("/dashboard"));
+  it.each([
+    "https://evil.invalid",
+    "//evil.invalid",
+    "/\\evil.invalid",
+    "/contacts/../../login",
+    "/login",
+    "/api/contacts",
+    "/dashboard\nLocation:evil",
+    undefined,
+    ["/contacts"],
+  ])("rejects unsafe return path %#", value => expect(safeReturnPath(value)).toBe("/dashboard"));
   it("preserves a permitted nested route and its filters", () => {
     expect(safeReturnPath("/contacts/demo?tab=activity")).toBe("/contacts/demo?tab=activity");
   });
@@ -135,6 +167,8 @@ describe("safe redirect and public configuration", () => {
     expect(() => parseSupabaseConfig("https://example.supabase.co", "sb_secret_fictional")).toThrow(/publishable/);
     const serviceJwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ role: "service_role" }))}.example`;
     expect(() => parseSupabaseConfig("https://example.supabase.co", serviceJwt)).toThrow(/publishable/);
-    expect(parseSupabaseConfig("https://example.supabase.co", "sb_publishable_demo").url).toBe("https://example.supabase.co");
+    expect(parseSupabaseConfig("https://example.supabase.co", "sb_publishable_demo").url).toBe(
+      "https://example.supabase.co",
+    );
   });
 });

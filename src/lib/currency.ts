@@ -6,4 +6,6 @@ export function toCents(value: string | number): bigint {
 export function formatCents(cents: bigint, currency: string) {
   return `${currency} ${(cents / BigInt(100)).toLocaleString("en-GB")}.${String(cents % BigInt(100)).padStart(2, "0")}`;
 }
-export function formatMoney(value: string | number, currency: string) { return formatCents(toCents(value), currency); }
+export function formatMoney(value: string | number, currency: string) {
+  return formatCents(toCents(value), currency);
+}

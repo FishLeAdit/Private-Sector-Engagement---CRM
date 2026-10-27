@@ -5,8 +5,12 @@ export type AccessProfile = Pick<Tables<"profiles">, "id" | "display_name" | "de
 export type PseProfile = AccessProfile & { role: PseRole };
 
 export function isActivePseProfile(profile: AccessProfile | null): profile is PseProfile {
-  return !!profile && profile.active && profile.department === "PSE"
-    && ["pse_member", "pse_manager", "admin"].includes(profile.role);
+  return (
+    !!profile &&
+    profile.active &&
+    profile.department === "PSE" &&
+    ["pse_member", "pse_manager", "admin"].includes(profile.role)
+  );
 }
 
 export function canManageTargets(profile: AccessProfile | null): boolean {
@@ -18,5 +22,7 @@ export function isPseManager(profile: AccessProfile | null): boolean {
 }
 
 export const roleLabels: Record<PseRole, string> = {
-  pse_member: "PSE member", pse_manager: "PSE manager", admin: "Administrator",
+  pse_member: "PSE member",
+  pse_manager: "PSE manager",
+  admin: "Administrator",
 };

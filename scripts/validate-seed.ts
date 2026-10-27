@@ -8,13 +8,22 @@ async function main() {
       select c.relname as name, c.relrowsecurity as rls from pg_class c
       join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'`);
     assert.equal(tables.length, 13);
-    assert.ok(tables.every(table => table.rls), "Every CRM table must enable RLS");
+    assert.ok(
+      tables.every(table => table.rls),
+      "Every CRM table must enable RLS",
+    );
     const { rows: totals } = await db.query<{ currency: string; amount: string }>(`
       select currency,sum(amount)::text as amount from public.recognized_contributions group by currency order by currency`);
-    assert.deepEqual(totals, [{ currency: "BDT", amount: "205000.00" }, { currency: "USD", amount: "200.00" }]);
-    const { rows: quarters } = await db.query<{ quarter: number; target: string; allocated: string }>(`
+    assert.deepEqual(totals, [
+      { currency: "BDT", amount: "205000.00" },
+      { currency: "USD", amount: "200.00" },
+    ]);
+    const { rows: quarters } = await db.query<{ quarter: number; target: string; allocated: string }>(
+      `
       select q.quarter,q.amount::text as target,sum(a.amount)::text as allocated from public.target_quarters q
-      join public.target_allocations a using(plan_id,quarter) where q.plan_id=$1 group by q.quarter,q.amount order by q.quarter`, [ids.approvedPlan]);
+      join public.target_allocations a using(plan_id,quarter) where q.plan_id=$1 group by q.quarter,q.amount order by q.quarter`,
+      [ids.approvedPlan],
+    );
     assert.equal(quarters.length, 4);
     assert.ok(quarters.every(q => q.target === q.allocated));
     assert.equal(quarters[1].target, "250000.00");
@@ -30,11 +39,18 @@ async function main() {
     }
     const visible = await asActor(db, ids.member, async tx => (await tx.query("select id from public.contacts")).rows);
     assert.equal(visible.length, 4);
-    console.log("Validated: 13 migrated tables with RLS; fictional seed; reconciled 1,000,000 BDT target; Q1 110%; Q2 unchanged; realized totals grouped by currency; independent activities; basic role visibility.");
-    console.log("Local PostgreSQL/Auth-adapter verification only. No hosted Supabase project or login flow was tested.");
+    console.log(
+      "Validated: 13 migrated tables with RLS; fictional seed; reconciled 1,000,000 BDT target; Q1 110%; Q2 unchanged; realized totals grouped by currency; independent activities; basic role visibility.",
+    );
+    console.log(
+      "Local PostgreSQL/Auth-adapter verification only. No hosted Supabase project or login flow was tested.",
+    );
   } finally {
     await db.close();
   }
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

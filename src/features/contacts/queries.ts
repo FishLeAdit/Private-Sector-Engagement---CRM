@@ -15,11 +15,23 @@ export function quotedContains(value: string) {
 
 function databaseError(error: { code?: string; message?: string }): never {
   if (error.code === "23505") {
-    const field = error.message?.includes("contacts_email_unique") ? "email" : error.message?.includes("contacts_phone_unique") ? "phone" : null;
-    throw new ContactError(409, "A contact with that email or phone already exists.", field ? { [field]: ["Already used by another contact."] } : {});
+    const field = error.message?.includes("contacts_email_unique")
+      ? "email"
+      : error.message?.includes("contacts_phone_unique")
+        ? "phone"
+        : null;
+    throw new ContactError(
+      409,
+      "A contact with that email or phone already exists.",
+      field ? { [field]: ["Already used by another contact."] } : {},
+    );
   }
   if (error.code === "42501") throw new ContactError(403, "You do not have permission to change this contact.");
-  if (["23514", "23503", "22P02"].includes(error.code ?? "")) throw new ContactError(422, "Some contact details are invalid or no longer available. Review the form and try again.");
+  if (["23514", "23503", "22P02"].includes(error.code ?? ""))
+    throw new ContactError(
+      422,
+      "Some contact details are invalid or no longer available. Review the form and try again.",
+    );
   throw new ContactError(503, "Contacts are temporarily unavailable. Please try again.");
 }
 
@@ -31,13 +43,18 @@ export function createContactRepository(client: SupabaseClient<Database>): Conta
       if (input.company_id) query = query.eq("company_id", input.company_id);
       if (input.q) {
         const pattern = quotedContains(input.q);
-        const filters = ["name", "email_normalized", "phone", "industry", "designation"].map(field => `${field}.ilike.${pattern}`);
+        const filters = ["name", "email_normalized", "phone", "industry", "designation"].map(
+          field => `${field}.ilike.${pattern}`,
+        );
         const digits = input.q.replace(/[^0-9]/g, "");
         if (digits && /^[+0-9()\s.-]+$/.test(input.q)) filters.push(`phone_normalized.ilike.${quotedContains(digits)}`);
         query = query.or(filters.join(","));
       }
       const start = (input.page - 1) * CONTACT_PAGE_SIZE;
-      const { data, count, error } = await query.order("name").order("id").range(start, start + CONTACT_PAGE_SIZE - 1);
+      const { data, count, error } = await query
+        .order("name")
+        .order("id")
+        .range(start, start + CONTACT_PAGE_SIZE - 1);
       if (error) databaseError(error);
       return { contacts: data ?? [], count: count ?? 0 };
     },
@@ -58,7 +75,11 @@ export function createContactRepository(client: SupabaseClient<Database>): Conta
       return data ?? [];
     },
     async create(input, actorId) {
-      const { data, error } = await client.from("contacts").insert({ ...input, created_by: actorId }).select(selection).single();
+      const { data, error } = await client
+        .from("contacts")
+        .insert({ ...input, created_by: actorId })
+        .select(selection)
+        .single();
       if (error) databaseError(error);
       if (!data) throw new ContactError(503, "Contact could not be saved. Please try again.");
       return data;
@@ -71,26 +92,45 @@ export function createContactRepository(client: SupabaseClient<Database>): Conta
     async remove(id) {
       const { data, error } = await client.from("contacts").delete().eq("id", id).select("id").maybeSingle();
       if (error && ["23503", "23001"].includes(error.code)) {
-        throw new ContactError(409, "This contact is linked to other contacts, opportunities, meetings or activities. Reassign or unlink those records before deleting it.");
+        throw new ContactError(
+          409,
+          "This contact is linked to other contacts, opportunities, meetings or activities. Reassign or unlink those records before deleting it.",
+        );
       }
       if (error) databaseError(error);
       return data?.id === id;
     },
     async history(id) {
-      const opportunities = await client.from("opportunities").select("id,deal_name,expected_amount,currency,created_at")
-        .or(`contact_id.eq.${id},primary_contact_id.eq.${id},secondary_contact_id.eq.${id}`).order("created_at", { ascending: false }).limit(10);
+      const opportunities = await client
+        .from("opportunities")
+        .select("id,deal_name,expected_amount,currency,created_at")
+        .or(`contact_id.eq.${id},primary_contact_id.eq.${id},secondary_contact_id.eq.${id}`)
+        .order("created_at", { ascending: false })
+        .limit(10);
       if (opportunities.error) databaseError(opportunities.error);
       const opportunityIds = (opportunities.data ?? []).map(row => row.id);
       const opportunityFilter = opportunityIds.length ? `,opportunity_id.in.(${opportunityIds.join(",")})` : "";
-      const meetings = await client.from("meetings").select("id,title,scheduled_at,status")
-        .or(`contact_id.eq.${id}${opportunityFilter}`).order("scheduled_at", { ascending: false }).limit(10);
+      const meetings = await client
+        .from("meetings")
+        .select("id,title,scheduled_at,status")
+        .or(`contact_id.eq.${id}${opportunityFilter}`)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
       if (meetings.error) databaseError(meetings.error);
       const meetingIds = (meetings.data ?? []).map(row => row.id);
       const meetingFilter = meetingIds.length ? `,meeting_id.in.(${meetingIds.join(",")})` : "";
-      const activities = await client.from("activities").select("id,activity_type,status,occurred_at,notes,created_at")
-        .or(`contact_id.eq.${id}${opportunityFilter}${meetingFilter}`).order("created_at", { ascending: false }).limit(20);
+      const activities = await client
+        .from("activities")
+        .select("id,activity_type,status,occurred_at,notes,created_at")
+        .or(`contact_id.eq.${id}${opportunityFilter}${meetingFilter}`)
+        .order("created_at", { ascending: false })
+        .limit(20);
       if (activities.error) databaseError(activities.error);
-      return { opportunities: opportunities.data ?? [], meetings: meetings.data ?? [], activities: activities.data ?? [] };
+      return {
+        opportunities: opportunities.data ?? [],
+        meetings: meetings.data ?? [],
+        activities: activities.data ?? [],
+      };
     },
   };
 }

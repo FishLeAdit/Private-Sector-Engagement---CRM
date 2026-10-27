@@ -5,7 +5,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("../../src/features/auth/service", () => ({ signInWithAccess: mocks.signIn }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
-vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`REDIRECT:${path}`); } }));
+vi.mock("next/navigation", () => ({
+  redirect: (path: string) => {
+    throw new Error(`REDIRECT:${path}`);
+  },
+}));
 
 import { signInAction, signOutAction } from "../../src/app/(auth)/actions";
 

@@ -41,14 +41,18 @@ export async function createLocalDatabase({ seed = true } = {}) {
   try {
     await db.exec(localAuthBootstrap);
     const migrations = (await readdir(resolve("supabase/migrations")))
-      .filter(name => /^\d+_[a-z0-9_]+\.sql$/.test(name)).sort();
+      .filter(name => /^\d+_[a-z0-9_]+\.sql$/.test(name))
+      .sort();
     for (const name of migrations) {
       const sql = await readFile(resolve("supabase/migrations", name), "utf8");
       await db.exec(sql);
     }
     if (seed) {
       for (const name of ["manager", "member", "colleague", "outsider", "inactive"] as const) {
-        await db.query("insert into auth.users (id, email) values ($1, $2)", [fixtureIds[name], `${name}@example.invalid`]);
+        await db.query("insert into auth.users (id, email) values ($1, $2)", [
+          fixtureIds[name],
+          `${name}@example.invalid`,
+        ]);
       }
       await db.exec(await readFile(resolve("supabase/seed.sql"), "utf8"));
     }

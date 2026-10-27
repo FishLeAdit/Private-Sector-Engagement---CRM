@@ -11,8 +11,9 @@ export async function contactPageContext() {
 }
 
 export async function contactPageData<T>(load: () => Promise<T>) {
-  try { return { ok: true as const, data: await load() }; }
-  catch (error) {
+  try {
+    return { ok: true as const, data: await load() };
+  } catch (error) {
     if (error instanceof ContactError) return { ok: false as const, error };
     throw error;
   }

@@ -4,5 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = { title: "PSE CRM", description: "Private Sector Engagement CRM scaffold" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }

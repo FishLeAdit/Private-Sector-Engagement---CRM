@@ -36,6 +36,7 @@ Next.js 16 uses `src/proxy.ts` instead of `src/middleware.ts`. Tailwind CSS 4 us
 
 - `npm run dev`: local development.
 - `npm run lint`: ESLint.
+- `npm run format` / `npm run format:check`: apply or verify Prettier formatting. Migrations, docs, Markdown and generated files (`src/types/database.types.ts`, `next-env.d.ts`) are excluded in `.prettierignore`.
 - `npm run typecheck`: TypeScript.
 - `npm run build`: production build.
 - `npm test`: run 618 database, authentication, Contacts/Opportunities/Meetings/Activities service/API/query, form and demo-seed checks.

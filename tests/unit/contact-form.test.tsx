@@ -7,16 +7,31 @@ import { emptyContact } from "../../src/features/contacts/schemas";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
-vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
+vi.mock("next/link", () => ({
+  default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
+}));
 
 const contactId = "10000000-0000-4000-8000-000000000099";
 let fetcher: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks();
-  fetcher = vi.fn().mockImplementation(async (url: string) => Response.json(url.includes("duplicates") ? { duplicates: [] } : url.includes("?") ? { contacts: [] } : { contact: { id: contactId } }));
+  fetcher = vi
+    .fn()
+    .mockImplementation(async (url: string) =>
+      Response.json(
+        url.includes("duplicates")
+          ? { duplicates: [] }
+          : url.includes("?")
+            ? { contacts: [] }
+            : { contact: { id: contactId } },
+      ),
+    );
   vi.stubGlobal("fetch", fetcher);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("contact form interactions", () => {
   it("shows communication errors before attempting to save", async () => {
@@ -33,7 +48,11 @@ describe("contact form interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create contact" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(`/contacts/${contactId}?saved=created`));
     const save = fetcher.mock.calls.find(([url]) => url === "/api/contacts");
-    expect(JSON.parse(save![1].body)).toMatchObject({ kind: "individual", company_id: "", email: "fictional@example.invalid" });
+    expect(JSON.parse(save![1].body)).toMatchObject({
+      kind: "individual",
+      company_id: "",
+      email: "fictional@example.invalid",
+    });
   });
   it("switches to company fields and accepts phone-only contact data", async () => {
     render(<ContactForm />);
@@ -45,25 +64,48 @@ describe("contact form interactions", () => {
     await waitFor(() => expect(navigation.push).toHaveBeenCalled());
   });
   it("shows normalized duplicate matches while the user fills the form", async () => {
-    fetcher.mockResolvedValue(Response.json({ duplicates: [{ id: contactId, name: "Fictional Existing Person", fields: ["email"] }] }));
+    fetcher.mockResolvedValue(
+      Response.json({ duplicates: [{ id: contactId, name: "Fictional Existing Person", fields: ["email"] }] }),
+    );
     render(<ContactForm />);
     fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "existing@example.invalid" } });
     expect(await screen.findByText("Possible duplicate contact")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Fictional Existing Person" }).getAttribute("href")).toBe(`/contacts/${contactId}`);
+    expect(screen.getByRole("link", { name: "Fictional Existing Person" }).getAttribute("href")).toBe(
+      `/contacts/${contactId}`,
+    );
   });
   it("keeps entered values and displays server duplicate errors after a save race", async () => {
-    fetcher.mockImplementation(async (url: string) => url.includes("duplicates") ? Response.json({ duplicates: [] }) : Response.json({ error: "A contact with that email or phone already exists.", fields: { email: ["Already used by another contact."] } }, { status: 409 }));
+    fetcher.mockImplementation(async (url: string) =>
+      url.includes("duplicates")
+        ? Response.json({ duplicates: [] })
+        : Response.json(
+            {
+              error: "A contact with that email or phone already exists.",
+              fields: { email: ["Already used by another contact."] },
+            },
+            { status: 409 },
+          ),
+    );
     render(<ContactForm />);
     fireEvent.change(screen.getByLabelText(/Contact name/), { target: { value: "Fictional Preserved Form" } });
     fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "race@example.invalid" } });
-    fireEvent.change(screen.getByLabelText(/Relationship notes/), { target: { value: "Keep these notes after an error" } });
+    fireEvent.change(screen.getByLabelText(/Relationship notes/), {
+      target: { value: "Keep these notes after an error" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Create contact" }));
     expect(await screen.findByText("Already used by another contact.")).toBeTruthy();
-    expect((screen.getByLabelText(/Relationship notes/) as HTMLTextAreaElement).value).toBe("Keep these notes after an error");
+    expect((screen.getByLabelText(/Relationship notes/) as HTMLTextAreaElement).value).toBe(
+      "Keep these notes after an error",
+    );
     expect(navigation.push).not.toHaveBeenCalled();
   });
   it("keeps contact type immutable while editing and sends PATCH", async () => {
-    render(<ContactForm contactId={contactId} initial={{ ...emptyContact, name: "Fictional Edit", phone: "+8801700008882" }} />);
+    render(
+      <ContactForm
+        contactId={contactId}
+        initial={{ ...emptyContact, name: "Fictional Edit", phone: "+8801700008882" }}
+      />,
+    );
     expect(screen.queryByRole("combobox", { name: "Contact type" })).toBeNull();
     fireEvent.change(screen.getByLabelText(/Relationship notes/), { target: { value: "Updated notes" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));

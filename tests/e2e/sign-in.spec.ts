@@ -17,7 +17,15 @@ test("anonymous dashboard and nested routes redirect to sign-in", async ({ page 
 });
 
 test("anonymous CRM APIs return JSON 401", async ({ request }) => {
-  for (const feature of ["contacts", "opportunities", "meetings", "activities", "targets", "contributions", "reports"]) {
+  for (const feature of [
+    "contacts",
+    "opportunities",
+    "meetings",
+    "activities",
+    "targets",
+    "contributions",
+    "reports",
+  ]) {
     const response = await request.get(`/api/${feature}`);
     expect(response.status()).toBe(401);
     expect(await response.json()).toEqual({ error: "Sign in required" });
@@ -31,7 +39,10 @@ test("sign-in return destination cannot leave the workspace", async ({ page }) =
 });
 
 test("PSE demo user can sign in, reload and sign out", async ({ page }) => {
-  test.skip(!process.env.E2E_PSE_EMAIL || !process.env.E2E_PSE_PASSWORD, "Optional live demo credentials are not configured.");
+  test.skip(
+    !process.env.E2E_PSE_EMAIL || !process.env.E2E_PSE_PASSWORD,
+    "Optional live demo credentials are not configured.",
+  );
   await page.goto("/login");
   await page.getByLabel("Email address").fill(process.env.E2E_PSE_EMAIL!);
   await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_PSE_PASSWORD!);
@@ -47,7 +58,10 @@ test("PSE demo user can sign in, reload and sign out", async ({ page }) => {
 });
 
 test("restricted demo account cannot enter the PSE workspace", async ({ page }) => {
-  test.skip(!process.env.E2E_RESTRICTED_EMAIL || !process.env.E2E_RESTRICTED_PASSWORD, "Optional restricted-account credentials are not configured.");
+  test.skip(
+    !process.env.E2E_RESTRICTED_EMAIL || !process.env.E2E_RESTRICTED_PASSWORD,
+    "Optional restricted-account credentials are not configured.",
+  );
   await page.goto("/login");
   await page.getByLabel("Email address").fill(process.env.E2E_RESTRICTED_EMAIL!);
   await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_RESTRICTED_PASSWORD!);
