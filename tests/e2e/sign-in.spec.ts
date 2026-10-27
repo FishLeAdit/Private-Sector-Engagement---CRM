@@ -66,7 +66,10 @@ test("restricted demo account cannot enter the PSE workspace", async ({ page }) 
   await page.getByLabel("Email address").fill(process.env.E2E_RESTRICTED_EMAIL!);
   await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_RESTRICTED_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("does not have PSE access", { timeout: 30000 });
+  // Next.js also renders an empty role="alert" route announcer, so match the message itself.
+  await expect(page.getByRole("alert").filter({ hasText: "does not have PSE access" })).toBeVisible({
+    timeout: 30000,
+  });
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login\?/);
 });
