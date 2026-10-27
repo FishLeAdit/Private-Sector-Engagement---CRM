@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
+import { buildDemoFinance, demoContributionIds, demoFinanceVerticals } from "../../scripts/lib/demo-finance";
 import {
   buildDemoData,
   checkDemoContacts,
@@ -168,5 +169,47 @@ describe("hosted demonstration seed preparation", () => {
     expect(
       (await db.query("select id from public.opportunities where id=any($1::uuid[])", [demoOpportunityIds])).rows,
     ).toHaveLength(8);
+  });
+  // A fresh project runs seed:demo and then seed:finance, which writes all six receipts in one statement;
+  // one refused receipt would leave the demo without any actuals.
+  it("seeds finance receipts only on demo deals that can still accept them", async () => {
+    await insertDemo();
+    const deals = (
+      await db.query<{ id: string; currency: string; contribution_type: string }>(
+        "select id,currency,contribution_type from public.opportunities where id=any($1::uuid[]) order by id",
+        [demoOpportunityIds],
+      )
+    ).rows;
+    const profile = (id: string, role: string) => ({ id, display_name: role, department: "PSE", role, active: true });
+    const { contributions } = buildDemoFinance(
+      profile(ids.manager, "pse_manager"),
+      [profile(ids.manager, "pse_manager"), profile(ids.member, "pse_member")],
+      deals,
+      [2035],
+    );
+    for (const row of demoFinanceVerticals)
+      await db.query(
+        "insert into public.target_verticals(id,code,name,active,is_provisional) values($1,$2,$3,true,true) on conflict(id) do nothing",
+        [row.id, row.code, row.name],
+      );
+    // The insert trigger runs for administrative inserts too, so this is the seeder's path.
+    await db.query(
+      "insert into public.recognized_contributions select * from jsonb_populate_recordset(null::public.recognized_contributions,$1::jsonb)",
+      [
+        JSON.stringify(
+          contributions.map(row => ({
+            ...row,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })),
+        ),
+      ],
+    );
+    expect(
+      (await db.query("select id from public.recognized_contributions where id=any($1::uuid[])", [demoContributionIds]))
+        .rows,
+    ).toHaveLength(6);
+    // Every stage is still demonstrated, including the closed, not-won outcomes.
+    expect(new Set(dataset().opportunities.map(row => row.stage_id)).size).toBe(8);
   });
 });

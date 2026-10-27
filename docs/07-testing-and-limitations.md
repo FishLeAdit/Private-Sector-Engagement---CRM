@@ -11,7 +11,7 @@ Two decisions on contribution integrity, each enforced in the service and in the
 
 | Check | Result |
 |---|---|
-| `npm test` | 647 passed across 49 files; 10 added (5 stage outcomes through the API, member/manager attribution through the API, member and manager form views, and 2 PGlite database tests) |
+| `npm test` | 648 passed across 49 files; 11 added (5 stage outcomes through the API, member/manager attribution through the API, member and manager form views, 2 PGlite database tests, and the fresh-project demo seed test) |
 | The 2 database tests with migrations 0012/0013 removed | Both failed, confirming they test the migrations |
 | `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed; generated types unchanged (no column changes) |
 | `live/contributions.spec.ts`, development server against the hosted demo | Passed: an open QA deal offers the form and its save is blocked in the browser; after a move to a closed, not-won stage the button is gone and the page explains why. The hosted demo still has 7 contributions and no QA records |
@@ -20,7 +20,7 @@ Two decisions on contribution integrity, each enforced in the service and in the
 
 The hosted database checks wait until 0012/0013 are applied there; until then only the application-level checks protect the hosted demo.
 
-Known issue, decision pending: the hosted finance seeder (`seed:finance`) puts its 200 USD demo receipt on "Overseas education grant", which the demo seed creates as **Lost**. The existing hosted receipt remains valid, but on a fresh project the seeder would now be refused at that receipt.
+Demo seed adjusted for the new rule (decided 28 October 2026). `seed:finance` writes its six receipts in one statement, and one of them, 200 USD, went to "Overseas education grant", which `seed:demo` created as Lost. On a fresh project the rule would have refused that receipt and rolled back all six, leaving targets with no actuals. For fresh projects, `seed:demo` now creates that deal as **Won** (partially received) and "Community classroom sponsorship", which receives no seeded receipt, as **Lost**, so all eight stages are still shown once each. A new PGlite test seeds the real demo deals and all six receipts through the trigger; with the previous stages it fails with the rule's message. The hosted demo is unchanged: the seeders only add missing records, so its Lost USD deal keeps the receipt it already has, which the rule allows.
 
 ## Restricted account check on 28 October 2026
 

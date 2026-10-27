@@ -170,16 +170,19 @@ export function buildDemoData(
       company: 1,
       primary: 4,
       secondary: 5,
-      stage: "Won",
+      // No receipts are seeded on this deal, so it can be the closed, not-won Lost example.
+      stage: "Lost",
       category: "DSP",
       amount: 400000,
       budget: 10000,
       days: -7,
     },
     {
+      // Won with a partial USD receipt from the finance seed. Deals that receive seeded receipts must be open
+      // or won, because closed deals that were not won refuse new receipts (migration 0012).
       name: "Overseas education grant",
       person: 11,
-      stage: "Lost",
+      stage: "Won",
       category: "GENERAL",
       amount: 5000,
       days: -14,
