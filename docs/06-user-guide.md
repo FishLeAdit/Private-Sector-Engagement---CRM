@@ -10,7 +10,7 @@ npm run validate:seed
 npm run db:types:check
 ```
 
-- `npm test` runs 418 checks covering database/authentication foundations, Contacts/Opportunities/Meetings/Activities persistence/deletion, linked follow-up integrity under PostgreSQL/RLS, service/API/query contracts, forms and demo-seed preparation. These tests require no live account or hosted writes. Completed results are recorded in [testing and limitations](07-testing-and-limitations.md).
+- `npm test` runs 618 checks covering database/authentication foundations, Contacts/Opportunities/Meetings/Activities persistence/deletion, linked follow-up integrity under PostgreSQL/RLS, service/API/query contracts, forms, report caching and demo-seed preparation. These tests require no live account or hosted writes. Completed results are recorded in [testing and limitations](07-testing-and-limitations.md).
 - `npm run validate:seed` applies migrations and fictional data to a fresh local database. It checks the 1,000,000 BDT annual allocation, Q1 at 110%, unchanged Q2 target, 205,000 BDT and 200 USD realized totals reported separately, independent activities and basic access restrictions.
 - `npm run db:types:check` verifies that committed TypeScript types match the locally migrated database catalog. After an intentional schema change, run `npm run db:types` to regenerate them, then rerun the checks.
 
@@ -32,9 +32,9 @@ The local identity adapter supplies database roles and request IDs solely for po
 
 Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local` using your configured Supabase project. `.env.example` contains placeholders; ordinary login does not need a service-role key. Restart the development server after changing environment values.
 
-The hosted project needs all six migrations applied, a confirmed email/password Auth user and a matching `public.profiles` row with the same UUID, department `PSE`, `active = true`, and role `pse_member`, `pse_manager` or `admin`. Profiles are provisioned through trusted administration; there is no self-service CRM signup. The local seed's fixed identity rows are not hosted login accounts.
+The hosted project needs all eleven migrations applied, a confirmed email/password Auth user and a matching `public.profiles` row with the same UUID, department `PSE`, `active = true`, and role `pse_member`, `pse_manager` or `admin`. Profiles are provisioned through trusted administration; there is no self-service CRM signup. The local seed's fixed identity rows are not hosted login accounts.
 
-Run `npm run dev`, open http://localhost:3000/login and sign in using the email/password of your Supabase Auth user. Successful PSE access opens `/dashboard`; the header shows the profile name, role and Sign out button. Contacts, Opportunities, Meetings with follow-ups, Activities and pipeline Settings are implemented. Target/contribution-entry screens and reporting remain pending. The disposable local seed is not connected to the web app.
+Run `npm run dev`, open http://localhost:3000/login and sign in using the email/password of your Supabase Auth user. Successful PSE access opens `/dashboard`; the header shows the profile name, role and Sign out button. Contacts, Opportunities, Meetings with follow-ups, Activities and pipeline Settings are implemented. Contribution entry and target allocation/performance are implemented. Dashboard and Reports show filtered funding and workload metrics with short-lived server snapshots. Permission-scoped caching is implemented; signed-in acceptance and deployment remain later work. The disposable local seed is not connected to the web app.
 
 Manual acceptance checks:
 
@@ -122,7 +122,7 @@ Meetings, activities and recognized contributions block deletion with a visible 
 
 ## Try Meetings and linked follow-ups
 
-The configured project has all six migrations, including the meeting-delete policy, and six fictional demo meetings. Open `/meetings` and search `Demo |` to browse three Scheduled, two Done and one Cancelled example. Hosted seeding used administrative access; live end-user login/browser behavior remains a manual check. Your browser saves use the configured Supabase project, so use fictional records. Meeting title/owner, Cancelled and deletion are project choices; the assessment lists contact information, event date/time, Scheduled/Done and description.
+The configured project has all eleven migrations, including the meeting-delete policy, and six fictional demo meetings. Open `/meetings` and search `Demo |` to browse three Scheduled, two Done and one Cancelled example. Hosted seeding used administrative access; live end-user login/browser behavior remains a manual check. Your browser saves use the configured Supabase project, so use fictional records. Meeting title/owner, Cancelled and deletion are project choices; the assessment lists contact information, event date/time, Scheduled/Done and description.
 
 1. **Create an independent meeting from a contact.** Open an individual contact, such as a fictional independent donor, and click **Schedule meeting**. Enter a title, a future **Meeting date and time (Asia/Dhaka)**, Scheduled status and optional description. Leave opportunity empty. Save, refresh and verify the meeting retains the contact without requiring a company or financial deal. Owner defaults to your account; a manager may assign another active PSE employee.
 2. **Create a meeting from an opportunity.** Open a fictional company deal and click **Schedule meeting**. The opportunity is selected. Leave **Contact person / organization** as **Use opportunity contact details** to derive the primary contact (or opportunity party if no primary is set), or explicitly choose its party, primary or secondary contact. Verify the displayed designation, email/phone and workplace. An opportunity-only meeting does not require a duplicate explicit contact link. Internal search also supports selecting existing contacts/deals from **Meetings → New meeting**; external autofill is excluded.
@@ -132,7 +132,7 @@ The configured project has all six migrations, including the meeting-delete poli
 6. **Try the meeting list.** Open `/meetings`, search by title and use owner/status/date filters. **Upcoming scheduled** means Scheduled with event time from now onward; **Completed** means Done, regardless of event date. View and Status combine with AND: for example, Completed plus Scheduled returns no matches. Use All meetings to find overdue Scheduled records. Date bounds include whole Asia/Dhaka calendar days. Lists show 20 rows per page in event-time/ID order; use Previous/Next for more.
 7. **Check related navigation.** Contact detail's Recent meetings links open working meeting detail pages. Opportunity detail provides **View meetings**, filtered to its saved opportunity link. A `contact_id` list filter matches an explicit meeting contact only; it does not include every opportunity-only meeting whose display derives that person. Contact detail's recent indirect history remains bounded to its displayed parent records.
 
-Meeting detail shows the latest 20 directly linked activities and 20 audit entries. Owner selection is capped at 1,000 permitted PSE profiles, with historical inactive owners retained on existing records. Contact/organization information is read from current internal contact records rather than a historical snapshot. Activity editing, status and deletion are available through the linked entry; external sync, automatic valuation and follow-up-rate KPI remain excluded as documented. Authenticated hosted persistence and native browser interaction remain manual acceptance checks; the [test log](07-testing-and-limitations.md) records 418 passing checks and twelve passing anonymous browser tests, with three optional live cases skipped.
+Meeting detail shows the latest 20 directly linked activities and 20 audit entries. Owner selection is capped at 1,000 permitted PSE profiles, with historical inactive owners retained on existing records. Contact/organization information is read from current internal contact records rather than a historical snapshot. Activity editing, status and deletion are available through the linked entry; external sync, automatic valuation and follow-up-rate KPI remain excluded as documented. Authenticated hosted persistence and native browser interaction remain manual acceptance checks; the [test log](07-testing-and-limitations.md) records 618 passing checks and nineteen passing anonymous browser tests, with three optional live cases skipped.
 
 ## Delete a meeting
 
@@ -142,7 +142,7 @@ For a full manual check, use a disposable fictional meeting, cancel once, then c
 
 ## Next workflow
 
-Implement recognized-contribution entry and target setup/allocation, then dashboard/reporting using confirmed recognition and metric definitions.
+Next: review signed-in report/CRUD acceptance, then caching/performance and deployment. Phase 11 reporting is implemented.
 
 ## Add demo data to the web app
 
@@ -189,14 +189,14 @@ The hosted insert and joins were verified, and a repeat preview reported six exi
 
 The hosted project has 11 fictional examples owned by Demo Manager, one for each assessment activity type. Sign in as Demo Manager/a manager to edit these examples, or create your own disposable entries for mutation tests. Sign in to the running app, open **Activities**, and search `Demo |`. Try type, work category, status, owner and relevant-date filters; clear date filters to include undated work. Lists show 20 entries per page and the exact matching count. Contact/deal/meeting shortcuts filter direct links only.
 
-1. Choose **New activity**. Select a type and category, enter descriptive notes, optional related person/organization and remaining work. Leave all CRM links and time empty; save and refresh to confirm independent work persists.
+1. Choose **New activity**. Select a type and category, enter descriptive notes, a related person or organization; add remaining work if useful. Leave all CRM links and time empty; save and refresh to confirm independent work persists.
 2. Create a second fictional entry with a relevant Dhaka date/time. Add optional document URLs or paste Google Drive references into notes. Choose an existing contact, opportunity or meeting using the internal selectors. Choosing a meeting clears previous direct links and displays inherited context; add only compatible direct links if needed.
 3. Open the saved entry, choose **Edit activity**, change notes/category/remaining work and save. Change its status to Done using **Save status**. Relevant time does not become a completion timestamp; no financial amount or received contribution is created.
 4. From a meeting, create a follow-up task and open it in the linked Activities list. Edit it or mark it Done in the same workspace.
 5. On a disposable entry you may edit, select **Delete activity**. Cancel once to check nothing changes, then confirm **Delete permanently**. Refresh/search to check it is gone. Parent contacts/deals/meetings remain; the deletion audit snapshot remains in the database. Deleting a follow-up may unblock deletion of its meeting; it does not delete the meeting itself.
 6. With another fictional PSE account, check team visibility and owner/creator/manager edit/delete permissions. Members cannot reassign ownership; managers may assign another active PSE owner. An unrelated member gets read access only. Inactive/non-PSE accounts must be denied.
 
-Activity notes are required as a project data-quality choice; time and all three links are optional. Existing legacy records with blank notes need notes added before a status/detail update. Relevant-date filters exclude undated work. The detail audit list is capped at 20 entries; owner lookup at 1,000 profiles. Contact information reflects current linked records. Full reporting, reminder/calendar integration, Gmail sync, uploads, automatic valuations and unapproved KPIs are not implemented.
+Activity notes are required as a project data-quality choice. A related person/organization or valid CRM link is also required; time and the three links remain individually optional. Existing legacy records with blank notes need notes added before a status/detail update. Relevant-date filters exclude undated work. The detail audit list is capped at 20 entries; owner lookup at 1,000 profiles. Contact information reflects current linked records. Reminder/calendar integration, Gmail sync, uploads, automatic valuations and unapproved KPIs are not implemented.
 
 To preview or add missing demo activities in another configured project:
 
@@ -207,3 +207,98 @@ npm.cmd run seed:activities
 ```
 
 Use the same privately configured administrative key as other seed scripts. The script never provisions users, overwrites existing demo edits or recreates deleted parents. It uses current demo contacts/deals/meetings when available and otherwise creates independent examples. Dates are relative to the Dhaka day of first insertion; one general entry is undated. Optional `--owner=EXISTING_PSE_PROFILE_UUID` affects only newly inserted rows. No financial values, targets, contacts, deals or meetings are created/changed. Migration 0007 adds the deletion grant/policy without changing columns; apply pending migrations with `npx.cmd supabase db push --linked` for another project. Hosted demo verification is administrative; live end-user sign-in and native dialog behavior remain manual checks.
+
+
+## Try Phase 10: contributions and targets
+
+Open **Contributions** or **Targets** from the sidebar. Migration 0008 is applied to the configured hosted project; another project must apply pending migrations with `npx.cmd supabase db push --linked`. The original Phase 10 implementation inserted no receipts/plans. The subsequent requested demo seed now provides the examples below. Financial entries and approved targets are permanent in this release, so use fictional records in your test environment for these mutation checks.
+
+### Target setup as an authorized manager
+
+1. Sign in as an active PSE manager/admin, open **Targets → Configure verticals**, and create/activate the target dimensions you intend to test. Mark sample terminology provisional. Contribution categories and target verticals remain independent; no DSP/VBD/SAC mapping is automatic.
+2. Choose **New target plan**, select year/currency and enter the annual target. Example: 1,000 BDT with quarter baselines 150 / 250 / 250 / 350. One plan is allowed per year/currency.
+3. Save an incomplete draft. On the detail page, acknowledge the approval statement and attempt approval: missing employee/vertical allocations must prevent locking. An annual/quarter mismatch must also prevent approval.
+4. Choose **Edit draft** and add allocation rows for each quarter. Select employee and vertical, then enter an amount or enter a percentage of that quarter and choose **Apply percentage**. For one employee/vertical, 100% gives the entire quarter amount. For multiple cells, percentage calculations round down to cents; assign the visible remainder manually until every quarter reconciles. Changing quarter baselines does not silently recalculate saved cell amounts.
+5. Save, review the detail page and approve/lock. The plan now shows approver/time and becomes read-only. Quarterly baselines cannot change to match later actual performance. An ordinary PSE member can read the plan but cannot create, edit, configure or approve it.
+6. To check stale-version protection, open a draft in two tabs, save in one, then try saving/approving the older tab. It must report a conflict; reload and review the latest data.
+
+### Record actual support from an opportunity
+
+1. Open a fictional opportunity and choose **Record contribution**. Enter the actual amount separately; the opportunity's expected value is deliberately not prefilled. Currency and financial type come from the saved opportunity.
+2. Set the recognition date/time in **Asia/Dhaka**, select the attributed active employee, optionally select an active target vertical, and enter receipt/context or Google Drive references in Notes. Leaving vertical unassigned includes the receipt in team actuals while showing its attribution as unassigned.
+3. For valued in-kind support, manually enter the agreed amount and describe the operational-team inventory/market estimate source. Add an inventory/estimate URL if available. An expected opportunity valuation is not automatically recognized.
+4. Choose **Review contribution**, check all fields, then **Confirm and record contribution**. The saved detail shows the recorder, recognition time, attribution and supporting context. Reload it to check persistence, and check the opportunity's contribution history. Recording actuals does not move its stage or change expected value.
+5. If the connection fails, the form freezes the reviewed snapshot. **Retry same submission** reuses its ID and payload; a successful initial request is returned without adding a second receipt. Check Contributions before starting a separate entry. Append-only receipts have no edit/delete/refund/correction flow in this release.
+6. Return to the matching year/currency target plan. Annual, quarter and employee/vertical achievement should reflect the receipt. In a clean fictional example, 165 recognized against a Q1 target of 150 gives 110%; Q2 remains 250. Existing same-year/currency actuals are included too. Unvalued activity records and expected deal values add nothing to achievement.
+
+Target performance uses recognition time in Asia/Dhaka to determine calendar year/quarter, includes all eligible rows through a SQL aggregate, keeps currencies separate and displays unassigned or out-of-allocation receipts rather than dropping them. No allocated target means the percentage is shown as unavailable, rather than dividing by zero. Employee/vertical attribution stays with the receipt after opportunity reassignment. The employee/vertical grid reads in bounded pages to handle more than Supabase's default 1,000-row cap; snapshots above 4,000 allocation cells are not supported. Employee/vertical option lists cap at 1,000 each; recent header audit history at 20 entries. Detailed cell/quarter audit snapshots remain stored in the database.
+
+Live signed-in acceptance is manual. Local SQL, service/API, SDK and form tests verify the behavior above; anonymous browser tests verify protected routes. Phase 12 adds scoped reporting snapshots; refunds/corrections, currency conversion, final vertical mappings and final hierarchy remain outside the implemented scope.
+
+
+## Browse the seeded finance examples
+
+The configured hosted project now contains:
+
+| Example | What to inspect |
+|---|---|
+| **2026 · BDT draft plan** | Annual 1,000,000; quarter targets 150,000 / 250,000 / 250,000 / 350,000; 12 employee/vertical cells |
+| **Q1 performance** | Cash 100,000 + 65,000 = 165,000, giving 110%; Q2 remains 250,000 |
+| **Q2/Q3/Q4 actuals** | 40,000 valued in-kind / 50,000 cash / 25,000 unassigned cash |
+| **Annual BDT actuals** | 280,000, or 28% of the 1,000,000 target |
+| **Separate USD receipt** | 200 USD on a demo opportunity; excluded from BDT target achievement |
+| **2027 · BDT draft plan** | Annual 1,200,000; uneven quarters entered, no employee/vertical cells yet; use Edit draft to practise allocation |
+
+Open **Targets**, then **2026 · BDT**, to view performance. This plan is fully allocated but remains a draft; a manager may review and approve it through the normal UI. The 2027 draft intentionally cannot be approved until its allocations reconcile. Open **Contributions** to inspect all six receipts; Notes begin `Demo |` and clearly identify fictional data. The in-kind entry retains illustrative operational-team agreement and an intentionally fictional Drive URL. Three verticals (`Demo | DSP`, `Demo | VBD`, `Demo | Project`) are active, explicitly provisional examples, not finalized PSE mappings. Receipts/plans are attributed to existing Demo Manager/Demo Member profiles; no users or roles were created. Audit entries identify administrative fixture operations as system actions, not a live user login.
+
+The initial insert and relationships were verified administratively, and a repeat preview found no missing inserts. Seeded target years use free BDT slots rather than overwriting an existing year/currency plan. In this hosted run, those slots were 2026 and 2027. Existing receipt IDs, edited target plans/quarters/cells and configuration remain preserved on reruns; existing plans are skipped entirely, so the seed does not restore cells you deliberately removed. Sample percentages/totals describe the untouched dataset and will reflect subsequent authorized user changes.
+
+```powershell
+npm.cmd run seed:finance
+npm.cmd run seed:finance -- --apply
+npm.cmd run seed:finance
+```
+
+Preview is read-only. Apply inserts missing fictional receipt IDs, provisional vertical IDs and new target snapshots. It reuses current existing demo opportunities and needs BDT cash, BDT valued in-kind and USD cash examples; deleted parents are never recreated. An active PSE manager must exist; optional `--owner=EXISTING_PSE_MANAGER_UUID` chooses the fixture creator for new records. Use the same privately configured administrative key as other seed commands. Migration 0009 restricts the atomic target helper to service-role execution; it does not enable an app-side seed button or approve plans. Each new plan is transactional, while vertical/receipt/plan batches are separate retryable steps. A failure can leave previously completed batches present; rerunning adds only missing examples.
+
+
+## Try Phase 11: Dashboard and Reports
+
+Open [Dashboard](http://localhost:3000/dashboard) or [Reports](http://localhost:3000/reports) after signing in. The hosted project has migrations 0010 and 0011; no business records, receipts, approvals or target baselines were changed to implement reporting. All chart values come from the current database, including the fictional records already seeded.
+
+1. Select **2026 / Full year / Whole team / All verticals / BDT**. With the untouched finance examples, target is 1,000,000 and actual is 280,000 (28%). The target remains labeled Draft until a manager reviews and approves it.
+2. Switch to **Q1**: target 150,000, actual 165,000, attainment 110%, overachievement 15,000. Switch to Q2: its target stays 250,000 and actual is 40,000. No carry-forward adjustment changes targets.
+3. Select **March**: show monthly actual support while target/attainment remains unavailable. The CRM has no assigned monthly target baseline, so the report does not divide a quarter into invented monthly quotas.
+4. Switch to **USD** for the full year: the separate 200 USD receipt appears, with no BDT conversion. Workload counts remain the same because activities/meetings are independent of funding currency.
+5. Select a **PSE team member** or **Funding vertical**. Actuals/targets use receipt attribution/allocation cells; pipeline and workload use current record ownership. Vertical affects only funding attribution/targets because no category/workload mapping has been approved. Select **Unassigned contributions** to see support without an allocated vertical target.
+6. Review **Pipeline forecast**. It uses current stages for opportunities with expected closing dates in the period. Won remains an expected classification, not a recorded receipt. Opportunities lacking closing dates appear separately and are excluded from period totals.
+7. Review **Non-monetary work**. Dated activities, canonical meetings, types/categories/statuses, independent work and monthly trends are separate counts. Undated activities are excluded from period counts and shown separately across all dates for the selected owner. Seeded work dates are mostly in October/November, so Q1 can show financial achievement with no demo work in that quarter.
+8. Open **Detailed reports** to inspect the full employee/vertical funding, stage, work-by-owner and monthly tables. Switching between views preserves the filters. Use **Refresh data** to expire your report snapshots and request current data. A normal browser reload can reuse an unexpired server snapshot.
+
+The earlier Activity context gap is closed in client/server validation and SQL. For an independent entry, enter a person or organization without creating a Contact/Opportunity. Alternatively, link a valid existing record. Try saving only Notes with no context/links: it must be rejected. Clearing the last context on edit must also fail. Older context-free rows remain readable and display a notice; add accurate context when editing them. The existing demo general-inbox row may need this correction because the seed preserves earlier rows and edits. No name is fabricated automatically for existing records.
+
+Current reports intentionally omit Lead, Contacts engaged and Follow-up rate KPIs pending approved definitions. Canonical meetings and Meeting-type activities are never summed as unique interactions. Stage counts are current, not historical snapshots; Done counts use scheduled/relevant dates and current status, not a separately recorded completion date. See [all reporting definitions](09-reporting-definitions.md).
+
+Automated checks cover SQL totals/security/boundaries, read freshness, over 1,000 receipts, API/query contracts, accessible view rendering and anonymous browser redirects. Full signed-in hosted acceptance, chart layout on your devices and cross-session role revocation remain manual checks; optional live login tests stayed disabled as requested.
+
+## Try Phase 12: caching and freshness
+
+No migration or new credential is required. Reports reuse a numeric snapshot for at most 30 seconds; report funding-vertical options for at most five minutes. Current authentication, PSE permissions and profile names are checked on every request. Each cache entry belongs to the verified project, user, role, session and filters. Transactional forms/details and financial validation remain uncached.
+
+1. Sign in, open Reports with fixed filters and note **Updated**. Reload promptly: an unexpired snapshot can retain its timestamp. The page shows minute precision; the report API's `report.generated_at` field gives the exact instant. Bucket boundaries or a refreshed session token can cause an earlier new snapshot.
+2. Choose **Refresh data**. After successful invalidation the page requests a new snapshot. Its exact generation time should advance even if totals stay the same; the displayed minute can remain unchanged. A failed request shows an error; retry after restoring access/connectivity.
+3. In another signed-in window, make a permitted change to a fictional Activity's status. Reload the matching report: application writes expire affected report snapshots for all project users. Confirm the workload count changes. Restore the demo status afterward if desired. Receipts/target approval are permanent, so use this reversible Activity example for freshness checks.
+4. If you edit through trusted Supabase administration or run a seed/import command, use **Refresh data** afterward. Those paths bypass application invalidation. Otherwise report values expire within 30 seconds and vertical options within five minutes.
+5. Using a separate fictional account and trusted administration, revoke PSE access after warming its report, then request it again. Access must be denied despite the warm snapshot. Test independent sessions and restore access through administration afterward. These live checks have not been run automatically.
+
+For an uncached comparison, set the server-only `PSE_REPORT_CACHE_ENABLED=false` in your private `.env.local`, restart the development server, and repeat. Remove that override or set it to `true` and restart to enable caching again. No secret value needs to be copied into the browser or shared in chat.
+
+Run the isolated, fictional SQL/cache-policy benchmark without changing hosted data:
+
+```powershell
+npm.cmd run benchmark:reports
+```
+
+It rewrites [local timing evidence](benchmarks/report-cache.json). The recorded run measured 46.333 ms uncached versus 5.316 ms warm median with 10,002 selected receipts. It uses a measurement cache driver, not Next's production cache storage, and excludes hosted Auth/network, HTTP/rendering and browser time. For actual signed-in HTTP measurements, open DevTools Network and request `/api/reports` with matching query filters; inspect its `Server-Timing` response header before/after repeat requests, with the override enabled/disabled. Keep normal signed-in browser authentication; do not copy bearer tokens into tools or URLs. Compare multiple samples with the same filters/data, accounting for the 30-second bucket boundary.
+
+Shared cache-handler behavior and cross-instance invalidation remain deployment acceptance work. Keep caching disabled on self-hosted replicas until those checks pass. See [cache keys, TTLs and invalidation](05-caching-strategy.md) for the full boundary.

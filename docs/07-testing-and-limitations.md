@@ -1,6 +1,61 @@
 # Testing and limitations
 
-The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, and the full Activities workspace are implemented. Other CRM modules remain scaffolds. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
+The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
+
+## Phase 12 performance and caching on 27 October 2026
+
+| Check | Result |
+|---|---|
+| `npm.cmd test` | 618 passed across 47 files; 46 added checks since Phase 11 |
+| `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run build` | Passed; cache adapter, report refresh route and updated UI compile |
+| Full implemented Chromium suite | Nineteen anonymous checks passed; three optional live cases skipped |
+| `npm.cmd run benchmark:reports` | Passed using an isolated local PostgreSQL database and fictional data; raw evidence in [report-cache.json](benchmarks/report-cache.json) |
+
+Cache tests cover project/user/role/session/filter separation, hard report/metadata expiry, failure without stale fallback, redacted stored names with fresh permitted profile hydration, denied access after deactivation despite a warm entry, global versus user invalidation and excluded raw credentials. Real SDK fetch contracts verify a cookie-free caller bearer, publishable key and no-store requests. Factory tests capture sessions outside cached loaders, reject mismatched/missing identities, handle provider failures safely and exercise the uncached override. Adapter tests verify Next's TTL/tag arguments and blocking `expire: 0` invalidation from each affected write path. Refresh transport/UI tests verify authorization, matching Origin, safe failure and refresh only after successful invalidation.
+
+The local benchmark includes 10,002 selected BDT receipts and measures fresh local membership/profile access plus the shared report service read/options path. Across 25 samples, uncached median/p95 were 46.333/54.672 ms; warm cache-policy median/p95 were 5.316/7.097 ms. A cold cached request took 48.340 ms. One cold plus 25 warm requests issued one report and one vertical query while all 26 still checked authorization/profile data. Assertions verify equal report values, receipt visibility after invalidation and denied access following profile deactivation.
+
+The benchmark's storage is the isolated `MeasurementCache` driver. It does not measure Next Data Cache persistence, Supabase JWT/network verification, HTTP/RSC/browser latency or distributed invalidation. No hosted speedup is claimed. Production code delegates to Next Data Cache; its cross-instance behavior and authenticated hosted acceptance remain manual. `PSE_REPORT_CACHE_ENABLED=false` bypasses both caches and should be used on unverified self-hosted replicas. Authorized report API responses expose total handler duration through `Server-Timing` for later real HTTP measurement.
+
+Browser checks reused the existing port-3000 server and left it running. No live credentials, impersonation, hosted data changes or migrations were used in this checkpoint. Seed/catalog checks were already passing in Phase 11; Phase 12 changes no SQL schema or fixture definitions. Signed-in freshness, independent sessions and production cache-handler propagation remain acceptance work. The [manual guide](06-user-guide.md#try-phase-12-caching-and-freshness) covers those steps. Older sections below retain the results and limitations of their own checkpoints.
+
+## Phase 11 reporting and Activity context on 27 October 2026
+
+| Check | Result |
+|---|---|
+| `npm test` | 572 passed across 42 files; 70 added context/reporting checks |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Passed; real Dashboard/Reports pages and API compile |
+| Full implemented Chromium suite, including `reports.spec.ts` | Eighteen anonymous checks passed; three optional live cases skipped |
+| `npm run validate:seed`, `npm run db:types:check` | Passed with eleven migrations and 13-table types |
+| Hosted migration | Project matched app configuration; dry run identified only 0010/0011; context constraint and read-only reporting function applied successfully |
+
+PostgreSQL checks verify actual/target/forecast separation, fixed Q2 and Q1 attainment, missing/monthly targets, currency isolation, employee/vertical attribution, unassigned receipts, configurable stages/current outcomes, undated data, owner scopes, Dhaka inclusive/exclusive boundaries and zero-filled monthly buckets. Aggregation includes 1,101 receipts without REST truncation. Repeated reads see a new receipt immediately and reporting changes no audit rows or baselines. Restricted/inactive/anonymous callers and invalid parameters are denied.
+
+The Activity gap has shared-schema and SQL tests for non-whitespace independent context, all three valid link alternatives, clearing the last context, and historical NOT VALID behavior. A legacy row remains readable and is counted for correction; its update fails until accurate context is supplied. Existing Activity tests/helpers now include explicit fictional context where appropriate, and future activity seed examples do too. No hosted names/context were silently backfilled.
+
+API/service tests verify fresh PSE identity/profile matching, strict periods/UUIDs/currency, authorization before queries, safe errors, no-store responses and fresh queries on every read. SDK contracts inspect one parameterized aggregate RPC, explicit quarter/month/unassigned values and bounded metadata. DOM checks cover separate financial/workload sections, draft/missing/monthly targets, filter preservation, full tables, relative bars with accessible exact values, correction notices and Refresh. The initial build found an overly broad test-mock type; the mock was typed and the subsequent type check/build passed.
+
+Anonymous browser checks reused the running port-3000 server and left it running. No live credentials, impersonation or hosted record mutations were used. Real signed-in hosted RPC/RLS, visual layout on user devices and independent concurrent sessions remain manual acceptance work. Database coverage uses the local PostgreSQL/Auth adapter; it does not independently prove hosted JWT behavior. No shared cache or benchmark improvement is claimed. Target plans/receipts/stages/activities were not approved, changed or deleted by migration/report testing.
+
+[Reporting definitions](09-reporting-definitions.md) record date/filter/count rules. Monthly quotas, historical pipeline reconstruction and unique contacts/lead/follow-up-rate KPIs are not invented. Pipeline stage charts cap at 12 while full tables/totals remain complete. Metadata lookups cap at 1,000; money/count aggregates use all eligible rows. Older checkpoint sections below retain their historical results/limitations.
+
+## Phase 10 contributions, target allocation and performance on 27 October 2026
+
+| Check | Result |
+|---|---|
+| `npm test` | 489 passed across 36 files; 71 new Phase 10 checks |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Passed; new Contributions/Targets pages and financial API routes compile |
+| Full implemented Playwright suite | Sixteen anonymous Chromium checks passed; three optional live cases skipped |
+| `npm run validate:seed`, `npm run db:types:check` | Passed against eight migrations and 13 tables |
+| Hosted migration | Project matched private app configuration; dry run identified only 0008; workflow functions/revision triggers applied successfully |
+
+PostgreSQL tests exercise atomic draft snapshots, complete rollback on invalid replacement, removal of old draft cells, stale-version saves/approval including direct child changes, denied member/non-PSE/inactive/anonymous mutations, reconciliation and permanent approval locking. Receipt tests verify fixed recorder identity, identity/precision rejection, identical retry deduplication, changed-payload conflicts, manual in-kind evidence and append-only storage. Actual aggregation covers Dhaka quarter boundaries, explicit/unassigned attribution, separate currencies and over 1,000 eligible receipts while preserving Q2's target. Existing approval-audit tests now select the approval transition explicitly because child-revision tracking adds draft header audit entries.
+
+API/service checks cover fresh identity/profile guards, team reads, manager-only target writes/configuration, exact reviewed versions, strict inputs, matching Origin, JSON limits, missing references, preserved attribution, safe provider failures and reconciliation errors. SDK contracts verify atomic RPC payloads, decimal strings, Dhaka day filters, bounded lookups/history and complete pagination of a 1,001-cell allocation grid. Target details reject data assembled across different plan revisions. DOM tests exercise contribution review/confirmation, manual UTC conversion, frozen ambiguous submissions and identical retries, incomplete draft saving, percentage rounding/remainder, preserved drafts after conflicts and explicit lock acknowledgement.
+
+All anonymous browser checks reused the existing port-3000 development server, which was left running. Live sign-in/write cases remained disabled at the developer's request. No hosted receipts, target plans or profiles were inserted/changed by Phase 10 testing. Migration 0008 adds functions/triggers but does not recognize funding or lock any existing plan. Authenticated hosted JWT/RLS, actual financial RPC acceptance and interactive signed-in persistence remain manual checks. PostgreSQL tests use a single-connection local adapter: lock design and stale-version behavior are tested, but independent concurrent hosted sessions are not proven by this harness.
+
+The initial type check reused stale incremental diagnostics from the earlier ES2017 target. A clean TypeScript check and production build pass with ES2020, which supports the integer-cent BigInt arithmetic used here. Vitest's existing forward-looking configuration-loader warning remains non-failing. The assessment mapping is in [requirements](01-requirements-and-assumptions.md#phase-10-assessment-check); the [manual guide](06-user-guide.md#try-phase-10-contributions-and-targets) covers setup and acceptance. Earlier checkpoint sections below retain their historical results/limitations.
 
 ## Activities, deletion, hosted seed and assessment review on 27 October 2026
 
@@ -175,7 +230,7 @@ The TypeScript runner initially could not read Windows user information inside t
 
 - Independent hosted Supabase role/security verification and live Auth sessions remain pending manual checks. The local engine uses PostgreSQL 18; verify compatibility against the selected hosted PostgreSQL version when integrating.
 - Parent-row locks serialize target edits and approval in the SQL design. The single-connection local harness does not prove multi-session race behavior; add a two-session hosted/local-server test during integration.
-- Contacts, Opportunities, Meetings and Activities forms/services, including inline New Deal contact creation, stage configuration and meeting follow-up task creation, are implemented. Target/contribution-entry workflows, dashboard queries, contacts-engaged KPI, application cache and production deployment remain pending. Target E2E remains a placeholder; Meetings/Opportunities/Activities E2E cover anonymous boundaries only.
+- Contacts, Opportunities, Meetings and Activities forms/services, including inline New Deal contact creation, stage configuration and meeting follow-up task creation, are implemented. Dashboard/Reports and scoped caching are implemented; unapproved contacts-engaged/lead/follow-up KPIs, signed-in/multi-instance acceptance and production deployment remain pending. Reports/Targets/Contributions/Meetings/Opportunities/Activities E2E cover anonymous boundaries only.
 - Contact history is a recent-record view: up to 10 opportunities, 10 meetings and 20 activities, including indirect links only through the recent parents shown. It is not an exhaustive report. Unlinked contact/opportunity deletion is implemented as a user-requested addition with FK protection and retained audit history; active/inactive contact lifecycle remains unresolved.
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
@@ -188,3 +243,12 @@ The TypeScript runner initially could not read Windows user information inside t
 On 26 October 2026, local production-server HTTP smoke checks confirmed root/sign-in, dashboard, contact list/new/detail placeholders returned HTTP 200 and the contacts API returned HTTP 501. These were scaffold checks; they did not verify contact forms, login or private data access.
 
 See [the local test guide](06-user-guide.md) for reproducible commands.
+
+
+## Requested finance demo seed on 27 October 2026
+
+The separate `seed:finance` runner previews before applying. It inserts only missing stable IDs, preserves existing receipts and edited target snapshots, checks vertical-code collisions and current parent types, and selects free year/currency slots. Migration 0009 provides a service-role-only, fixed-search-path atomic insert for two reserved demo target IDs; authenticated users (including target managers) and anonymous actors cannot execute it. Targets remain drafts and no session/claim impersonation is used. The original Phase 10 statements above describe the earlier checkpoint before this explicitly requested finance seed.
+
+All **502 tests across 37 files**, lint, typecheck, production build and local seed/type checks passed, including 13 added builder/SQL checks covering dataset totals, manual in-kind evidence, independent USD/unassigned receipts, uneven reconciled allocations, free-year selection, role denial, atomic rollback, existing-plan preservation and deduplicated receipts. The previously completed sixteen anonymous browser checks remain the latest browser run; UI/auth code did not change in this seed checkpoint.
+
+Hosted preflight found zero receipts/plans and current demo opportunities of all required types. A dry run identified only 0009, which was applied before seeding. The seed inserted three provisional verticals, two draft plans (2026/2027 BDT), 12 allocation cells for 2026 and six receipts, totaling 280,000 BDT and 200 USD separately. Stored relationships and reconciliation were verified administratively. Q1 is 165,000 / 150,000 = 110%; Q2's target remains 250,000. The 2027 draft intentionally has no cells. A subsequent preview found zero missing inserts. No opportunity values/stages, contacts, meetings, activities, profiles or roles were changed. Existing user data is not overwritten; an edited existing plan is skipped completely. Per-plan atomicity is tested; the complete multi-batch seed is retryable rather than one global transaction. Live end-user acceptance remains manual.

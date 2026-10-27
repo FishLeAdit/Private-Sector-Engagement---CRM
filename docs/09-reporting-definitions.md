@@ -1,0 +1,64 @@
+# Reporting definitions
+
+Dashboard and Reports use authorized SQL snapshots, with eligible numeric snapshots reused for up to 30 seconds. Figures cover recorded CRM data, including explicitly fictional demo data where present. No chart uses hardcoded sample totals. All PSE members may view team records; other departments, inactive profiles and anonymous callers are denied.
+
+## Periods and filter scopes
+
+The year, quarter or month uses calendar boundaries in **Asia/Dhaka**: inclusive start, exclusive end. One funding currency is selected at a time; amounts are never converted or combined across currencies. The default is the current Dhaka year, full year, whole team, all funding verticals and BDT. Years 1–9998 are supported.
+
+| Area | Time basis | Employee basis | Vertical | Currency |
+|---|---|---|---|---|
+| Actual contributions | Saved recognition instant | Explicit receipt attribution | Explicit receipt vertical, including unassigned | Selected currency |
+| Targets | Stored plan year and selected quarter baselines | Allocation cells when scoped to a member | Allocation cells when scoped to a vertical | Plan currency |
+| Pipeline | Expected closing date, with current stage/outcome | Current focal person/owner | No mapping; unaffected | Selected opportunity currency |
+| Activities | Relevant activity timestamp | Current activity owner | Unaffected | Unaffected |
+| Meetings | Scheduled meeting timestamp | Current meeting owner | Unaffected | Unaffected |
+
+An empty employee/vertical filter means the whole team/all verticals. `unassigned` selects actual contributions without a vertical and has no allocated target. Historical inactive metadata remains selectable when permitted. Selectors are bounded to 1,000 profiles/verticals; aggregates still include all eligible data, without the REST row cap. Selecting an unknown permitted UUID yields no matching rows rather than inventing an identity.
+
+## Monetary fundraising
+
+| Metric | Definition |
+|---|---|
+| Actual achievement | Sum of recognized contribution amounts in the selected currency and recognition period, with the selected attribution filters |
+| Cash / valued in-kind | The same actuals grouped by their saved financial contribution type |
+| Assigned target, whole team/all verticals | Stored annual amount for a full year; stored quarter baseline for a quarter |
+| Assigned target with employee or vertical selection | Sum of matching canonical allocation cells across the selected year/quarter |
+| Monthly target | Unavailable: no monthly allocation rule has been approved, so quarterly targets are not divided into invented monthly amounts |
+| Remaining | `max(target − actual, 0)` when a target exists |
+| Overachievement | `max(actual − target, 0)` when a target exists |
+| Attainment | `actual / target × 100`, rounded to two decimal places; unavailable for a missing/zero denominator |
+| Employee / vertical performance | The union of matching allocations and actual attribution groups, including unassigned/out-of-allocation actuals |
+
+Missing targets are distinct from explicit zero allocations. Missing targets leave remaining/over/attainment unavailable. A zero baseline can have actual overachievement, but no percentage denominator. Draft target values are labeled provisional; the report does not approve or lock them. Approved baselines remain fixed: Q1 at 110% stays in Q1 and never lowers Q2. Annual actuals aggregate the year's recognized support.
+
+Receipt employee/vertical attribution is independent of future opportunity ownership. Opportunity expectations, operational budgets, activity estimates and unvalued gifts contribute zero to actual monetary achievement. In-kind amounts are manually agreed by PSE with operational-team evidence, not valued by this report. The report does not create receipts, reverse them or apply exchange rates.
+
+## Pipeline forecast
+
+Pipeline totals include all current stages/outcomes for opportunities whose expected closing date falls in the selected period. They are expected amounts, not realized support or an open-only forecast. The stage names, ordering, outcomes and provisional flags come from configuration. Closed outcomes remain distinct: Open, Won, Lost, Abandoned and Junk. These classifications are not an approved Lead KPI.
+
+The dashboard stage chart shows up to 12 stages ranked by expected value; the detailed Reports table and totals include all matching stages. Undated opportunities are excluded from period totals and shown separately with their expected value across all dates for the selected owner/currency. The report does not reconstruct historical stages or infer contribution categories as target verticals.
+
+## Non-monetary work
+
+| Metric | Definition |
+|---|---|
+| Dated activity records | Activity rows whose relevant timestamp falls within the period |
+| Completed activities | Those dated activity rows whose current status is Done |
+| Activity type/category/status counts | The same period rows grouped by stored type, work category or current status; confirmed enum buckets are zero-filled |
+| Meeting records and status | Canonical meeting rows scheduled in the period, grouped by current Scheduled/Done/Cancelled status |
+| Independent activities | Dated activity rows with no direct contact, opportunity or meeting link |
+| Undated activities | Rows without relevant timestamps across all dates for the selected owner; excluded from period activity/trend counts |
+| Missing related context | Older rows with no CRM link or non-whitespace person/organization context, across all dates for the selected owner; shown for correction |
+| Work by owner | Separate dated activity/Done and scheduled meeting/Done record counts per current owner |
+
+A Meeting-type activity and its canonical Meeting can both exist. Their separate counts are never added into a claimed unique-interaction total. Done is current saved status, not completion within the period: the schema has no distinct completion timestamp. Created time is not silently substituted for missing relevant activity time.
+
+## Monthly trends and freshness
+
+Each included calendar month has a zero-filled bucket for actual recognized amount, dated activities, Done activities, scheduled meetings and Done meetings. These remain separate measures, not a combined workload total. Numeric figures originate in one report statement snapshot and include every eligible record, including more than 1,000 receipts. Profile names are resolved from a fresh permitted lookup on every request. Money is returned as decimal text and display calculations use integer cents.
+
+The generated timestamp is shown in Dhaka time. Reports may reuse a per-user/session/filter snapshot for up to 30 seconds, and vertical options for 300 seconds. Authentication/profile checks remain fresh. Refresh data expires the verified user’s entries and then retrieves a new authorized snapshot; app writes immediately expire applicable project tags. Administrative edits outside the app need Refresh or TTL expiry. HTTP responses remain private/no-store. See [cache scopes, deployment controls and local timing evidence](05-caching-strategy.md).
+
+Lead, contacts-engaged and follow-up-rate KPIs remain omitted until PSE approves their eligibility, identity/deduplication and timing definitions. Final vertical/category mappings and pipeline stage names remain configurable rather than declared final.

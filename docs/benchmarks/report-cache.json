@@ -1,0 +1,49 @@
+{
+  "measured_at_utc": "2026-10-27T15:07:03.830Z",
+  "environment": "Node.js / PGlite / single local process; no hosted requests",
+  "dataset": {
+    "additional_receipts": 10000,
+    "selected_bdt_receipts": 10002
+  },
+  "path": "fresh local profile authorization + report service read/options + SQL aggregate; repeated identical year/team/currency",
+  "uncached": {
+    "samples": 25,
+    "median_ms": 46.333,
+    "p95_ms": 54.672,
+    "min_ms": 39.48,
+    "max_ms": 60.546
+  },
+  "cached_warm": {
+    "samples": 25,
+    "median_ms": 5.316,
+    "p95_ms": 7.097,
+    "min_ms": 2.944,
+    "max_ms": 8.331
+  },
+  "cached_cold_ms": 48.34,
+  "query_counts": {
+    "uncached_25": {
+      "reports": 25,
+      "profiles": 25,
+      "verticals": 25,
+      "access": 25
+    },
+    "cached_cold_plus_25_warm": {
+      "reports": 1,
+      "profiles": 26,
+      "verticals": 1,
+      "access": 26
+    }
+  },
+  "checks": {
+    "same_financial_and_pipeline_values": true,
+    "profile_checks_on_every_request": true,
+    "mutation_invalidation_reflected": true,
+    "revoked_profile_denied_with_warm_cache": true
+  },
+  "limits": [
+    "Cache storage is the isolated MeasurementCache driver, not Next Data Cache persistence or a distributed backend.",
+    "Local Auth adapter validates database membership but does not measure Supabase JWT/network verification, HTTP, RSC rendering or browser latency.",
+    "These measurements are not a hosted production speedup claim."
+  ]
+}

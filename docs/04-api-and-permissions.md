@@ -1,13 +1,13 @@
 # API and permissions
 
-Database authorization is implemented in grants, row-level security (RLS), validated target approval and triggers. Authentication, Contacts, Opportunities, Meetings and Activities HTTP handlers are implemented, including a narrow linked follow-up task endpoint. The three remaining business handlers (contributions, targets and reports) require active PSE access before returning HTTP 501.
+Database authorization is implemented in grants, row-level security (RLS), validated target approval and triggers. Authentication, Contacts, Opportunities, Meetings and Activities HTTP handlers are implemented, including a narrow linked follow-up task endpoint. Contributions and Targets are now implemented; Reports is now implemented with a caller-scoped read-only aggregate.
 
 ## HTTP and session behavior
 
 - `/login` accepts email/password through a Next.js Server Action with server-side validation. Supabase verifies the credentials; shared access logic verifies the user and current profile before granting entry. Failed membership checks attempt to sign out the newly created session. No public signup or profile/role editor is provided.
 - `/` redirects to `/dashboard`, `/access-denied` or `/login` according to verified access. The login return path is restricted to workspace routes and cannot redirect to an external site.
 - Proxy refreshes/verifies tokens with `getClaims()` and preserves refreshed cookies across redirects. Protected page rendering and all API GET handlers independently verify the current user/profile. Future business services must call the guard before accessing data; layout checks alone are insufficient.
-- Anonymous API callers receive JSON 401; authenticated callers without active PSE membership receive 403; identity/profile service failures produce 503 and never grant access. Authorized Contacts/Opportunities/Meetings/Activities calls return data or validation/conflict errors; the three other business stubs return 501. Unsupported methods have no implemented mutation.
+- Anonymous API callers receive JSON 401; authenticated callers without active PSE membership receive 403; identity/profile service failures produce 503 and never grant access. Authorized Contacts/Opportunities/Meetings/Activities/Contributions/Targets calls return data or validation/conflict errors; Reports calls return a read-only aggregate or a safe validation/availability error. Unsupported methods have no implemented mutation.
 - `authorizeApi({ manager: true })` provides the server-side manager check for future target mutations. Existing target GET access remains team-wide; target writes still require RLS/approval validation.
 - Auth responses use private/no-store headers and Supabase server fetches bypass caching. Cookie-session refresh is implemented; ordinary CRM requests use no administrative/service-role client. The separate explicitly run demo-seed CLI is administrative tooling. Sign out affects the current session and reports failure instead of claiming success if the provider rejects it.
 
@@ -133,10 +133,51 @@ Authentication helpers, actions and proxy behavior have mocked unit coverage; an
 | `DELETE /api/activities/[id]` | Same ownership policy, matching Origin, no body; `{ deleted: true, id }`; retains parent records/audit snapshots |
 | `GET /api/activities/options` | `{ owners, contact, opportunity, meeting }`; optional three relationship IDs, internal lookups and at most 1,000 PSE owners including historical inactive choices |
 
-Required create fields: `activity_type`, `owner_id`, nonblank `notes` (10,000 characters). Category defaults to `independent_general`, status to `open`. Optional strings: `contact_id`, `opportunity_id`, `meeting_id`, `related_person_name`, `related_organization_name`, `remaining_work`, `occurred_at`; optional `drive_urls` holds up to 20 HTTP(S) URLs. Form/API empty strings clear nullable fields. Person/organization text is context, not a CRM identity. All links can be absent. Relevant time accepts a zoned ISO instant and stores UTC; no date is required. Legacy blank-note records must receive descriptive notes when updated.
+Required create fields: `activity_type`, `owner_id`, nonblank `notes` (10,000 characters). Category defaults to `independent_general`, status to `open`. Optional strings: `contact_id`, `opportunity_id`, `meeting_id`, `related_person_name`, `related_organization_name`, `remaining_work`, `occurred_at`; optional `drive_urls` holds up to 20 HTTP(S) URLs. Form/API empty strings clear nullable fields. Person/organization text is context, not a CRM identity. All links can be absent when a related person or organization is provided. Relevant time accepts a zoned ISO instant and stores UTC; no date is required. Legacy blank-note records must receive descriptive notes when updated.
 
 Type keys: `task`, `email`, `call`, `meeting`, `event`, `campaign`, `proposal`, `visit`, `stewardship`, `prospect_engagement`, `general`. Work categories: `stewardship`, `prospect_engagement`, `independent_general`. Statuses: `open`, `in_progress`, `done`, `cancelled`. List type/category/status filters also accept `all`; filters combine with AND. Direct-link filters exclude context obtained only through another linked parent. Date bounds use `occurred_at`, include whole Dhaka days, and exclude null dates. Search treats SQL wildcard characters literally and rejects `*`.
 
 Only managers assign another active owner; unchanged historical owners are preserved for an authorized editor. A direct contact must be the opportunity party/designated contact where an effective direct or meeting-derived opportunity exists. Meeting and opportunity links cannot contradict each other; a contact-only meeting's contact must be compatible if paired with a deal. Missing references and validation conflicts return 422. SQL guards remain authoritative after service checks.
 
 POST/PATCH requires matching Origin, JSON and at most 65,536 characters; DELETE requires matching Origin and no body. Invalid fields/links return 422, permissions 403, missing IDs 404, malformed IDs/JSON 400, unsupported type 415, oversized input 413 and provider failures 503. A future FK reference conflict on delete maps to 409; a zero-row write after a permissions change returns 403. Raw database messages are scrubbed. All responses are private/no-store. Successful writes invalidate Activities list/detail/edit and Contacts/Opportunities/Meetings layouts. Identity, audit, financial and `estimated_nonmonetary_value` mass assignment is rejected; legacy estimates remain untouched by status/detail edits. No activity status transition writes financial achievement.
+
+
+## Phase 10 financial APIs
+
+| Endpoint | Behavior |
+|---|---|
+| `GET /api/contributions` | `{ contributions, count }`; direct opportunity/employee/vertical/currency and recognition `from`/`to` filters, one-based page; 20 rows by recognition descending then ID |
+| `POST /api/contributions` | Review-validated receipt with stable `request_id`; `{ contribution }` on first save or identical retry (HTTP 200) |
+| `GET /api/contributions/[id]` | `{ contribution }` with opportunity, employee, vertical and recorder; no PATCH/DELETE methods |
+| `GET /api/targets` | `{ plans, count }`; one-based page, 20 plans by year descending/currency |
+| `POST /api/targets` | Manager snapshot save with `request_id` and empty initial `expected_updated_at`; `{ id }` |
+| `GET /api/targets/[id]` | `{ plan, allocations, actuals, audits }`; fixed baselines and SQL-aggregated achievement |
+| `PATCH /api/targets/[id]` | Manager full draft snapshot; path equals `request_id`, existing `expected_updated_at` required for a successful update; `{ id }` |
+| `POST /api/targets/[id]/approve` | Manager-only `{ expected_updated_at }`; atomic version-checked reconciliation/lock; `{ id }` |
+| `GET /api/targets/options` | Up to 1,000 permitted PSE employees and 1,000 configured verticals, including inactive historical choices |
+| `POST /api/targets/verticals` | Manager-only `{ id?, values: { code, name, active, is_provisional } }`; `{ id }` |
+
+Receipt fields: `request_id`, `opportunity_id`, `employee_id`, optional/empty `target_vertical_id`, decimal-text positive `amount`, `currency`, `contribution_type`, zoned `recognized_at`, optional `approved_value_note`, `valuation_reference_url`, `notes`. In-kind requires a nonblank agreement/source note. Unknown identity/audit fields are rejected; recorder is bound in SQL. Currency/type must match the saved opportunity; employee/selected vertical must be active. Attribution is explicit, optional vertical stays unassigned, and no expected amount is automatically realized. Identical retry IDs/payloads are idempotent; changed submissions conflict. The UI freezes ambiguous submissions and allows retrying the same snapshot.
+
+Target snapshots contain `request_id`, `expected_updated_at`, year, currency, decimal annual amount, exactly four unique `{ quarter, amount }` objects and up to 4,000 `{ quarter, employee_id, vertical_id, amount }` cells. Duplicate dimension cells, extra fields, invalid money and unsupported years are rejected. Draft totals may be incomplete; approval requires full reconciliation and active dimensions. Application and database checks enforce manager-only writes. Approved targets are immutable, and stale snapshots/approvals return 409. The actual aggregate uses all same-currency contributions recognized in the plan year under Asia/Dhaka; no currency conversion or allocation-based exclusion is applied.
+
+All responses are private/no-store. Writes require a matching Origin and JSON, with a maximum of 1,000,000 characters for allocation snapshots. Errors: validation 422, malformed JSON/ID 400, missing record 404, permission 403, stale/duplicate conflict 409, unsupported content type 415, oversized request 413, unavailable provider 503. Raw database details are scrubbed. Successful writes invalidate Contributions/Targets/Opportunities/Dashboard/Reports layouts. No refund, correction, deletion or broad target-edit hierarchy is implied by these endpoints.
+
+
+`seed_demo_target` is administrative fixture tooling only. It is not used by the Targets API and cannot be executed by anonymous or authenticated application users, including PSE managers. Only the service-role CLI may insert the two reserved draft demo IDs; existing plans are preserved and approval still requires a real authorized user. No private administrative key is imported by the app.
+
+
+## Reports API
+
+`GET /api/reports` returns `{ filters, report }` with private/no-store headers. Optional filters: year (1–9998; defaults to the current Dhaka year), period (`year`, `q1`–`q4`, `m01`–`m12`; defaults to year), `employee_id` (UUID or empty), `vertical_id` (UUID, `unassigned` or empty), and three-letter `currency` (defaults to BDT, normalized uppercase). Unknown fields, malformed IDs/periods and mixed-currency input return 422. The endpoint implements no mutation methods.
+
+The service verifies fresh allowed PSE identity/profile equality; the repository uses the ordinary caller client. `pse_report` checks PSE membership again and uses RLS. Anonymous/restricted/unavailable states return 401/403/503; provider details are scrubbed. Report payload includes generation time, exclusive-end period boundaries, targets/actual/type/dimension comparisons, pipeline stage/outcome summaries, workload/type/status/category/owner counts and monthly trends. Metadata for page filters is bounded to 1,000 permitted profiles/verticals; report totals are SQL aggregates across all eligible records.
+
+Vertical filtering is restricted to explicit financial attribution/target dimensions. Pipeline uses current owner/currency and expected closing date; workload uses current owner and relevant/scheduled dates. Unassigned contributions are included in all-vertical team actuals; missing targets stay null rather than fabricated zero baselines. Monthly target values remain null. See [reporting definitions](09-reporting-definitions.md) for all metric/date/filter semantics. The API does not calculate lead, contacts-engaged or follow-up-rate KPIs, infer exchange rates or rebuild historical pipeline stages.
+
+
+## Cache refresh and timing
+
+Report GET responses remain `private, no-store` at the HTTP boundary; the server may reuse a scoped numeric snapshot for up to 30 seconds. Auth/profile guards run on every request, and permitted profile names are freshly hydrated instead of served from stored snapshots. SQL misses use a captured caller bearer outside cookie-dependent cache execution. The `Server-Timing` report duration measures the authorized handler path (including guards/session/query or hit); it contains no cache key or credentials.
+
+`POST /api/reports/refresh` requires active PSE authentication and a matching Origin, with no JSON body. It expires only the verified user's report and vertical entries, returns `{ refreshed: true }` with private/no-store headers, and returns 401/403/503 on denied/unavailable states or invalidation failure. Caller-supplied identities/tags are not accepted. User/department/role/session/project/filter cache isolation, 30/300-second boundaries and global mutation invalidation are documented in [caching strategy](05-caching-strategy.md). Ordinary mutations retain their existing RLS/uncached validation; this cache never authorizes writes.

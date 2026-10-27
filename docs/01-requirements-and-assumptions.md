@@ -63,11 +63,11 @@ The supplied Word assessment was reread for this checkpoint. The original Meetin
 | Internal suggestions permitted; external autofill/Gmail excluded | Existing contacts/deals only; no external enrichment or synchronization |
 | Meetings do not automatically establish monetary achievement | Completion, follow-up creation, deletion and demonstration seeding create no recognized contributions |
 
-Required title/owner, optional description requiredness, Cancelled status, detailed edit/delete permissions and live-linked contact details rather than immutable contact snapshots are implementation choices. A company contact can be selected directly; whether every company-only meeting must instead require a named individual remains a PSE clarification. Named individuals and opportunity primary contacts are already supported. Deletion is explicitly requested by the user, not mandated in the assessment. Activities editing is now available; dashboard meeting metrics and the broader assessment deliverables remain pending; no follow-up-rate KPI is inferred.
+Required title/owner, optional description requiredness, Cancelled status, detailed edit/delete permissions and live-linked contact details rather than immutable contact snapshots are implementation choices. A company contact can be selected directly; whether every company-only meeting must instead require a named individual remains a PSE clarification. Named individuals and opportunity primary contacts are already supported. Deletion is explicitly requested by the user, not mandated in the assessment. Activities editing is now available; dashboard meeting counts/status are implemented; the broader submission deliverables remain pending; no follow-up-rate KPI is inferred.
 
 ## Implementation status
 
-The database foundation, authentication, Contacts, financial Opportunities, Meetings and Activities workflows are implemented, including confirmed deletion for unlinked records. Meetings retain linked follow-up task creation and protected history. All 418 local tests and twelve anonymous browser checks pass. The configured project has all seven migrations applied and fictional demo contacts/deals plus six meetings (three Scheduled, two Done, one Cancelled) and 11 activities; existing rows and monetary achievement are preserved. Hosted sign-in and interactive end-user browser workflows remain manual. Target/contribution-entry UI, reporting and deployment remain pending. See [system architecture](02-system-architecture.md), [database schema](03-database-schema.md) and [testing and limitations](07-testing-and-limitations.md).
+The database foundation, authentication, Contacts, financial Opportunities, Meetings and Activities workflows are implemented, including confirmed deletion for unlinked records. Meetings retain linked follow-up task creation and protected history. All 618 local tests and nineteen anonymous browser checks pass. The configured project has all eleven migrations applied and fictional demo contacts/deals plus six meetings (three Scheduled, two Done, one Cancelled) and 11 activities; existing rows are preserved. The explicitly requested finance seed adds fictional actuals and target plans as documented below. Hosted sign-in and interactive end-user browser workflows remain manual. Recognized contribution entry and target allocation/approval/performance are implemented. The dashboard and detailed reports are implemented. Permission-scoped caching is implemented. Signed-in/multi-instance acceptance, deployment and real Odoo import remain pending. See [system architecture](02-system-architecture.md), [database schema](03-database-schema.md) and [testing and limitations](07-testing-and-limitations.md).
 
 
 ## Activities assessment check
@@ -88,4 +88,52 @@ Proposed project choices: work-category keys `stewardship`, `prospect_engagement
 
 Activity deletion is explicitly requested by the user. Migration 0007 adds its grant/RLS policy; confirmation names the entry, parents remain intact and immutable audit snapshots remain. No soft-delete or automatic parent deletion is introduced. The proposed legacy `estimated_nonmonetary_value` field remains stored but is not exposed or overwritten by the workflow; no currency or valuation rule is invented for it.
 
-A Meeting-type activity is a work log, not a second scheduled meeting. Events use Activities without registration, budget or ROI workflows. No contacts-engaged deduplication formula, lead KPI, follow-up-rate KPI or reporting totals are invented. Full reporting remains a later checkpoint. Supplied demo records are fictional and clearly labeled.
+A Meeting-type activity is a work log, not a second scheduled meeting. Events use Activities without registration, budget or ROI workflows. No contacts-engaged deduplication formula, lead KPI, follow-up-rate KPI or reporting totals are invented. The Phase 11 operational reports now cover confirmed financial/workload counts and trends; unapproved KPIs remain excluded. Supplied demo records are fictional and clearly labeled.
+
+
+## Phase 10 assessment check
+
+| Confirmed requirement | Implementation |
+|---|---|
+| Annual target, manually uneven quarters, allocations by employee and vertical, preferably percentages | Manager draft form, four quarter baselines and employee/vertical cells; percentage calculation aid with an explicit cent remainder |
+| Quarterly targets total the annual target and stay fixed after setup | Decimal reconciliation in approval transaction; approved headers/quarters/cells are immutable |
+| Primarily Safina or another explicitly authorized manager edits targets; PSE team can view | Trusted active PSE manager/admin roles control configuration, saves and approval; other active PSE staff have read access |
+| Forecast differs from confirmed/realized achievement | Separate append-only contribution records entered from opportunities; no expected-value copy or automatic Won recognition |
+| Operational team supplies significant in-kind estimate; PSE enters agreed value | Manually entered amount plus required valuation/source note and optional inventory/estimate URL; no valuation engine |
+| Q1 110% remains Q1 110%; Q2 assigned target stays unchanged | Quarter actuals and attainment calculated separately from stored fixed baselines; no carry-forward adjustment |
+| Team/member/vertical and quarterly/annual performance | Target detail includes annual, quarter and employee/vertical actual-versus-target views |
+
+Project choices: separate contribution forms/list/details, append-only receipts with no refund/correction/delete workflow, two-step receipt review, stable submission IDs for safe retries, draft-save and approval steps, transactional replacement of draft allocation cells, stale-version conflict detection, and server-fixed recorder identity. Any active PSE member may record support and explicitly attribute it to an active employee; this follows existing database permissions and is not a detailed assessment mandate. Target managers are provisioned trusted roles; the final hierarchy remains unresolved.
+
+Money input uses at most 12 whole digits and two decimals. Percentages use at most two decimals and apply to the selected quarter baseline; calculations round down to cents and the manager explicitly assigns any remainder. Canonical stored values are monetary amounts, not a second editable percentage ledger. Drafts may be incomplete; approval requires every total to reconcile and all dimensions to be active. The supported form year range is 1–9998.
+
+Reporting uses the contribution recognition instant interpreted in Asia/Dhaka to select calendar year/quarter. Currency and financial type must match the linked opportunity; currencies are never converted or combined. Attribution is explicit and remains unchanged when an opportunity changes owners. Vertical is optional for receipts, and unassigned/out-of-allocation actuals remain included in team performance. Contribution categories and target verticals remain independent; no DSP/VBD/SAC equivalence or finalized hierarchy is invented. General dashboard/reporting remains Phase 11.
+
+
+## Fictional finance examples
+
+The requested hosted finance seed creates six labeled fictional receipts, three explicitly provisional demo verticals and two draft BDT plans. It demonstrates 2026 Q1 at 110%, unchanged Q2, separate USD support, manual in-kind evidence and unassigned attribution. Both plans remain unapproved; administrative fixture creation does not impersonate an end-user or grant approval authority. A service-role-only helper atomically inserts a reserved demo plan plus its children and skips any existing plan entirely. No final vertical/category mapping is inferred, and no existing opportunity forecast/stage, contact, meeting, activity, user or role is modified.
+
+
+## Phase 11 assessment check
+
+| Confirmed direction | Implementation |
+|---|---|
+| Separate monetary fundraising and non-monetary work lenses | Distinct dashboard/report sections; activity estimates and work counts never become monetary achievement |
+| Actual-versus-target, remaining, overachievement, employee/team/vertical performance | Stored annual/quarter baselines or explicit allocation cells compared with recognized contributions; missing targets stay unavailable; draft targets are provisional |
+| Pipeline counts/value by stage and open/won/lost/abandoned/junk | Current configured stages/outcomes for opportunities expected to close in the selected period; expected values stay separate from receipts |
+| Cash and valued in-kind | Actual contributions grouped by the saved financial type, in a single selected currency |
+| Meetings, activity types, stewardship, prospect/general work, employee workload and trends | Separate current-status record counts and monthly activity/meeting/recognition trends |
+| Team-wide PSE visibility; restricted other departments | Fresh server identity checks and an invoker SQL aggregate with current PSE membership plus existing RLS |
+| Related person/organization context for Activities | A nonblank person/organization or CRM link is required on create/update; existing context-free rows remain readable for correction |
+
+Reporting-period/date rules, draft target labels, currency isolation and the lack of monthly target baselines are documented implementation choices. Financial dates use recognition time; meetings use scheduled time; activities use relevant time. Pipeline date filtering uses expected closing dates and current stage, not historical stage reconstruction. Undated work/deals are counted separately across the selected owner, without inventing relevant dates. Related context through a valid CRM link is accepted without forcing duplicate free-text names.
+
+Funding vertical filters apply only where an explicit vertical exists (targets/contributions). No contribution-category-to-vertical mapping or workload vertical is inferred. Employee selects historical contribution attribution for actuals and current ownership for pipeline/work. Monthly views display actuals only because monthly target allocation is not defined. Lead, contacts-engaged and follow-up-rate KPIs remain absent pending PSE definitions. Full [metric definitions](09-reporting-definitions.md) distinguish record counts from unique interactions and explain filter scopes. The legacy Activity constraint is NOT VALID for historical rows, but enforces all new/updated rows without backfill.
+
+
+## Phase 12 technical choices
+
+Caching is user-authorized engineering work, not a mandate established by the Word assessment. The implemented choice is a maximum 30-second report snapshot and 300-second vertical lookup, partitioned by project, verified user, role/department, hashed session and normalized filters. Authentication and permitted profile names remain fresh. Cached profile display names are removed and rehydrated through current caller-scoped lookup. Transactional forms/details and financial/approval validation are uncached. App writes and the authenticated Refresh endpoint expire applicable tags immediately; direct administrative writes need Refresh or TTL expiry.
+
+The local 10,002-receipt benchmark reports the shared SQL/service/cache-policy path, using an isolated test store rather than a deployed cache backend. It demonstrates reduced repeated query work without asserting a hosted speedup. Server-Timing supports later authorized HTTP measurements. Multi-instance cache propagation and live signed-in acceptance remain deployment checks; caching can be disabled until those checks are complete. KPI definitions, targets, currencies, valuations and source-data permissions are unchanged.

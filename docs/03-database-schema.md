@@ -11,6 +11,10 @@ The SQL migrations implement the database foundation. They are designed for Supa
 | [0003_indexes_and_triggers.sql](../supabase/migrations/0003_indexes_and_triggers.sql) | Relationship validation, timestamps, audit history, target reconciliation/locking and query indexes |
 | [0004_contact_deletion.sql](../supabase/migrations/0004_contact_deletion.sql) | Creator/manager contact DELETE grant and RLS policy; keeps restrictive foreign keys and audit history |
 | [0005_opportunity_deletion.sql](../supabase/migrations/0005_opportunity_deletion.sql) | Focal person/creator/manager opportunity DELETE grant and RLS policy; preserves linked work, actual contributions, contacts and audit history |
+| [0011_reporting.sql](../supabase/migrations/0011_reporting.sql) | Caller-scoped, read-only reporting snapshot across targets, actuals, pipeline and workload |
+| [0010_activity_context.sql](../supabase/migrations/0010_activity_context.sql) | Related person/organization or CRM link required on Activity writes; legacy rows retained through NOT VALID |
+| [0009_demo_target_seed.sql](../supabase/migrations/0009_demo_target_seed.sql) | Service-role-only atomic insertion of reserved demo target plans; existing plans skipped without edits or approval |
+| [0008_phase10_workflows.sql](../supabase/migrations/0008_phase10_workflows.sql) | Atomic version-checked target snapshots/approval, contribution retry RPC, actual aggregation and parent revision triggers |
 | [0007_activity_deletion.sql](../supabase/migrations/0007_activity_deletion.sql) | Owner/creator/manager activity DELETE grant and RLS policy; retain parent rows and audited snapshots |
 | [0006_meeting_deletion.sql](../supabase/migrations/0006_meeting_deletion.sql) | Owner/creator/manager meeting DELETE grant and RLS policy; linked activities/follow-ups restrict deletion and audit history remains |
 
@@ -56,11 +60,11 @@ A contact-only meeting can reference an individual or company. For a meeting lin
 
 The linked follow-up flow inserts `activities` with `activity_type = task`, `status = open`, `work_category = independent_general`, task text in `notes`, optional relevant `occurred_at`, and inherited meeting/contact/opportunity IDs. Nullable parent contact/opportunity IDs stay nullable. Owner defaults to the authenticated caller; manager assignment still requires an active PSE employee. General activity creation/editing/completion is not implemented by this narrow entry point.
 
-Existing RLS gives active PSE staff team reads and limits meeting updates to owner/creator/manager. Only a manager changes ownership. New or changed owners must be active PSE users, while unchanged historical owners can remain on authorized edits. Activity and meeting triggers reject contradictory links and parent changes that would invalidate existing follow-ups. No authenticated DELETE grant or meeting-deletion endpoint is added. Meetings/follow-ups do not insert or change recognized contributions, opportunity values or target allocations.
+Existing RLS gives active PSE staff team reads and limits meeting updates to owner/creator/manager. Only a manager changes ownership. New or changed owners must be active PSE users, while unchanged historical owners can remain on authorized edits. Activity and meeting triggers reject contradictory links and parent changes that would invalidate existing follow-ups. Migration 0006 adds the ownership-scoped meeting DELETE grant and endpoint; linked activities block deletion. Meetings/follow-ups do not insert or change recognized contributions, opportunity values or target allocations.
 
 ## Financial values and recognition
 
-Amounts use `numeric(14,2)` with finite-value checks. Expected opportunity amounts, actual contribution amounts and annual targets are positive; allocation amounts and an optional operational budget are non-negative. Currency is stored as a three-letter uppercase code. PostgreSQL decimal arithmetic performs reconciliation; future application inputs must handle rounding explicitly.
+Amounts use `numeric(14,2)` with finite-value checks. Expected opportunity amounts, actual contribution amounts and annual targets are positive; allocation amounts and an optional operational budget are non-negative. Currency is stored as a three-letter uppercase code. PostgreSQL decimal arithmetic performs reconciliation; Phase 10 application inputs handle percentage rounding explicitly.
 
 Opportunity creation/editing uses the original tables; deletion adds only the grant/policy in migration 0005. Input rejects more than two decimal places or more than 12 whole digits, rather than silently rounding entered amounts. Stage/category activation is required on creation or selection changes; unchanged inactive historical references can still be edited. Only a manager can reassign a focal person. Configurable stage labels, positions, closed outcomes and provisional flags are maintained through Settings; target verticals remain separate.
 
@@ -72,7 +76,7 @@ Expected value and realized support remain separate records. Winning a deal or e
 
 ## Target reconciliation and locking
 
-An annual plan stores its own baseline, each quarter stores its baseline, and the employee × quarter × vertical grid stores allocation amounts once. Percentage inputs are intended for a later service/form; monetary amounts are canonical, and no second independently editable percentage total is stored.
+An annual plan stores its own baseline, each quarter stores its baseline, and the employee × quarter × vertical grid stores allocation amounts once. Percentage inputs are implemented in the Phase 10 form; monetary amounts are canonical, and no second independently editable percentage total is stored.
 
 Draft plans may be incomplete. Approval through `approve_target_plan` checks all of the following in one transaction:
 
@@ -89,7 +93,7 @@ Seed stage/category/vertical labels are provisional demonstration configuration,
 
 The seed is local demonstration data using fixed fictional profile IDs. Matching Auth identity rows are supplied by the isolated test bootstrap, not by the migrations or seed. There are no Auth passwords or real demo login accounts. A hosted import requires trusted identity provisioning and reviewed ID mappings; this checkpoint does not deploy to a hosted project.
 
-Database types are generated from the migrated local catalog by the repository workflow. Meeting deletion adds only a grant/policy in migration 0006, with no column/type changes. Activity/follow-up references restrict meeting deletion, including for managers; parent contacts/opportunities and before/actor audit snapshots remain intact. The configured hosted project has all six migrations applied. Hosted sign-in and interactive CRUD checks remain manual. See [verification evidence](07-testing-and-limitations.md) for the completed checks and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.
+Database types are generated from the migrated local catalog by the repository workflow. Meeting deletion adds only a grant/policy in migration 0006, with no column/type changes. Activity/follow-up references restrict meeting deletion, including for managers; parent contacts/opportunities and before/actor audit snapshots remain intact. The configured hosted project has all eleven migrations applied. Hosted sign-in and interactive CRUD checks remain manual. See [verification evidence](07-testing-and-limitations.md) for the completed checks and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.
 
 
 ## Activity workflow and deletion
@@ -97,3 +101,22 @@ Database types are generated from the migrated local catalog by the repository w
 The full Activities workflow uses the existing table, nullable contact/opportunity/meeting FKs and link-consistency guards. All 11 types support independent work with person/organization text, remaining work, optional relevant timestamp and document URLs. `occurred_at` is relevant work time, not a dedicated due/completion timestamp. The application requires descriptive notes as a data-quality choice; the nullable database field remains compatible with legacy records. A legacy record without notes must receive notes before an application update.
 
 Migration 0007 grants authenticated DELETE and restricts it to an active PSE owner, creator or manager/admin. The existing audit trigger retains actor/before data after deletion; no parents are cascaded. Deleting a linked activity can remove the FK dependency that previously blocked deleting its meeting or opportunity. The application never edits `estimated_nonmonetary_value`, supplies a currency for it, or converts it into recognized achievement. No columns changed and generated types remain the same 13-table model.
+
+
+## Phase 10 transaction functions
+
+Migration 0008 adds `save_target_draft(uuid,jsonb,text)`, `approve_target_draft(uuid,text)`, `record_contribution(uuid,jsonb)` and `target_actuals(uuid)`. No tables/columns changed; generated types now include these functions. Public/anonymous execution is revoked; authenticated callers still pass explicit fresh PSE/manager checks. Target save/approval use fixed search paths and guarded definer privileges for atomic draft-cell removal/replacement without granting general target DELETE access. Receipt/actual functions use caller privileges and existing RLS.
+
+Target saves serialize on submission ID and parent row, compare the stored revision and perform all changes in one transaction. Replacing a matrix deletes only draft cells/quarters, retaining before snapshots and audit actors. New child-change triggers update the parent revision; approval sees stale direct child changes too. Existing identity and approval/locking triggers remain authoritative. Incomplete drafts are valid; approval still checks annual/quarter/cell totals and active employees/verticals.
+
+Contribution inputs carry decimal amounts as JSON text to PostgreSQL numeric. A stable ID and transaction lock prevent a successful submission from being duplicated by an identical retry. A changed payload or different recorder using that ID returns conflict. No receipt UPDATE/DELETE grant is added. The actual aggregation RPC sums all same-currency, same-recognition-year rows and returns decimal totals as text grouped by Dhaka quarter/employee/optional vertical. It never changes baselines, forecasts, actuals or activity estimates.
+
+
+The administrative finance seed uses `seed_demo_target(uuid,jsonb)` from migration 0009. EXECUTE is granted only to `service_role` (not ordinary authenticated users, even target managers). The fixed-search-path helper accepts only two reserved demo IDs, requires an existing active PSE manager as fixture creator, and inserts a new draft header/four quarters/allocation snapshot atomically. It returns without any modification when the ID already exists, including edited/incomplete/approved plans. Approval is deliberately absent. Normal target workflows continue to use their original caller-scoped RPCs; this is not an application mutation endpoint. Generated types include the helper, with the same 13 tables.
+
+
+## Reporting and related-context enforcement
+
+Migration 0010 adds `activities_related_context_required`: either a contact/opportunity/meeting FK or a non-whitespace related person/organization must be present. It is NOT VALID against historical rows so migration does not delete or manufacture context. Existing rows stay readable/deletable, but any subsequent update must satisfy the constraint. Shared client/server validation supplies actionable field errors before the SQL boundary; direct SQL/REST writes are also constrained.
+
+Migration 0011 adds `pse_report(integer,integer,integer,text,text,text) returns jsonb`. Anonymous/public execution is revoked and authenticated execution still checks current active PSE membership. SECURITY INVOKER preserves RLS. Quarter/month/year and UUID/currency parameters are validated; SQL uses one selected currency and Dhaka calendar boundaries, returns exact monetary sums as text, and reads without business-data writes. Targets/receipts use explicit vertical attribution; no category or operational-work mapping is invented. The function zero-fills known type/status/month buckets and returns uncapped aggregate totals plus grouped rows in one JSON value, avoiding REST pagination truncation. No tables/columns changed; generated types still cover 13 tables with the additional RPC.
