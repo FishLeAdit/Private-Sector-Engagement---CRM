@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
-import { verticalSchema } from "@/features/finance/schemas";
+import { verticalSchema } from "@/features/targets/schemas";
 export function VerticalForm({ verticals }: { verticals: FinanceOptions["verticals"] }) {
   const router = useRouter();
   const [id, setId] = useState(""),

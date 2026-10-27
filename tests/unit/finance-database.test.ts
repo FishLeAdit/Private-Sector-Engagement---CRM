@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { asActor, createLocalDatabase, fixtureIds as ids } from "../../scripts/lib/local-database";
 import { cents, decimal, targetPerformance, percentAmount } from "../../src/lib/money";
-import { contributionSchema, targetSchema } from "../../src/features/finance/schemas";
+import { contributionSchema } from "../../src/features/contributions/schemas";
+import { targetSchema } from "../../src/features/targets/schemas";
 let db: PGlite;
 beforeAll(async () => {
   db = await createLocalDatabase();

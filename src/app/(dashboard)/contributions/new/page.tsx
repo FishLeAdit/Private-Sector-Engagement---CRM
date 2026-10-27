@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { financePage, financeData } from "@/features/finance/context";
-import { ContributionForm } from "@/components/finance/contribution-form";
+import { contributionPage } from "@/features/contributions/context";
+import { financeData } from "@/features/finance/context";
+import { ContributionForm } from "@/components/contributions/contribution-form";
 import { FinanceProblem } from "@/components/finance/problem";
 export default async function Page({ searchParams }: { searchParams: Promise<{ opportunity_id?: string }> }) {
-  const { service, access } = await financePage();
+  const { service, access } = await contributionPage();
   const { id } = { id: (await searchParams).opportunity_id };
   if (!id)
     return (

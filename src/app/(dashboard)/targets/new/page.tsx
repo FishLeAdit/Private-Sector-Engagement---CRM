@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { financePage, financeData } from "@/features/finance/context";
+import { financeData } from "@/features/finance/context";
+import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
-import { TargetForm } from "@/components/finance/target-form";
+import { TargetForm } from "@/components/targets/target-form";
 import { isPseManager } from "@/lib/auth/roles";
 import { toDhakaDateTimeInput } from "@/lib/dates";
 export default async function Page() {
-  const { service, access } = await financePage();
+  const { service, access } = await targetPage();
   if (!isPseManager(access.profile))
     return <FinanceProblem message="Only an authorized manager can create target plans." />;
   const result = await financeData(() => service.options());

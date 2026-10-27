@@ -1,5 +1,6 @@
 import type { Tables, TablesInsert } from "../../src/types/database.types";
-import { contributionSchema, targetSchema } from "../../src/features/finance/schemas";
+import { contributionSchema } from "../../src/features/contributions/schemas";
+import { targetSchema } from "../../src/features/targets/schemas";
 import { cents, decimal } from "../../src/lib/money";
 import { fromDhakaDateTimeInput } from "../../src/lib/dates";
 import { DEMO_MARKER, type DemoProfile } from "./demo-data";

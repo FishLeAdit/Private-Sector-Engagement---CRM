@@ -1,4 +1,4 @@
-import { financeApi } from "@/features/finance/context";
+import { targetApi } from "@/features/targets/context";
 export async function GET(request: Request) {
-  return financeApi(request, service => service.options());
+  return targetApi(request, service => service.options());
 }

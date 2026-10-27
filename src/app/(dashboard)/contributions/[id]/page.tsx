@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { financePage, financeData } from "@/features/finance/context";
+import { contributionPage } from "@/features/contributions/context";
+import { financeData } from "@/features/finance/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { money } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { service } = await financePage();
+  const { service } = await contributionPage();
   const { id } = await params;
   const loaded = await financeData(() => service.contribution(id));
   if (!loaded.ok) {

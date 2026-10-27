@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
-import { targetSchema, type TargetInput } from "@/features/finance/schemas";
+import { targetSchema, type TargetInput } from "@/features/targets/schemas";
 import { cents, decimal, percentAmount } from "@/lib/money";
 export function TargetForm({
   initial,

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { financePage, financeData } from "@/features/finance/context";
+import { financeData } from "@/features/finance/context";
+import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
-import { ApproveTarget } from "@/components/finance/approve-target";
+import { ApproveTarget } from "@/components/targets/approve-target";
 import { isPseManager } from "@/lib/auth/roles";
 import { cents, money, targetPerformance } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { service, access } = await financePage();
+  const { service, access } = await targetPage();
   const { id } = await params,
     result = await financeData(() => Promise.all([service.details(id), service.options()]));
   if (!result.ok) {

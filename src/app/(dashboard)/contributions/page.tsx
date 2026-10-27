@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { financePage, financeData } from "@/features/finance/context";
-import { contributionFilters } from "@/features/finance/schemas";
+import { contributionPage } from "@/features/contributions/context";
+import { financeData } from "@/features/finance/context";
+import { contributionFilters } from "@/features/contributions/schemas";
 import { FinanceProblem } from "@/components/finance/problem";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/dates";
@@ -12,7 +13,7 @@ export default async function Page({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { service } = await financePage();
+  const { service } = await contributionPage();
   const parsed = contributionFilters.safeParse(await searchParams);
   if (!parsed.success) return <FinanceProblem message={parsed.error.issues[0].message} />;
   const input = parsed.data,

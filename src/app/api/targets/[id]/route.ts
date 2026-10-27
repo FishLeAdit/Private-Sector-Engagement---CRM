@@ -1,10 +1,11 @@
-import { financeApi, financeJson, invalidateFinance } from "@/features/finance/context";
+import { financeJson, invalidateFinance } from "@/features/finance/context";
+import { targetApi } from "@/features/targets/context";
 import { FinanceError } from "@/features/finance/types";
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  return financeApi(request, async service => service.details((await params).id));
+  return targetApi(request, async service => service.details((await params).id));
 }
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  return financeApi(
+  return targetApi(
     request,
     async service => {
       const body = await financeJson(request);

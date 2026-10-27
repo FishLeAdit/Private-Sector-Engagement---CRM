@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { ContributionForm } from "../../src/components/finance/contribution-form";
-import { TargetForm } from "../../src/components/finance/target-form";
-import { ApproveTarget } from "../../src/components/finance/approve-target";
+import { ContributionForm } from "../../src/components/contributions/contribution-form";
+import { TargetForm } from "../../src/components/targets/target-form";
+import { ApproveTarget } from "../../src/components/targets/approve-target";
 import type { FinanceOptions } from "../../src/features/finance/types";
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));

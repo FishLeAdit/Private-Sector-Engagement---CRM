@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { financePage, financeData } from "@/features/finance/context";
+import { financeData } from "@/features/finance/context";
+import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
-import { VerticalForm } from "@/components/finance/vertical-form";
+import { VerticalForm } from "@/components/targets/vertical-form";
 import { isPseManager } from "@/lib/auth/roles";
 export default async function Page() {
-  const { service, access } = await financePage();
+  const { service, access } = await targetPage();
   if (!isPseManager(access.profile))
     return <FinanceProblem message="Only an authorized manager can configure target verticals." />;
   const result = await financeData(() => service.options());

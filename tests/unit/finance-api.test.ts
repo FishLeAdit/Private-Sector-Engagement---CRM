@@ -6,7 +6,8 @@ vi.mock("../../src/lib/cache/invalidation", () => ({ invalidateReportCache: vi.f
 vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/auth/access", () => ({ authorizeApi: mocks.authorize }));
 vi.mock("../../src/lib/supabase/server", () => ({ createClient: mocks.client }));
-vi.mock("../../src/features/finance/queries", () => ({ createFinanceRepository: mocks.repo }));
+vi.mock("../../src/features/contributions/queries", () => ({ createContributionRepository: mocks.repo }));
+vi.mock("../../src/features/targets/queries", () => ({ createTargetRepository: mocks.repo }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 import { GET as CONTRIBUTIONS, POST as RECORD } from "../../src/app/api/contributions/route";
 import { GET as CONTRIBUTION } from "../../src/app/api/contributions/[id]/route";
@@ -107,7 +108,7 @@ function request(method = "GET", data?: unknown, origin = "http://localhost") {
     body: data === undefined ? undefined : JSON.stringify(data),
   });
 }
-describe("Phase 10 server boundaries", () => {
+describe("financial API boundaries", () => {
   it("rejects a target detail assembled across different draft versions", async () => {
     repo.plan
       .mockResolvedValueOnce({ ...snapshot, id, status: "draft", updated_at: stamp })

@@ -1,6 +1,7 @@
-import { financeApi, financeJson, invalidateFinance } from "@/features/finance/context";
+import { financeJson, invalidateFinance } from "@/features/finance/context";
+import { targetApi } from "@/features/targets/context";
 export async function POST(request: Request) {
-  return financeApi(
+  return targetApi(
     request,
     async service => {
       const result = await service.vertical(await financeJson(request));

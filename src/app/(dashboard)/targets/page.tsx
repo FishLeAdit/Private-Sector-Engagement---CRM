@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { financePage, financeData } from "@/features/finance/context";
+import { financeData } from "@/features/finance/context";
+import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { Pagination } from "@/components/ui/pagination";
 import { isPseManager } from "@/lib/auth/roles";
 import { listHref, pageCount } from "@/lib/list-href";
 import { money } from "@/lib/money";
 export default async function Page({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const { service, access } = await financePage();
+  const { service, access } = await targetPage();
   const parsed = z.coerce
     .number()
     .int()

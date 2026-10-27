@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
-import { contributionSchema } from "@/features/finance/schemas";
+import { contributionSchema } from "@/features/contributions/schemas";
 import { fromDhakaDateTimeInput } from "@/lib/dates";
 type Opportunity = { id: string; deal_name: string; owner_id: string; currency: string; contribution_type: string };
 export function ContributionForm({

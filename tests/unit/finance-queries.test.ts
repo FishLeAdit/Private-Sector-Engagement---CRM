@@ -2,8 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../src/types/database.types";
 vi.mock("server-only", () => ({}));
-import { createFinanceRepository } from "../../src/features/finance/queries";
-import { contributionFilters } from "../../src/features/finance/schemas";
+import { createContributionRepository } from "../../src/features/contributions/queries";
+import { createTargetRepository } from "../../src/features/targets/queries";
+import { contributionFilters } from "../../src/features/contributions/schemas";
+
+// One client drives both financial repositories, as the single finance repository did before the split.
+const createFinanceRepository = (client: Parameters<typeof createTargetRepository>[0]) => ({
+  ...createContributionRepository(client),
+  ...createTargetRepository(client),
+});
 const id = "f1000000-0000-4000-8000-000000000001";
 function repository(body: unknown = [], status = 200) {
   const fetcher = vi.fn().mockImplementation(

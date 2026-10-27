@@ -74,7 +74,7 @@ The administrative `seed:activities` runner inserts 11 missing stable IDs from a
 
 ## Phase 10 financial workflows
 
-The shared `features/finance` schemas, service and caller-scoped repository support Contributions and Targets. Pages handle rendering and client forms handle drafts/review; the server verifies membership, identity and manager authority on every operation, alongside SQL grants/RLS. Financial responses are private/no-store. Ordinary application code imports no administrative key.
+`features/contributions` and `features/targets` each own their schemas, caller-scoped repository and service. `features/finance` holds only what both share: the error type, database-error mapping, employee/vertical lookup, access guards and page/API wiring. Pages handle rendering and client forms handle drafts/review; the server verifies membership, identity and manager authority on every operation, alongside SQL grants/RLS. Financial responses are private/no-store. Ordinary application code imports no administrative key.
 
 Contribution entry starts from a saved opportunity, retaining its currency/type while requiring a separately entered actual amount and recognition time. A two-step review precedes the append-only write. The `record_contribution` invoker RPC binds the recorder to the verified caller and uses a stable submission ID plus a transaction lock: identical retries return the existing ID; changed payload/recorder conflicts. In-kind entries retain their own manual agreement/source, rather than inheriting expected valuation as realized funding. The app preserves explicit employee and optional vertical attribution.
 
