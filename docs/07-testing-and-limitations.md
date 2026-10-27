@@ -18,7 +18,15 @@ Assessment page 10 lists contacts engaged for the non-monetary lens. It is now b
 | Full Playwright suite with `E2E_LIVE_WRITES=1` | 26 passed in 4.6 min |
 | Signed-in, read-only, development server against the hosted demo (0014 not yet applied there) | Dashboard and Reports render with the section hidden, no error panel and no console error |
 
-Pending: after 0014 is applied to the hosted project, check the section with real figures.
+After the user applied 0012–0014 to the hosted project (`supabase db push`) and deployed `main` (b8e3925), the live checks were:
+
+| Check | Result |
+|---|---|
+| Dashboard and Reports, 2026, signed in, on the development server and the Vercel deployment | The section shows 3 contacts engaged (3 individuals, 0 companies, 0 named unlinked interactions), with Demo Manager at 3 in the owner table; no error panel or console error |
+| Independent recount from the meetings, activities and deal APIs, applying the documented rule outside SQL | 2 Done meetings and 3 Done activities in 2026 reach 3 distinct contacts, matching the report |
+| Playwright against the deployment, both accounts, live-write specs off | 21 passed, 5 skipped (the opt-in write specs) |
+
+The first production Dashboard request still showed no section; a minute later both pages did. That fits the request reaching the previous deployment during the switch, since report caching is off on Vercel.
 
 ## Target allocation grid on 28 October 2026
 
