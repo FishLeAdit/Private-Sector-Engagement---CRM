@@ -2,6 +2,7 @@ import Link from "next/link";
 import { normalizePhone } from "@/features/contacts/schemas";
 import type { ContactHistory, ContactRecord } from "@/features/contacts/types";
 import { formatDate } from "@/lib/dates";
+import { money } from "@/lib/money";
 
 // Sections of the contact detail page.
 
@@ -105,12 +106,7 @@ export function ContactHistoryLists({ history }: { history: ContactHistory }) {
             <Link href={`/opportunities/${row.id}`} className="link link-hover font-medium">
               {row.deal_name}
             </Link>
-            <p className="mt-1 text-sm text-base-content/65">
-              {new Intl.NumberFormat("en-BD", { style: "currency", currency: row.currency }).format(
-                row.expected_amount,
-              )}{" "}
-              expected
-            </p>
+            <p className="mt-1 text-sm text-base-content/65">{money(row.expected_amount, row.currency)} expected</p>
           </li>
         ))}
       </RecentList>
