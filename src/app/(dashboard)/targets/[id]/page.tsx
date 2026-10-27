@@ -58,9 +58,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         ))}
       </section>
       <p className="mb-5 text-sm">
-        Annual attainment: {annual.percentage ?? "No target"}%. Actuals include every contribution in this currency and
-        recognition year (Asia/Dhaka), including unassigned verticals. Forecasts and activities contribute zero. No
-        currency conversion or carry-forward adjustment is applied.
+        Annual attainment: {annual.percentage === null ? "No target" : `${annual.percentage}%`}. Actuals include every
+        contribution in this currency and recognition year (Asia/Dhaka), including unassigned verticals. Forecasts and
+        activities contribute zero. No currency conversion or carry-forward adjustment is applied.
       </p>
       <QuarterPerformance quarters={plan.quarters} actuals={actuals} currency={plan.currency} />
       <AllocationPerformance allocations={allocations} actuals={actuals} options={options} currency={plan.currency} />
