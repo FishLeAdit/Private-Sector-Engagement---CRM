@@ -2,6 +2,35 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Contribution stage and attribution rules on 28 October 2026
+
+Two decisions on contribution integrity, each enforced in the service and in the database:
+
+- **Open or won deals only.** A Lost, Abandoned or Junk deal no longer accepts new contributions. The service returns 422 naming the stage, and migration 0012 adds the same check to the contribution insert trigger. The deal page hides **Record contribution**, and the contribution page explains instead of showing the form. Receipts recorded before a deal closed stay valid, and closing a deal that has receipts is not blocked.
+- **Members credit themselves.** A member's contribution is credited to the member, and the form shows a fixed field. A PSE manager or admin can credit any active employee and starts from the deal's focal person. The service returns 403 otherwise, and migration 0013 replaces the `member_insert` RLS policy with the same rule, so a direct table insert is held to it too.
+
+| Check | Result |
+|---|---|
+| `npm test` | 647 passed across 49 files; 10 added (5 stage outcomes through the API, member/manager attribution through the API, member and manager form views, and 2 PGlite database tests) |
+| The 2 database tests with migrations 0012/0013 removed | Both failed, confirming they test the migrations |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed; generated types unchanged (no column changes) |
+| `live/contributions.spec.ts`, development server against the hosted demo | Passed: an open QA deal offers the form and its save is blocked in the browser; after a move to a closed, not-won stage the button is gone and the page explains why. The hosted demo still has 7 contributions and no QA records |
+
+| Full Playwright suite with `E2E_LIVE_WRITES=1` and both accounts | 26 passed in 4.6 min |
+
+The hosted database checks wait until 0012/0013 are applied there; until then only the application-level checks protect the hosted demo.
+
+Known issue, decision pending: the hosted finance seeder (`seed:finance`) puts its 200 USD demo receipt on "Overseas education grant", which the demo seed creates as **Lost**. The existing hosted receipt remains valid, but on a fresh project the seeder would now be refused at that receipt.
+
+## Restricted account check on 28 October 2026
+
+A non-PSE account (Auth user with a `Finance` department profile, fictional email) now exists on the hosted demo for `tests/e2e/sign-in.spec.ts`. Its first run exposed a test defect, not an app defect: the app showed "This account does not have PSE access", but the assertion matched every `role="alert"` element, including Next.js's empty route announcer. The assertion now matches the message itself.
+
+| Check | Result |
+|---|---|
+| `sign-in.spec.ts`, development server and the Vercel deployment | 6 passed on each, including the restricted account being refused and sent back to sign-in |
+| Default Playwright suite with both accounts in `.env.local` | 21 passed, 4 skipped (the opt-in live specs) |
+
 ## Signed-in browser specs on 28 October 2026
 
 The signed-in acceptance checks are now opt-in Playwright specs in `tests/e2e/live`, run with `E2E_LIVE_WRITES=1` and the demo credentials. They run against the hosted demo project and use the shared `tests/e2e/helpers/live.ts`:

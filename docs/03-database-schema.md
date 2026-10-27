@@ -12,6 +12,8 @@ The SQL migrations implement the database foundation. They are designed for Supa
 | [0004_contact_deletion.sql](../supabase/migrations/0004_contact_deletion.sql) | Creator/manager contact DELETE grant and RLS policy; keeps restrictive foreign keys and audit history |
 | [0005_opportunity_deletion.sql](../supabase/migrations/0005_opportunity_deletion.sql) | Focal person/creator/manager opportunity DELETE grant and RLS policy; preserves linked work, actual contributions, contacts and audit history |
 | [0011_reporting.sql](../supabase/migrations/0011_reporting.sql) | Caller-scoped, read-only reporting snapshot across targets, actuals, pipeline and workload |
+| [0012_contribution_stage_guard.sql](../supabase/migrations/0012_contribution_stage_guard.sql) | New contributions only on open or won opportunities; earlier receipts stay valid when a deal later closes |
+| [0013_contribution_attribution.sql](../supabase/migrations/0013_contribution_attribution.sql) | Members credit contributions only to themselves; authorized managers may credit any active PSE employee |
 | [0010_activity_context.sql](../supabase/migrations/0010_activity_context.sql) | Related person/organization or CRM link required on Activity writes; legacy rows retained through NOT VALID |
 | [0009_demo_target_seed.sql](../supabase/migrations/0009_demo_target_seed.sql) | Service-role-only atomic insertion of reserved demo target plans; existing plans skipped without edits or approval |
 | [0008_phase10_workflows.sql](../supabase/migrations/0008_phase10_workflows.sql) | Atomic version-checked target snapshots/approval, contribution retry RPC, actual aggregation and parent revision triggers |
@@ -93,7 +95,7 @@ Seed stage/category/vertical labels are provisional demonstration configuration,
 
 The seed is local demonstration data using fixed fictional profile IDs. Matching Auth identity rows are supplied by the isolated test bootstrap, not by the migrations or seed. There are no Auth passwords or real demo login accounts. A hosted import requires trusted identity provisioning and reviewed ID mappings; this checkpoint does not deploy to a hosted project.
 
-Database types are generated from the migrated local catalog by the repository workflow. Meeting deletion adds only a grant/policy in migration 0006, with no column/type changes. Activity/follow-up references restrict meeting deletion, including for managers; parent contacts/opportunities and before/actor audit snapshots remain intact. The configured hosted project has all eleven migrations applied. Hosted sign-in and interactive CRUD checks remain manual. See [verification evidence](07-testing-and-limitations.md) for the completed checks and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.
+Database types are generated from the migrated local catalog by the repository workflow. Meeting deletion adds only a grant/policy in migration 0006, with no column/type changes. Activity/follow-up references restrict meeting deletion, including for managers; parent contacts/opportunities and before/actor audit snapshots remain intact. The configured hosted project has migrations 0001–0011 applied; 0012 and 0013 are applied with `npx.cmd supabase db push --linked` before the matching application code is deployed. Hosted sign-in and interactive CRUD checks remain manual. See [verification evidence](07-testing-and-limitations.md) for the completed checks and [entity relationships](diagrams/entity-relationships.mmd) for the editable diagram.
 
 
 ## Activity workflow and deletion
