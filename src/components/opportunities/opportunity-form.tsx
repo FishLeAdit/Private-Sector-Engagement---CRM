@@ -1,8 +1,7 @@
 "use client";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   emptyOpportunity,
@@ -11,11 +10,21 @@ import {
   type OpportunityInput,
 } from "@/features/opportunities/schemas";
 import type { OpportunityOptions, Party } from "@/features/opportunities/types";
-import { emptyContact } from "@/features/contacts/schemas";
-import { ContactForm } from "@/components/contacts/contact-form";
-import { ContactPicker } from "./contact-picker";
+import { sendJson } from "@/lib/send-json";
+import { applyFieldErrors, DocumentUrlsField, FieldError, FormActions, OwnerField } from "@/components/ui/form";
+import { DealContactField, useDealContacts } from "./deal-contacts";
+import { InlineContactDialog, type ContactField } from "./inline-contact-dialog";
 
-type ContactField = "contact_id" | "primary_contact_id" | "secondary_contact_id";
+type TextField =
+  | "deal_name"
+  | "currency"
+  | "payment_interval"
+  | "country"
+  | "expected_close_at"
+  | "expected_amount"
+  | "operational_budget"
+  | "valuation_reference_url";
+
 export function OpportunityForm({
   initial,
   opportunityId,
@@ -45,48 +54,21 @@ export function OpportunityForm({
     mode: "onBlur",
   });
   const contributionType = useWatch({ control, name: "contribution_type" });
-  const [selected, setSelected] = useState<Partial<Record<ContactField, Party | null>>>(contacts);
+  const dealContacts = useDealContacts(contacts, setValue);
+  // Primary and secondary contact people only apply to company deals.
+  const company = dealContacts.company;
   const [error, setSaveError] = useState("");
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [creation, setCreation] = useState<{ field: ContactField; key: number }>({ field: "contact_id", key: 0 });
-  // Open after the fresh contact form mounts, so native dialog focus targets it.
-  useEffect(() => {
-    if (creation.key) dialog.current?.showModal();
-  }, [creation.key]);
-  const company = selected.contact_id?.kind === "company" ? selected.contact_id : null;
-  const labels: Record<ContactField, string> = {
-    contact_id: "Individual / company",
-    primary_contact_id: "Primary contact",
-    secondary_contact_id: "Secondary contact (optional)",
-  };
-  function select(field: ContactField, party: Party | null) {
-    setSelected(current => ({
-      ...current,
-      [field]: party,
-      ...(field === "contact_id" ? { primary_contact_id: null, secondary_contact_id: null } : {}),
-    }));
-    setValue(field, party?.id ?? "", { shouldValidate: true, shouldDirty: true });
-    if (field === "contact_id") {
-      setValue("primary_contact_id", "");
-      setValue("secondary_contact_id", "");
-    }
-  }
-  function createContact(field: ContactField) {
-    setCreation(current => ({ field, key: current.key + 1 }));
-  }
+
   async function save(data: OpportunityInput) {
     setSaveError("");
     try {
-      const response = await fetch(opportunityId ? `/api/opportunities/${opportunityId}` : "/api/opportunities", {
-        method: opportunityId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        for (const [field, messages] of Object.entries(result.fields ?? {}) as [keyof OpportunityInput, string[]][])
-          if (field in emptyOpportunity) setError(field, { type: "server", message: messages[0] });
+      const { ok, result } = await sendJson(
+        opportunityId ? `/api/opportunities/${opportunityId}` : "/api/opportunities",
+        opportunityId ? "PATCH" : "POST",
+        data,
+      );
+      if (!ok) {
+        applyFieldErrors(result.fields, emptyOpportunity, setError);
         setSaveError(result.error || "Opportunity could not be saved.");
         return;
       }
@@ -96,27 +78,12 @@ export function OpportunityForm({
       setSaveError("Opportunity could not be saved. Check your connection and try again.");
     }
   }
-  const issue = (field: keyof OpportunityInput) =>
-    errors[field] ? (
-      <p className="mt-1 text-sm text-error" role="alert">
-        {errors[field]?.message || "Use up to 20 valid HTTP(S) reference URLs."}
-      </p>
-    ) : null;
+  const issue = (field: keyof OpportunityInput) => (
+    <FieldError error={errors[field]} fallback="Use up to 20 valid HTTP(S) reference URLs." />
+  );
   const input = (field: keyof OpportunityInput) => ({ ...register(field), "aria-invalid": !!errors[field] });
-  const textField = (
-    field:
-      | "deal_name"
-      | "currency"
-      | "payment_interval"
-      | "country"
-      | "expected_close_at"
-      | "expected_amount"
-      | "operational_budget"
-      | "valuation_reference_url",
-    label: string,
-    type = "text",
-    maxLength = 200,
-  ) => (
+
+  const textField = (field: TextField, label: string, type = "text", maxLength = 200) => (
     <div>
       <label htmlFor={`deal-${field}`} className="mb-2 block text-sm font-medium">
         {label}
@@ -132,6 +99,7 @@ export function OpportunityForm({
       {issue(field)}
     </div>
   );
+  // Stage/category lists: inactive entries stay visible only when this deal already uses them.
   const lookup = (
     field: "stage_id" | "contribution_category_id",
     label: string,
@@ -156,28 +124,15 @@ export function OpportunityForm({
     </div>
   );
   const contactField = (field: ContactField) => (
-    <div>
-      <Controller
-        name={field}
-        control={control}
-        render={({ field: value }) => (
-          <ContactPicker
-            value={value.value ?? ""}
-            selected={selected[field] ?? null}
-            onSelect={party => select(field, party)}
-            label={labels[field]}
-            individual={field !== "contact_id"}
-            disabled={isSubmitting}
-          />
-        )}
-      />
-      {issue(field)}
-      <button type="button" className="btn btn-link btn-sm mt-1 px-0" onClick={() => createContact(field)}>
-        Create{" "}
-        {field === "contact_id" ? "contact" : field === "primary_contact_id" ? "primary contact" : "secondary contact"}
-      </button>
-    </div>
+    <DealContactField
+      field={field}
+      contacts={dealContacts}
+      control={control}
+      disabled={isSubmitting}
+      error={issue(field)}
+    />
   );
+
   return (
     <>
       <form onSubmit={handleSubmit(save)} className="max-w-4xl space-y-7" noValidate>
@@ -189,38 +144,17 @@ export function OpportunityForm({
           <legend className="sr-only">Opportunity details</legend>
           <div className="grid gap-5 sm:grid-cols-2">
             {textField("deal_name", "Deal name *")}
-            <div>
-              <label htmlFor="deal-owner" className="mb-2 block text-sm font-medium">
-                Focal person (employee) *
-              </label>
-              {manager ? (
-                <select id="deal-owner" className="select select-bordered w-full" {...input("owner_id")}>
-                  <option value="">Choose…</option>
-                  {options.owners
-                    .filter(row => row.active || row.id === initial?.owner_id)
-                    .map(row => (
-                      <option key={row.id} value={row.id}>
-                        {row.display_name}
-                        {!row.active && " (inactive)"}
-                      </option>
-                    ))}
-                </select>
-              ) : (
-                <>
-                  <input type="hidden" {...register("owner_id")} />
-                  <input
-                    id="deal-owner"
-                    readOnly
-                    className="input input-bordered w-full bg-base-200"
-                    value={
-                      options.owners.find(row => row.id === (initial?.owner_id ?? userId))?.display_name ??
-                      "Current focal person"
-                    }
-                  />
-                </>
-              )}
-              {issue("owner_id")}
-            </div>
+            <OwnerField
+              id="deal-owner"
+              label="Focal person (employee) *"
+              manager={manager}
+              owners={options.owners}
+              ownerId={initial?.owner_id ?? userId}
+              placeholderName="Current focal person"
+              selectProps={input("owner_id")}
+              hiddenProps={register("owner_id")}
+              error={issue("owner_id")}
+            />
             <div>
               <label htmlFor="deal-type" className="mb-2 block text-sm font-medium">
                 Contribution type *
@@ -289,66 +223,25 @@ export function OpportunityForm({
               {issue(field)}
             </div>
           ))}
-          <div>
-            <label htmlFor="deal-links" className="mb-2 block text-sm font-medium">
-              Document reference URLs (optional, one per line)
-            </label>
-            <Controller
-              name="drive_urls"
-              control={control}
-              render={({ field }) => (
-                <textarea
-                  id="deal-links"
-                  className="textarea textarea-bordered min-h-28 w-full"
-                  value={field.value?.join("\n") ?? ""}
-                  onChange={event => field.onChange(event.target.value.split("\n"))}
-                  onBlur={field.onBlur}
-                  ref={field.ref}
-                  placeholder="https://drive.google.com/…"
-                />
-              )}
-            />
-            {issue("drive_urls")}
-            <p className="mt-1 text-xs text-base-content/60">
-              Paste Google Drive links here or in Notes. Up to 20 HTTP(S) links; direct uploads are excluded.
-            </p>
-          </div>
-        </fieldset>
-        {error && (
-          <p role="alert" className="rounded-lg bg-error/10 p-4 text-error">
-            {error}
-          </p>
-        )}
-        <div className="flex gap-3 border-t border-base-300 pt-5">
-          <button className="btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? "Saving…" : opportunityId ? "Save changes" : "Create deal"}
-          </button>
-          <Link className="btn btn-ghost" href={opportunityId ? `/opportunities/${opportunityId}` : "/opportunities"}>
-            Cancel
-          </Link>
-        </div>
-      </form>
-      <dialog ref={dialog} className="modal" aria-labelledby="inline-contact-title">
-        <div className="modal-box max-w-3xl">
-          <h2 id="inline-contact-title" className="mb-3 text-xl font-bold">
-            Create a contact for this deal
-          </h2>
-          <p className="mb-5 text-sm text-base-content/65">
-            Saving creates a contact immediately, even if you later cancel the deal. Your deal draft stays open.
-          </p>
-          <ContactForm
-            key={creation.key}
-            fixedKind={creation.field === "contact_id" ? undefined : "individual"}
-            company={creation.field !== "contact_id" && company ? company : null}
-            initial={{ ...emptyContact, company_id: creation.field !== "contact_id" ? (company?.id ?? "") : "" }}
-            onSaved={contact => {
-              select(creation.field, contact);
-              dialog.current?.close();
-            }}
-            onCancel={() => dialog.current?.close()}
+          <DocumentUrlsField
+            control={control}
+            name="drive_urls"
+            id="deal-links"
+            label="Document reference URLs (optional, one per line)"
+            className="textarea textarea-bordered min-h-28 w-full"
+            hint="Paste Google Drive links here or in Notes. Up to 20 HTTP(S) links; direct uploads are excluded."
+            error={issue("drive_urls")}
           />
-        </div>
-      </dialog>
+        </fieldset>
+        <FormActions
+          error={error}
+          busy={isSubmitting}
+          disabled={isSubmitting}
+          submitLabel={opportunityId ? "Save changes" : "Create deal"}
+          cancelHref={opportunityId ? `/opportunities/${opportunityId}` : "/opportunities"}
+        />
+      </form>
+      <InlineContactDialog request={dealContacts.creation} company={company} onSaved={dealContacts.select} />
     </>
   );
 }

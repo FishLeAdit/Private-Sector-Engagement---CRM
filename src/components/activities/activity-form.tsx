@@ -1,8 +1,7 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   activitySchema,
@@ -16,17 +15,19 @@ import {
   type ActivityFormInput,
   type ActivityInput,
 } from "@/features/activities/schemas";
-import type {
-  ActivityOptions,
-  ActivityContact,
-  ActivityMeeting,
-  ActivityOpportunity,
-} from "@/features/activities/types";
+import type { ActivityOptions } from "@/features/activities/types";
 import { fromDhakaDateTimeInput, toDhakaDateTimeInput } from "@/lib/dates";
-import { ContactPicker } from "@/components/opportunities/contact-picker";
-import { OpportunityPicker } from "@/components/meetings/opportunity-picker";
-import { MeetingContactInformation } from "@/components/meetings/contact-information";
-import { ActivityMeetingPicker } from "./meeting-picker";
+import { sendJson } from "@/lib/send-json";
+import { applyFieldErrors, DocumentUrlsField, FieldError, FormActions, OwnerField } from "@/components/ui/form";
+import { ActivityLinksSection, useActivityLinks } from "./activity-links";
+
+const select = <T extends string>(values: readonly T[], labels: Record<T, string>) =>
+  values.map(value => (
+    <option key={value} value={value}>
+      {labels[value]}
+    </option>
+  ));
+
 export function ActivityForm({
   initial,
   activityId,
@@ -60,60 +61,23 @@ export function ActivityForm({
     defaultValues: defaults,
     mode: "onBlur",
   });
-  const [contact, setContact] = useState<ActivityContact | null>(options.contact),
-    [opportunity, setOpportunity] = useState<ActivityOpportunity | null>(options.opportunity),
-    [meeting, setMeeting] = useState<ActivityMeeting | null>(options.meeting);
-  const [time, setTime] = useState(toDhakaDateTimeInput(defaults.occurred_at)),
-    [loadingLink, setLoadingLink] = useState(false),
-    [error, setSaveError] = useState(""),
-    [notice, setNotice] = useState("");
-  const effectiveOpportunity = opportunity ?? meeting?.opportunity ?? null;
-  const choices = effectiveOpportunity
-    ? [effectiveOpportunity.contact, effectiveOpportunity.primary_contact, effectiveOpportunity.secondary_contact]
-        .filter((row): row is ActivityContact => !!row)
-        .filter((row, index, rows) => rows.findIndex(other => other.id === row.id) === index)
-    : meeting?.contact
-      ? [meeting.contact]
-      : [];
-  function chooseContact(row: ActivityContact | null) {
-    setContact(row);
-    setValue("contact_id", row?.id ?? "", { shouldValidate: true, shouldDirty: true });
-  }
-  function chooseOpportunity(row: ActivityOpportunity | null) {
-    setOpportunity(row);
-    setValue("opportunity_id", row?.id ?? "", { shouldValidate: true, shouldDirty: true });
-    setNotice("");
-    if (row && contact && ![row.contact_id, row.primary_contact_id, row.secondary_contact_id].includes(contact.id)) {
-      chooseContact(null);
-      setNotice("The previous direct contact link was cleared because it is not part of this opportunity.");
-    }
-  }
-  function chooseMeeting(row: ActivityMeeting | null) {
-    setMeeting(row);
-    setValue("meeting_id", row?.id ?? "", { shouldValidate: true, shouldDirty: true });
-    setNotice("");
-    if (row && row.id !== meeting?.id) {
-      chooseContact(null);
-      chooseOpportunity(null);
-      setNotice(
-        "The meeting provides contact/opportunity context. Previous direct links were cleared; add compatible direct links only if needed.",
-      );
-    }
-  }
+  const links = useActivityLinks(options, setValue);
+  const [time, setTime] = useState(toDhakaDateTimeInput(defaults.occurred_at));
+  // True while a picker loads a selected record's details; saving waits so links stay consistent.
+  const [loadingLink, setLoadingLink] = useState(false);
+  const [error, setSaveError] = useState("");
+
   async function save(data: ActivityInput) {
     if (loadingLink) return;
     setSaveError("");
     try {
-      const response = await fetch(activityId ? `/api/activities/${activityId}` : "/api/activities", {
-        method: activityId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        for (const [field, messages] of Object.entries(result.fields ?? {}) as [keyof ActivityInput, string[]][])
-          if (field in emptyActivity) setError(field, { type: "server", message: messages[0] });
+      const { ok, result } = await sendJson(
+        activityId ? `/api/activities/${activityId}` : "/api/activities",
+        activityId ? "PATCH" : "POST",
+        data,
+      );
+      if (!ok) {
+        applyFieldErrors(result.fields, emptyActivity, setError);
         setSaveError(result.error || "Activity could not be saved.");
         return;
       }
@@ -123,13 +87,11 @@ export function ActivityForm({
       setSaveError("Activity could not be saved. Check your connection and try again.");
     }
   }
-  const issue = (field: keyof ActivityInput) =>
-    errors[field] ? (
-      <p role="alert" className="mt-1 text-sm text-error">
-        {errors[field]?.message || "Use up to 20 valid HTTP(S) document URLs."}
-      </p>
-    ) : null;
+  const issue = (field: keyof ActivityInput) => (
+    <FieldError error={errors[field]} fallback="Use up to 20 valid HTTP(S) document URLs." />
+  );
   const input = (field: keyof ActivityInput) => ({ ...register(field), "aria-invalid": !!errors[field] });
+
   return (
     <form onSubmit={handleSubmit(save)} className="max-w-4xl space-y-7" noValidate>
       <p className="rounded-lg bg-info/10 p-4 text-sm">
@@ -144,11 +106,7 @@ export function ActivityForm({
               Activity type *
             </label>
             <select id="activity-type" className="select select-bordered w-full" {...input("activity_type")}>
-              {activityTypes.map(type => (
-                <option key={type} value={type}>
-                  {activityTypeLabels[type]}
-                </option>
-              ))}
+              {select(activityTypes, activityTypeLabels)}
             </select>
             {issue("activity_type")}
           </div>
@@ -157,11 +115,7 @@ export function ActivityForm({
               Work category *
             </label>
             <select id="activity-category" className="select select-bordered w-full" {...input("work_category")}>
-              {workCategories.map(category => (
-                <option key={category} value={category}>
-                  {workCategoryLabels[category]}
-                </option>
-              ))}
+              {select(workCategories, workCategoryLabels)}
             </select>
             {issue("work_category")}
           </div>
@@ -170,43 +124,21 @@ export function ActivityForm({
               Status *
             </label>
             <select id="activity-status" className="select select-bordered w-full" {...input("status")}>
-              {activityStatuses.map(status => (
-                <option key={status} value={status}>
-                  {activityStatusLabels[status]}
-                </option>
-              ))}
+              {select(activityStatuses, activityStatusLabels)}
             </select>
             {issue("status")}
           </div>
-          <div>
-            <label htmlFor="activity-owner" className="mb-2 block text-sm font-medium">
-              Owner *
-            </label>
-            {manager ? (
-              <select id="activity-owner" className="select select-bordered w-full" {...input("owner_id")}>
-                <option value="">Choose…</option>
-                {options.owners
-                  .filter(row => row.active || row.id === defaults.owner_id)
-                  .map(row => (
-                    <option key={row.id} value={row.id}>
-                      {row.display_name}
-                      {!row.active && " (inactive)"}
-                    </option>
-                  ))}
-              </select>
-            ) : (
-              <>
-                <input type="hidden" {...register("owner_id")} />
-                <input
-                  id="activity-owner"
-                  readOnly
-                  className="input input-bordered w-full bg-base-200"
-                  value={options.owners.find(row => row.id === defaults.owner_id)?.display_name ?? "Current owner"}
-                />
-              </>
-            )}
-            {issue("owner_id")}
-          </div>
+          <OwnerField
+            id="activity-owner"
+            label="Owner *"
+            manager={manager}
+            owners={options.owners}
+            ownerId={defaults.owner_id}
+            placeholderName="Current owner"
+            selectProps={input("owner_id")}
+            hiddenProps={register("owner_id")}
+            error={issue("owner_id")}
+          />
         </div>
         <div>
           <label htmlFor="activity-notes" className="mb-2 block text-sm font-medium">
@@ -276,6 +208,7 @@ export function ActivityForm({
             aria-invalid={!!errors.occurred_at}
             onChange={event => {
               setTime(event.target.value);
+              // An unparseable entry becomes "invalid" so validation reports it rather than silently clearing it.
               setValue(
                 "occurred_at",
                 event.target.value ? fromDhakaDateTimeInput(event.target.value) || "invalid" : "",
@@ -285,131 +218,30 @@ export function ActivityForm({
           />
           {issue("occurred_at")}
         </div>
-        <section className="space-y-5 rounded-lg border border-base-300 p-5">
-          <h2 className="font-semibold">Related CRM records (optional)</h2>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <ActivityMeetingPicker
-                selected={meeting}
-                onSelect={chooseMeeting}
-                disabled={isSubmitting}
-                onBusyChange={setLoadingLink}
-              />
-              {issue("meeting_id")}
-            </div>
-            <div>
-              <OpportunityPicker
-                selected={opportunity}
-                onSelect={chooseOpportunity}
-                disabled={isSubmitting}
-                onBusyChange={setLoadingLink}
-                optionsPath="/api/activities/options"
-              />
-              {issue("opportunity_id")}
-            </div>
-            <div>
-              {effectiveOpportunity || meeting ? (
-                <Controller
-                  name="contact_id"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      <label htmlFor="activity-contact" className="mb-2 block text-sm font-medium">
-                        Contact (optional)
-                      </label>
-                      <select
-                        id="activity-contact"
-                        className="select select-bordered w-full"
-                        value={field.value ?? ""}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        onChange={event => chooseContact(choices.find(row => row.id === event.target.value) ?? null)}
-                      >
-                        <option value="">Use related record context / no direct link</option>
-                        {choices.map(row => (
-                          <option key={row.id} value={row.id}>
-                            {row.name}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  )}
-                />
-              ) : (
-                <Controller
-                  name="contact_id"
-                  control={control}
-                  render={({ field }) => (
-                    <ContactPicker<ActivityContact>
-                      value={field.value ?? ""}
-                      selected={contact}
-                      onSelect={chooseContact}
-                      label="Contact (optional)"
-                      disabled={isSubmitting}
-                      emptyMessage="No matching contacts. You can keep this activity independent."
-                    />
-                  )}
-                />
-              )}
-              {issue("contact_id")}
-            </div>
-          </div>
-          {notice && (
-            <p role="status" className="text-sm text-base-content/65">
-              {notice}
-            </p>
-          )}
-          {(contact || effectiveOpportunity || meeting?.contact) && (
-            <MeetingContactInformation
-              contact={contact ?? meeting?.contact ?? null}
-              opportunity={effectiveOpportunity}
-            />
-          )}
-          {meeting && (
-            <p className="text-xs text-base-content/60">
-              Meeting: {meeting.title}. Direct links, when supplied, must remain compatible with the meeting and
-              opportunity.
-            </p>
-          )}
-        </section>
-        <div>
-          <label htmlFor="activity-links" className="mb-2 block text-sm font-medium">
-            Document URLs (optional, one per line)
-          </label>
-          <Controller
-            name="drive_urls"
-            control={control}
-            render={({ field }) => (
-              <textarea
-                id="activity-links"
-                className="textarea textarea-bordered min-h-24 w-full"
-                value={field.value?.join("\n") ?? ""}
-                onChange={event => field.onChange(event.target.value.split("\n"))}
-                onBlur={field.onBlur}
-                ref={field.ref}
-                placeholder="https://drive.google.com/…"
-              />
-            )}
-          />
-          {issue("drive_urls")}
-          <p className="mt-1 text-xs text-base-content/60">
-            Up to 20 HTTP(S) references; Google Drive links can also be pasted into Notes. No direct uploads.
-          </p>
-        </div>
+        <ActivityLinksSection
+          links={links}
+          control={control}
+          issue={issue}
+          disabled={isSubmitting}
+          onBusyChange={setLoadingLink}
+        />
+        <DocumentUrlsField
+          control={control}
+          name="drive_urls"
+          id="activity-links"
+          label="Document URLs (optional, one per line)"
+          className="textarea textarea-bordered min-h-24 w-full"
+          hint="Up to 20 HTTP(S) references; Google Drive links can also be pasted into Notes. No direct uploads."
+          error={issue("drive_urls")}
+        />
       </fieldset>
-      {error && (
-        <p role="alert" className="rounded-lg bg-error/10 p-4 text-error">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-3 border-t border-base-300 pt-5">
-        <button className="btn btn-primary" disabled={isSubmitting || loadingLink}>
-          {isSubmitting ? "Saving…" : activityId ? "Save changes" : "Create activity"}
-        </button>
-        <Link href={activityId ? `/activities/${activityId}` : "/activities"} className="btn btn-ghost">
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        error={error}
+        busy={isSubmitting}
+        disabled={isSubmitting || loadingLink}
+        submitLabel={activityId ? "Save changes" : "Create activity"}
+        cancelHref={activityId ? `/activities/${activityId}` : "/activities"}
+      />
     </form>
   );
 }

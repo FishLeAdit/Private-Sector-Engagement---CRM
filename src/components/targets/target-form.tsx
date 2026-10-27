@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import type { FinanceOptions } from "@/features/finance/types";
 import { targetSchema, type TargetInput } from "@/features/targets/schemas";
 import { cents, decimal, percentAmount } from "@/lib/money";
+import { sendJson } from "@/lib/send-json";
+import { AllocationRow } from "./allocation-row";
+
+// Annual target → four quarter baselines → employee × vertical cells. Drafts may be incomplete;
+// the plan's ID doubles as the request ID so a retried save updates the same draft.
 export function TargetForm({
   initial,
   options,
@@ -54,14 +59,12 @@ export function TargetForm({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(initial ? `/api/targets/${id.current}` : "/api/targets", {
-        method: initial ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(parsed.data),
-      });
-      const result = await response.json();
-      if (!response.ok) {
+      const { ok, result } = await sendJson(
+        initial ? `/api/targets/${id.current}` : "/api/targets",
+        initial ? "PATCH" : "POST",
+        parsed.data,
+      );
+      if (!ok) {
         setError(
           `${result.error || "Draft could not be saved."} ${Object.values(result.fields ?? {})
             .flat()
@@ -163,108 +166,32 @@ export function TargetForm({
           )}
           <div className="space-y-4">
             {draft.allocations.map((a, index) => (
-              <div key={index} className="grid gap-3 rounded-lg bg-base-200 p-4 sm:grid-cols-3 lg:grid-cols-6">
-                <label className="text-xs">
-                  Quarter
-                  <select
-                    aria-label={`Allocation ${index + 1} quarter`}
-                    value={a.quarter}
-                    className="select select-bordered mt-1 w-full"
-                    onChange={e => allocation(index, { quarter: Number(e.target.value) })}
-                  >
-                    {[1, 2, 3, 4].map(q => (
-                      <option key={q} value={q}>
-                        Q{q}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs">
-                  Employee
-                  <select
-                    aria-label={`Allocation ${index + 1} employee`}
-                    value={a.employee_id}
-                    className="select select-bordered mt-1 w-full"
-                    onChange={e => allocation(index, { employee_id: e.target.value })}
-                  >
-                    <option value="">Choose…</option>
-                    {options.employees.map(e => (
-                      <option key={e.id} value={e.id} disabled={!e.active}>
-                        {e.display_name}
-                        {!e.active ? " (inactive)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs">
-                  Vertical
-                  <select
-                    aria-label={`Allocation ${index + 1} vertical`}
-                    value={a.vertical_id}
-                    className="select select-bordered mt-1 w-full"
-                    onChange={e => allocation(index, { vertical_id: e.target.value })}
-                  >
-                    <option value="">Choose…</option>
-                    {options.verticals.map(v => (
-                      <option key={v.id} value={v.id} disabled={!v.active}>
-                        {v.name}
-                        {v.is_provisional ? " (provisional)" : ""}
-                        {!v.active ? " (inactive)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs">
-                  % of quarter
-                  <input
-                    aria-label={`Allocation ${index + 1} percentage`}
-                    inputMode="decimal"
-                    className="input input-bordered mt-1 w-full"
-                    value={percentages[index] ?? ""}
-                    onChange={e => setPercentages(p => ({ ...p, [index]: e.target.value }))}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs mt-1"
-                    onClick={() => {
-                      try {
-                        allocation(index, {
-                          amount: percentAmount(
-                            draft.quarters.find(q => q.quarter === a.quarter)!.amount,
-                            percentages[index] ?? "",
-                          ),
-                        });
-                        setError("");
-                      } catch (error) {
-                        setError((error as Error).message);
-                      }
-                    }}
-                  >
-                    Apply percentage
-                  </button>
-                </label>
-                <label className="text-xs">
-                  Amount
-                  <input
-                    aria-label={`Allocation ${index + 1} amount`}
-                    inputMode="decimal"
-                    className="input input-bordered mt-1 w-full"
-                    value={a.amount}
-                    onChange={e => allocation(index, { amount: e.target.value })}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm self-center"
-                  aria-label={`Remove allocation ${index + 1}`}
-                  onClick={() => {
-                    setDraft(d => ({ ...d, allocations: d.allocations.filter((_, i) => i !== index) }));
-                    setPercentages({});
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
+              <AllocationRow
+                key={index}
+                index={index}
+                allocation={a}
+                options={options}
+                percentage={percentages[index] ?? ""}
+                onChange={values => allocation(index, values)}
+                onPercentageChange={value => setPercentages(p => ({ ...p, [index]: value }))}
+                onApplyPercentage={() => {
+                  try {
+                    allocation(index, {
+                      amount: percentAmount(
+                        draft.quarters.find(q => q.quarter === a.quarter)!.amount,
+                        percentages[index] ?? "",
+                      ),
+                    });
+                    setError("");
+                  } catch (error) {
+                    setError((error as Error).message);
+                  }
+                }}
+                onRemove={() => {
+                  setDraft(d => ({ ...d, allocations: d.allocations.filter((_, i) => i !== index) }));
+                  setPercentages({});
+                }}
+              />
             ))}
           </div>
           <button

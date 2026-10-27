@@ -1,15 +1,17 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { emptyMeeting, meetingSchema, type MeetingFormInput, type MeetingInput } from "@/features/meetings/schemas";
 import type { MeetingContact, MeetingOpportunity, MeetingOptions } from "@/features/meetings/types";
 import { fromDhakaDateTimeInput, toDhakaDateTimeInput } from "@/lib/dates";
-import { ContactPicker } from "@/components/opportunities/contact-picker";
+import { sendJson } from "@/lib/send-json";
+import { applyFieldErrors, FieldError, FormActions, OwnerField } from "@/components/ui/form";
 import { OpportunityPicker } from "./opportunity-picker";
 import { MeetingContactInformation } from "./contact-information";
+import { belongsToOpportunity } from "./contact-choices";
+import { MeetingContactField } from "./meeting-contact-field";
 
 export function MeetingForm({
   initial,
@@ -44,17 +46,14 @@ export function MeetingForm({
     defaultValues: defaults,
     mode: "onBlur",
   });
-  const [contact, setContact] = useState<MeetingContact | null>(options.contact),
-    [opportunity, setOpportunity] = useState<MeetingOpportunity | null>(options.opportunity);
-  const [time, setTime] = useState(toDhakaDateTimeInput(defaults.scheduled_at)),
-    [error, setSaveError] = useState(""),
-    [notice, setNotice] = useState("");
+  const [contact, setContact] = useState<MeetingContact | null>(options.contact);
+  const [opportunity, setOpportunity] = useState<MeetingOpportunity | null>(options.opportunity);
+  const [time, setTime] = useState(toDhakaDateTimeInput(defaults.scheduled_at));
+  const [error, setSaveError] = useState("");
+  const [notice, setNotice] = useState("");
+  // True while the opportunity picker loads the chosen deal's contacts; saving waits for it.
   const [selectingOpportunity, setSelectingOpportunity] = useState(false);
-  const choices = opportunity
-    ? [opportunity.contact, opportunity.primary_contact, opportunity.secondary_contact]
-        .filter((row): row is MeetingContact => !!row)
-        .filter((row, index, rows) => rows.findIndex(other => other.id === row.id) === index)
-    : [];
+
   function chooseContact(row: MeetingContact | null) {
     setContact(row);
     setValue("contact_id", row?.id ?? "", { shouldValidate: true, shouldDirty: true });
@@ -63,7 +62,7 @@ export function MeetingForm({
     setOpportunity(row);
     setValue("opportunity_id", row?.id ?? "", { shouldValidate: true, shouldDirty: true });
     setNotice("");
-    if (row && contact && ![row.contact_id, row.primary_contact_id, row.secondary_contact_id].includes(contact.id)) {
+    if (row && contact && !belongsToOpportunity(row, contact.id)) {
       chooseContact(null);
       setNotice(
         "The previous contact was cleared because it is not linked to this opportunity. You can use the opportunity’s contact details or choose one of its contact people.",
@@ -74,16 +73,13 @@ export function MeetingForm({
     if (selectingOpportunity) return;
     setSaveError("");
     try {
-      const response = await fetch(meetingId ? `/api/meetings/${meetingId}` : "/api/meetings", {
-        method: meetingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        for (const [field, messages] of Object.entries(result.fields ?? {}) as [keyof MeetingInput, string[]][])
-          if (field in emptyMeeting) setError(field, { type: "server", message: messages[0] });
+      const { ok, result } = await sendJson(
+        meetingId ? `/api/meetings/${meetingId}` : "/api/meetings",
+        meetingId ? "PATCH" : "POST",
+        data,
+      );
+      if (!ok) {
+        applyFieldErrors(result.fields, emptyMeeting, setError);
         setSaveError(result.error || "Meeting could not be saved.");
         return;
       }
@@ -93,17 +89,13 @@ export function MeetingForm({
       setSaveError("Meeting could not be saved. Check your connection and try again.");
     }
   }
-  const issue = (field: keyof MeetingInput) =>
-    errors[field] ? (
-      <p id={`meeting-${field}-error`} role="alert" className="mt-1 text-sm text-error">
-        {errors[field]?.message}
-      </p>
-    ) : null;
+  const issue = (field: keyof MeetingInput) => <FieldError id={`meeting-${field}-error`} error={errors[field]} />;
   const input = (field: keyof MeetingInput) => ({
     ...register(field),
     "aria-invalid": !!errors[field],
     "aria-describedby": errors[field] ? `meeting-${field}-error` : undefined,
   });
+
   return (
     <form onSubmit={handleSubmit(save)} className="max-w-4xl space-y-7" noValidate>
       <p className="rounded-lg bg-info/10 p-4 text-sm">
@@ -120,35 +112,17 @@ export function MeetingForm({
             <input id="meeting-title" className="input input-bordered w-full" maxLength={200} {...input("title")} />
             {issue("title")}
           </div>
-          <div>
-            <label htmlFor="meeting-owner" className="mb-2 block text-sm font-medium">
-              Owner *
-            </label>
-            {manager ? (
-              <select id="meeting-owner" className="select select-bordered w-full" {...input("owner_id")}>
-                <option value="">Choose…</option>
-                {options.owners
-                  .filter(row => row.active || row.id === defaults.owner_id)
-                  .map(row => (
-                    <option key={row.id} value={row.id}>
-                      {row.display_name}
-                      {!row.active && " (inactive)"}
-                    </option>
-                  ))}
-              </select>
-            ) : (
-              <>
-                <input type="hidden" {...register("owner_id")} />
-                <input
-                  id="meeting-owner"
-                  readOnly
-                  className="input input-bordered w-full bg-base-200"
-                  value={options.owners.find(row => row.id === defaults.owner_id)?.display_name ?? "Current owner"}
-                />
-              </>
-            )}
-            {issue("owner_id")}
-          </div>
+          <OwnerField
+            id="meeting-owner"
+            label="Owner *"
+            manager={manager}
+            owners={options.owners}
+            ownerId={defaults.owner_id}
+            placeholderName="Current owner"
+            selectProps={input("owner_id")}
+            hiddenProps={register("owner_id")}
+            error={issue("owner_id")}
+          />
           <div>
             <OpportunityPicker
               selected={opportunity}
@@ -158,58 +132,14 @@ export function MeetingForm({
             />
             {issue("opportunity_id")}
           </div>
-          <div>
-            {opportunity ? (
-              <Controller
-                name="contact_id"
-                control={control}
-                render={({ field }) => (
-                  <>
-                    <label htmlFor="meeting-contact" className="mb-2 block text-sm font-medium">
-                      Contact person / organization
-                    </label>
-                    <select
-                      id="meeting-contact"
-                      className="select select-bordered w-full"
-                      value={field.value ?? ""}
-                      onChange={event => chooseContact(choices.find(row => row.id === event.target.value) ?? null)}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
-                    >
-                      <option value="">Use opportunity contact details</option>
-                      {choices.map(row => (
-                        <option key={row.id} value={row.id}>
-                          {row.name} ({row.kind})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-2 text-xs text-base-content/60">
-                      An explicit contact must be the opportunity’s party, primary or secondary contact.
-                    </p>
-                  </>
-                )}
-              />
-            ) : (
-              <Controller
-                name="contact_id"
-                control={control}
-                render={({ field }) => (
-                  <ContactPicker<MeetingContact>
-                    value={field.value ?? ""}
-                    selected={contact}
-                    onSelect={chooseContact}
-                    label="Contact person / organization"
-                    disabled={isSubmitting}
-                    emptyMessage="No contacts found. Create one in Contacts, then search again."
-                  />
-                )}
-              />
-            )}
-            {issue("contact_id")}
-            <Link href="/contacts/new" target="_blank" className="link mt-2 inline-block text-xs">
-              Create a contact in a new tab
-            </Link>
-          </div>
+          <MeetingContactField
+            control={control}
+            opportunity={opportunity}
+            contact={contact}
+            onSelect={chooseContact}
+            disabled={isSubmitting}
+            error={issue("contact_id")}
+          />
         </div>
         {notice && (
           <p role="status" className="text-sm text-base-content/70">
@@ -277,19 +207,13 @@ export function MeetingForm({
           {issue("description")}
         </div>
       </fieldset>
-      {error && (
-        <p role="alert" className="rounded-lg bg-error/10 p-4 text-error">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-3 border-t border-base-300 pt-5">
-        <button className="btn btn-primary" disabled={isSubmitting || selectingOpportunity}>
-          {isSubmitting ? "Saving…" : meetingId ? "Save changes" : "Create meeting"}
-        </button>
-        <Link href={meetingId ? `/meetings/${meetingId}` : "/meetings"} className="btn btn-ghost">
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        error={error}
+        busy={isSubmitting}
+        disabled={isSubmitting || selectingOpportunity}
+        submitLabel={meetingId ? "Save changes" : "Create meeting"}
+        cancelHref={meetingId ? `/meetings/${meetingId}` : "/meetings"}
+      />
     </form>
   );
 }
