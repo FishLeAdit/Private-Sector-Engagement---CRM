@@ -70,7 +70,7 @@ E2E_RESTRICTED_EMAIL=your-restricted-demo-user-email
 E2E_RESTRICTED_PASSWORD=your-restricted-demo-user-password
 ```
 
-Optional `E2E_BASE_URL` targets an already running app instead of starting a local server. Keep demo values private; they are not committed. Live test traces/screenshots are disabled. The contact write workflow also requires `E2E_CONTACT_WRITES=1`; it creates two fictional records, tests blocked company deletion while linked, and deletes its own person/company records on success. It requires migration 0004; interrupted/failed runs can leave fictional records for manual review. Live testing remains explicit opt-in, and the developer has chosen manual authenticated testing. See [verification evidence](07-testing-and-limitations.md) for actual run results rather than treating optional test availability as proof of execution.
+Optional `E2E_BASE_URL` targets an already running app instead of starting a local server. Keep demo values private; they are not committed. Live test traces/screenshots are disabled. The signed-in specs in `tests/e2e/live` also require `E2E_LIVE_WRITES=1`. They create records named "QA …" (contacts, a deal, a meeting and an activity), check edits, a stage move, blocked deletes of linked parents, past-the-end list pages and the target percentage box, then delete everything they created, including after a failure or timeout. Recording a contribution, saving or approving a target plan, and changing verticals, stages or categories cannot be undone, so those requests are blocked in the browser. Live testing remains explicit opt-in. See [verification evidence](07-testing-and-limitations.md) for actual run results rather than treating optional test availability as proof of execution.
 
 ## Try Contacts in the browser
 

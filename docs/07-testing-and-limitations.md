@@ -2,6 +2,27 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Signed-in browser specs on 28 October 2026
+
+The signed-in acceptance checks are now opt-in Playwright specs in `tests/e2e/live`, run with `E2E_LIVE_WRITES=1` and the demo credentials. They run against the hosted demo project and use the shared `tests/e2e/helpers/live.ts`:
+
+- Every live test blocks, in the browser, the hosted writes that cannot be undone: recording a contribution, creating, saving or approving a target plan, and adding verticals, stages or categories. The target spec checks that its save attempt was blocked.
+- Records are named "QA …" and registered for cleanup. A fixture with its own time budget deletes them after the test, including after a failure or timeout. The first run showed why: the workflow timed out against a compiling dev server, and cleanup inside the same budget could not run. That run's four QA records were deleted by hand, and the fixture was checked to tear down after a timed-out test.
+
+| Spec | Covers |
+|---|---|
+| `live/workflow.spec.ts` | Contact → deal → meeting (linked to the deal) → activity (linked to the meeting); edits of all four that survive a reload; a stage move shown in the deal's audit history; deletes of the contact, deal and meeting blocked while a linked record exists; deletion in reverse order, each confirmed by a 404 |
+| `live/contacts.spec.ts` | Company and person linked by workplace, edit, search, duplicate warning and rejection, blocked company delete, deletion. It replaces the earlier `E2E_CONTACT_WRITES` case in `contacts.spec.ts` |
+| `live/lists.spec.ts` | A page past the end on all six lists redirects to the last page with its filter kept and no error panel (read-only) |
+| `live/targets.spec.ts` | On a new, unsaved draft: percentage → amount, amount → percentage, the quarter remainder, an invalid percentage flagged without changing the amount, and the save request blocked |
+
+| Check | Result |
+|---|---|
+| Full Playwright suite with `E2E_LIVE_WRITES=1`, against the development server | 24 passed, 1 skipped (no restricted account), 3.9 min; the workflow spec alone takes about 2.2 min |
+| Default suite (credentials in `.env.local`, live specs off) | 20 passed, 5 skipped |
+| Hosted demo after the runs | No contact, deal, meeting or activity named "QA …" remains (read-only API search) |
+| `npm run lint`, `npm run typecheck`, `npm test` (637 across 49 files), `npm run build`, `validate:seed`, `db:types:check` | Passed; no application code changed |
+
 ## Display fixes and requirement mapping on 28 October 2026
 
 Three display fixes, plus a documentation pass that maps the assessment's open dashboard items:
