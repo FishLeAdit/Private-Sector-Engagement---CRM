@@ -1,0 +1,12 @@
+flowchart TD
+  Request["Page or API request"] --> Session{"Signed in?"}
+  Session -- "No" --> Login["Sign-in page, or JSON 401"]
+  Session -- "Yes" --> Profile{"Active PSE profile?"}
+  Profile -- "No" --> Denied["Access denied page, or JSON 403"]
+  Profile -- "Yes" --> Role{"Role required?"}
+  Role -- "Missing" --> Forbidden["403 before anything is read or written"]
+  Role -- "Present or not needed" --> Service["Service validates the input and business rules"]
+  Service --> Query["Query with the caller's own Supabase client"]
+  Query --> Check{"RLS and triggers agree?"}
+  Check -- "No" --> Refused["Database refuses the change"]
+  Check -- "Yes" --> Saved["Saved, with an audit entry"]

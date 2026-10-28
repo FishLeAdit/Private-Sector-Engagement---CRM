@@ -1,0 +1,46 @@
+erDiagram
+  PROFILES ||--o{ CONTACTS : creates
+  CONTACTS o|--o{ CONTACTS : company_for
+  CONTACTS ||--o{ OPPORTUNITIES : party
+  CONTACTS o|--o{ OPPORTUNITIES : contact_person
+  PROFILES ||--o{ OPPORTUNITIES : owns
+  PIPELINE_STAGES ||--o{ OPPORTUNITIES : stage
+  CONTRIBUTION_CATEGORIES ||--o{ OPPORTUNITIES : category
+  CONTACTS o|--o{ MEETINGS : links
+  OPPORTUNITIES o|--o{ MEETINGS : links
+  CONTACTS o|--o{ ACTIVITIES : links
+  OPPORTUNITIES o|--o{ ACTIVITIES : links
+  MEETINGS o|--o{ ACTIVITIES : follow_up
+  PROFILES ||--o{ ACTIVITIES : owns
+
+  PROFILES {
+    uuid id PK
+    text role
+    text department
+    boolean active
+  }
+  CONTACTS {
+    uuid id PK
+    text kind
+    uuid company_id FK
+    text email_normalized UK
+    text phone_normalized UK
+  }
+  OPPORTUNITIES {
+    uuid id PK
+    uuid contact_id FK
+    uuid primary_contact_id FK
+    numeric expected_amount
+    text currency
+  }
+  MEETINGS {
+    uuid id PK
+    timestamptz scheduled_at
+    text status
+  }
+  ACTIVITIES {
+    uuid id PK
+    text activity_type
+    text status
+    text related_organization_name
+  }

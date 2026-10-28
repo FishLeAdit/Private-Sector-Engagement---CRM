@@ -1,0 +1,38 @@
+erDiagram
+  OPPORTUNITIES ||--o{ RECOGNIZED_CONTRIBUTIONS : realizes
+  RECOGNIZED_CONTRIBUTIONS o|--o{ RECOGNIZED_CONTRIBUTIONS : corrected_by
+  PROFILES ||--o{ RECOGNIZED_CONTRIBUTIONS : credited_employee
+  TARGET_VERTICALS o|--o{ RECOGNIZED_CONTRIBUTIONS : vertical
+  PROFILES ||--o{ TARGET_PLANS : creates_or_approves
+  TARGET_PLANS ||--o{ TARGET_QUARTERS : quarter_baselines
+  TARGET_QUARTERS ||--o{ TARGET_ALLOCATIONS : cells
+  PROFILES ||--o{ TARGET_ALLOCATIONS : member
+  TARGET_VERTICALS ||--o{ TARGET_ALLOCATIONS : vertical
+
+  RECOGNIZED_CONTRIBUTIONS {
+    uuid id PK
+    uuid opportunity_id FK
+    uuid employee_id FK
+    numeric amount
+    timestamptz recognized_at
+    uuid corrects_contribution_id FK
+  }
+  TARGET_PLANS {
+    uuid id PK
+    integer year
+    text currency
+    numeric annual_amount
+    text status
+  }
+  TARGET_QUARTERS {
+    uuid plan_id PK
+    integer quarter PK
+    numeric amount
+  }
+  TARGET_ALLOCATIONS {
+    uuid plan_id FK
+    integer quarter FK
+    uuid employee_id FK
+    uuid vertical_id FK
+    numeric amount
+  }

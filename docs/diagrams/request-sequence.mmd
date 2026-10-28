@@ -1,0 +1,23 @@
+sequenceDiagram
+  actor U as PSE staff member
+  participant A as Next.js on Vercel
+  participant S as Feature service
+  participant D as Supabase PostgreSQL (RLS)
+  U->>A: Add a company and its contact person
+  A->>S: create contact
+  S->>D: insert as the caller
+  D-->>S: saved (a duplicate email or phone is refused)
+  U->>A: Create a deal for the company
+  A->>S: create opportunity
+  S->>D: insert, and triggers check the party, contact person, stage and category
+  U->>A: Schedule a meeting, then log a follow-up activity
+  A->>S: create meeting and activity
+  S->>D: insert, and linked people must belong to the deal
+  U->>A: Review and record a received contribution
+  A->>S: record receipt
+  S->>D: record_contribution(): open or won deal, own attribution, safe retry
+  A->>A: expire report cache tags
+  U->>A: Open the dashboard
+  A->>S: report for the period
+  S->>D: pse_report(): one SQL snapshot, cached 30 s per user and session
+  D-->>U: actual against target, pipeline, workload

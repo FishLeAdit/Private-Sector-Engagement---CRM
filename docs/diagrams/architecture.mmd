@@ -1,39 +1,24 @@
-flowchart LR
-  Staff[PSE staff or authorized manager]
-  Browser[Browser]
-  subgraph Application[Next.js application on proposed Vercel hosting]
-    Pages[Pages and reusable components]
-    Login[Login and logout server actions]
-    Proxy[Session refresh proxy]
-    Services[Shared Auth Contacts Opportunities Meetings Activities Finance Reports services and authorization]
-    Future[Signed-in acceptance and deployment pending]
-    Client[Caller-scoped Supabase client]
+flowchart TB
+  Staff["PSE staff, managers and the superadmin"] --> Browser["Browser"]
+  subgraph Vercel["Vercel · Next.js 16"]
+    Proxy["proxy.ts<br/>session refresh, sign-in redirect"]
+    Pages["Pages<br/>server components and client forms"]
+    Routes["API routes<br/>same-origin writes, private no-store"]
+    Services["Feature services<br/>access, roles, Zod validation, business rules"]
+    Cache[("Report cache<br/>30 s, per user, role and session")]
+    Admin["Auth admin client<br/>superadmin sign-in changes only"]
   end
-  subgraph Supabase[Configured Supabase project - live verification pending]
-    Auth[Auth identity and verified session]
-    subgraph Database[PostgreSQL database foundation]
-      RLS[Table grants and active PSE row policies]
-      Data[Contacts opportunities meetings activities contributions]
-      Targets[Annual plan quarterly baselines allocation grid]
-      Guards[Constraints approval locks and audit triggers]
-      Audit[Append-only audit history]
-    end
+  subgraph Supabase["Supabase"]
+    Auth["Auth<br/>email and password sessions"]
+    RLS["Grants and row-level security<br/>active PSE profiles only"]
+    RPC["SQL functions<br/>reports, targets, contributions, accounts, import"]
+    Tables[("13 tables<br/>constraints, link triggers, append-only audit")]
   end
-  Local[Isolated PGlite PostgreSQL verification]
-  Migrations[Versioned SQL migrations]
-  Staff --> Browser --> Pages
   Browser --> Proxy --> Pages
-  Pages --> Login --> Auth
-  Proxy --> Auth
+  Browser --> Routes
   Pages --> Services
-  Pages -. later checkpoints .-> Future
-  Auth -. caller identity .-> Client
-  Services --> Client
-  Client --> RLS
-  RLS --> Data
-  RLS --> Targets
-  Data --> Guards
-  Targets --> Guards
-  Guards --> Audit
-  Migrations --> Database
-  Migrations --> Local
+  Routes --> Services
+  Services -- "caller-scoped client" --> RLS --> Tables
+  Services --> Cache -- "miss: the caller's own token" --> RPC --> Tables
+  Services -- "superadmin only" --> Admin --> Auth
+  Proxy --> Auth

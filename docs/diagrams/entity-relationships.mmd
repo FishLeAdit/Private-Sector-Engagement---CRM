@@ -15,6 +15,7 @@ erDiagram
   MEETINGS o|--o{ ACTIVITIES : optional_follow_up
   PROFILES ||--o{ ACTIVITIES : owns
   OPPORTUNITIES ||--o{ RECOGNIZED_CONTRIBUTIONS : realizes
+  RECOGNIZED_CONTRIBUTIONS o|--o{ RECOGNIZED_CONTRIBUTIONS : corrected_by
   PROFILES ||--o{ RECOGNIZED_CONTRIBUTIONS : attributed_employee
   TARGET_VERTICALS o|--o{ RECOGNIZED_CONTRIBUTIONS : optional_attribution
   PROFILES ||--o{ TARGET_PLANS : creates_or_approves
@@ -24,12 +25,27 @@ erDiagram
   TARGET_VERTICALS ||--o{ TARGET_ALLOCATIONS : allocated_vertical
   PROFILES o|--o{ AUDIT_LOGS : actor
 
+  PROFILES {
+    uuid id PK,FK
+    text display_name
+    text department
+    text role
+    boolean active
+  }
   CONTACTS {
     uuid id PK
     text kind
     uuid company_id FK
     text email_normalized UK
     text phone_normalized UK
+    text odoo_id UK
+  }
+  MEETINGS {
+    uuid id PK
+    uuid contact_id FK
+    uuid opportunity_id FK
+    timestamptz scheduled_at
+    text status
   }
   OPPORTUNITIES {
     uuid id PK
@@ -39,6 +55,7 @@ erDiagram
     numeric expected_amount
     numeric operational_budget
     text currency
+    text odoo_id UK
   }
   ACTIVITIES {
     uuid id PK
@@ -48,6 +65,7 @@ erDiagram
     text related_person_name
     text related_organization_name
     text remaining_work
+    text odoo_id UK
   }
   RECOGNIZED_CONTRIBUTIONS {
     uuid id PK
@@ -57,6 +75,8 @@ erDiagram
     numeric amount
     text currency
     timestamptz recognized_at
+    uuid corrects_contribution_id FK
+    text correction_reason
   }
   TARGET_PLANS {
     uuid id PK

@@ -285,7 +285,9 @@ Select your name at the foot of the navigation rail, then **Settings → Manage 
 
 Creating accounts, setting passwords and deleting sign-ins need `SUPABASE_SERVICE_ROLE_KEY` on the server (in `.env.local` locally, and in Vercel's environment variables for the deployment). Without it, the page still edits and restricts profiles.
 
-The hosted demo's named staff come from `npm.cmd run seed:accounts` (preview; add `-- --apply` to write, and `-- --superadmin=<email>` to make one existing account the superadmin). It renamed the generic "Demo Manager" and "Demo Member" profiles to Farzana Rahman (manager) and Nusrat Jahan (staff), keeping their sign-ins and records, and created Tanvir Hasan (manager), Arif Chowdhury and Sadia Islam (staff) with random passwords that were never shown. Set a password on an account's page before signing in as it.
+The hosted demo's named staff come from `npm.cmd run seed:accounts` (preview; add `-- --apply` to write, and `-- --superadmin=<email>` to make one existing account the superadmin). It renamed the generic "Demo Manager" and "Demo Member" profiles to named staff, keeping their sign-ins and records, and created the rest with random passwords that were never shown. The hosted demo's team is now JAC and Tanvir Hasan (managers) and Nusrat Jahan, Arif Chowdhury and Sadia Islam (staff), with the superadmin "Jawad Adit Chowdhury". Set a password on an account's page before signing in as it.
+
+`npm.cmd run seed:team` (preview; `-- --apply` writes) then adds fictional records owned and created by those five people: 3 companies, 6 people, 8 deals across the stages, 6 meetings and 12 activities, dated around the run day so they show in the current period. It inserts only missing rows with fixed IDs and records no contributions. Applied to the hosted demo on 28 October 2026.
 
 ## Try Phase 11: Dashboard and Reports
 
