@@ -27,7 +27,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   if (page > pages) redirect(link(pages));
   return (
     <>
-      <ListHeader title="Targets" description="Fixed annual and quarterly targets with employee/vertical allocation.">
+      <ListHeader
+        code={`SYS.TGT // ${count} ${count === 1 ? "RECORD" : "RECORDS"}`}
+        title="Targets"
+        description="Fixed annual and quarterly targets with employee/vertical allocation."
+      >
         {isPseManager(access.profile) && (
           <div className="flex gap-3">
             <Link href="/targets/verticals" className="btn btn-outline">
@@ -39,7 +43,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
           </div>
         )}
       </ListHeader>
-      <div className="overflow-x-auto rounded-xl border border-base-300">
+      <div className="overflow-x-auto panel">
         <table className="table">
           <thead>
             <tr>

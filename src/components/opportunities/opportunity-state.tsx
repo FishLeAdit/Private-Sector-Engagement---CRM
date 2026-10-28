@@ -13,7 +13,7 @@ export function OpportunityProblem({ message }: { message: string }) {
 
 export function PipelineSetupNeeded() {
   return (
-    <section className="space-y-3 rounded-lg border border-warning bg-warning/10 p-6">
+    <section className="space-y-3 border-l-2 border-warning bg-warning/5 p-6">
       <h2 className="text-xl font-semibold">Configure your pipeline first</h2>
       <p>
         A manager needs to add at least one active stage and contribution category. The final pipeline labels still need

@@ -5,6 +5,7 @@ import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { TargetForm } from "@/components/targets/target-form";
 import { isPseManager } from "@/lib/auth/roles";
+import { SysCode } from "@/components/ui/hud";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service, access } = await targetPage();
   if (!isPseManager(access.profile))
@@ -22,7 +23,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Link href={`/targets/${id}`} className="link text-sm">
         ← Target plan
       </Link>
-      <h1 className="mb-6 mt-4 text-3xl font-bold">Edit {plan.year} target draft</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.TGT // EDIT"}</SysCode>
+      <h1 className="mb-6 text-3xl font-bold">Edit {plan.year} target draft</h1>
       <TargetForm
         year={plan.year}
         options={options}

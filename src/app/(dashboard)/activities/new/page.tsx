@@ -4,6 +4,7 @@ import { activityOptionsSchema } from "@/features/activities/schemas";
 import { isPseManager } from "@/lib/auth/roles";
 import { ActivityForm } from "@/components/activities/activity-form";
 import { ActivityProblem } from "@/components/activities/activity-state";
+import { SysCode } from "@/components/ui/hud";
 export default async function NewActivityPage({
   searchParams,
 }: {
@@ -19,7 +20,8 @@ export default async function NewActivityPage({
       <Link href="/activities" className="link text-sm">
         ← Activities
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">New activity</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.ACT // NEW"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">New activity</h1>
       <ActivityForm options={result.data} manager={isPseManager(access.profile)} userId={access.userId} />
     </>
   );

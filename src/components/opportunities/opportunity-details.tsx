@@ -17,7 +17,7 @@ export function OpportunitySummary({
   stages: Stage[];
 }) {
   return (
-    <section className="space-y-5 rounded-xl border border-base-300 p-6">
+    <section className="space-y-5 panel p-6">
       <h2 className="text-lg font-semibold">Financial opportunity</h2>
       <p className="text-2xl font-bold">
         {money(row.expected_amount, row.currency)} <span className="text-sm font-normal">expected</span>
@@ -77,7 +77,7 @@ function ContactInfo({ party, label }: { party: Party | null; label: string }) {
 // The party, plus primary and secondary contact people when the party is a company.
 export function OpportunityContacts({ row }: { row: OpportunityRecord }) {
   return (
-    <section className="rounded-xl border border-base-300 p-6">
+    <section className="panel p-6">
       <h2 className="mb-5 text-lg font-semibold">Contact information</h2>
       <dl className="space-y-5 text-sm">
         <ContactInfo party={row.contact} label={row.contact?.kind === "company" ? "Company" : "Individual"} />
@@ -94,7 +94,7 @@ export function OpportunityContacts({ row }: { row: OpportunityRecord }) {
 
 export function OpportunityReferences({ row }: { row: OpportunityRecord }) {
   return (
-    <section className="space-y-5 rounded-xl border border-base-300 p-6">
+    <section className="space-y-5 panel p-6">
       <h2 className="text-lg font-semibold">Context and references</h2>
       {(
         [
@@ -133,7 +133,7 @@ export function OpportunityReferences({ row }: { row: OpportunityRecord }) {
 // Actual receipts, kept apart from the expected value above.
 export function OpportunityContributions({ contributions }: { contributions: OpportunityHistory["contributions"] }) {
   return (
-    <section className="rounded-xl border border-base-300 p-6">
+    <section className="panel p-6">
       <h2 className="text-lg font-semibold">Recognized contributions</h2>
       <p className="mt-2 text-sm text-base-content/65">
         Latest 10 recorded actuals, shown separately from expected value. Use Record contribution to add a receipt while

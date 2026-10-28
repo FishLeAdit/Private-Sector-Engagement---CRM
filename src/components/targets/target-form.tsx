@@ -90,7 +90,7 @@ export function TargetForm({
   }
   return (
     <form onSubmit={save} className="space-y-6" noValidate>
-      <p className="rounded-lg bg-info/10 p-4 text-sm">
+      <p className="border-l-2 border-info bg-info/5 p-4 text-sm">
         Save an incomplete draft as you work. Approval requires reconciled annual, quarterly and employee/vertical
         amounts and permanently locks the plan.
       </p>
@@ -127,7 +127,7 @@ export function TargetForm({
             />
           </label>
         </div>
-        <section className="space-y-4 rounded-lg border border-base-300 p-5">
+        <section className="space-y-4 panel p-5">
           <h2 className="text-lg font-semibold">Quarter baselines</h2>
           <p className="text-sm">
             Distribute the annual target unevenly if needed. Annual amount left to allocate: {annualRemainder()}{" "}
@@ -154,7 +154,7 @@ export function TargetForm({
             ))}
           </div>
         </section>
-        <section className="space-y-4 rounded-lg border border-base-300 p-5">
+        <section className="space-y-4 panel p-5">
           <h2 className="text-lg font-semibold">Member and vertical allocations</h2>
           <p className="text-sm text-base-content/65">
             For each quarter, give each member their amount, then split it across verticals by percentage; a member’s

@@ -25,7 +25,7 @@ export function OpportunityBoard({
           .map(stage => {
             const deals = rows.filter(row => row.stage_id === stage.id);
             return (
-              <section key={stage.id} className="w-72 shrink-0 rounded-xl bg-base-200 p-3">
+              <section key={stage.id} className="w-72 shrink-0 panel p-3">
                 <h2 className="mb-1 font-semibold">
                   {stage.name} <span className="badge badge-sm">{deals.length}</span>
                 </h2>
@@ -36,7 +36,7 @@ export function OpportunityBoard({
                 </p>
                 <div className="space-y-3">
                   {deals.map(row => (
-                    <article key={row.id} className="space-y-3 rounded-lg border border-base-300 bg-base-100 p-4">
+                    <article key={row.id} className="space-y-3 border border-base-300 bg-base-100/60 p-4">
                       <Link className="link link-hover font-semibold" href={`/opportunities/${row.id}`}>
                         {row.deal_name}
                       </Link>

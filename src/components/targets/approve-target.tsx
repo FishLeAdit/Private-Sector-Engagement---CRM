@@ -27,7 +27,7 @@ export function ApproveTarget({ id, stamp }: { id: string; stamp: string }) {
     }
   }
   return (
-    <section className="mt-6 space-y-4 rounded-xl border border-warning p-5">
+    <section className="mt-6 space-y-4 border border-warning bg-warning/5 p-5">
       <h2 className="text-lg font-semibold">Approve and lock</h2>
       <label className="flex items-start gap-3 text-sm">
         <input

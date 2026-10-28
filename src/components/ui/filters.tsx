@@ -16,7 +16,7 @@ export function FilterForm({
   children: React.ReactNode;
 }) {
   return (
-    <form action={action} className="mb-5 rounded-xl border border-base-300 p-4">
+    <form action={action} className="mb-5 panel p-4">
       {Object.entries(hidden).map(([name, value]) =>
         value ? <input key={name} type="hidden" name={name} value={value} /> : null,
       )}

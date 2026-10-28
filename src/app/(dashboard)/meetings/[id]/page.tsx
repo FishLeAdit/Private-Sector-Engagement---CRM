@@ -10,6 +10,8 @@ import { DeleteMeetingButton } from "@/components/meetings/delete-meeting-button
 import { AuditHistory } from "@/components/ui/audit-history";
 import { SavedNotice } from "@/components/ui/page";
 import { formatDate } from "@/lib/dates";
+import { SysCode } from "@/components/ui/hud";
+import { RecordStatus } from "@/components/ui/record-status";
 const statusLabel = (value: string | null) =>
   value === "done" ? "Done" : value === "scheduled" ? "Scheduled" : value === "cancelled" ? "Cancelled" : "Unknown";
 function auditStatus(value: Json) {
@@ -41,7 +43,10 @@ export default async function MeetingDetailsPage({
       </Link>
       <div className="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm text-base-content/65">{statusLabel(row.status)}</p>
+          <SysCode className="mb-1 block">{`SYS.MTG // ${id.slice(0, 8).toUpperCase()}`}</SysCode>
+          <p className="mb-2">
+            <RecordStatus status={row.status} label={statusLabel(row.status)} />
+          </p>
           <h1 className="break-words text-3xl font-bold">{row.title}</h1>
           <p className="mt-2 text-base-content/65">{formatDate(row.scheduled_at, true)} · Asia/Dhaka</p>
         </div>

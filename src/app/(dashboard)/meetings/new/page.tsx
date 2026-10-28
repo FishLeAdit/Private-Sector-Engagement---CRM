@@ -4,6 +4,7 @@ import { meetingOptionsSchema } from "@/features/meetings/schemas";
 import { isPseManager } from "@/lib/auth/roles";
 import { MeetingForm } from "@/components/meetings/meeting-form";
 import { MeetingProblem } from "@/components/meetings/meeting-state";
+import { SysCode } from "@/components/ui/hud";
 export default async function NewMeetingPage({
   searchParams,
 }: {
@@ -19,7 +20,8 @@ export default async function NewMeetingPage({
       <Link href="/meetings" className="link text-sm">
         ← Meetings
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">New meeting</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.MTG // NEW"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">New meeting</h1>
       <MeetingForm options={result.data} manager={isPseManager(access.profile)} userId={access.userId} />
     </>
   );

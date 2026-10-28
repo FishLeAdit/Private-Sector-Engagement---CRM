@@ -6,6 +6,7 @@ import { ContactProblem } from "@/components/contacts/contact-state";
 import { ContactHistoryLists, ContactInformation } from "@/components/contacts/contact-details";
 import { DeleteContactButton } from "@/components/contacts/delete-contact-button";
 import { SavedNotice } from "@/components/ui/page";
+import { SysCode } from "@/components/ui/hud";
 
 export default async function ContactDetailsPage({
   params,
@@ -30,7 +31,8 @@ export default async function ContactDetailsPage({
       </Link>
       <div className="mb-7 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span className="badge badge-ghost mb-2 capitalize">{contact.kind}</span>
+          <SysCode className="mb-1 block">{`SYS.CON // ${contact.id.slice(0, 8).toUpperCase()}`}</SysCode>
+          <span className="badge badge-ghost badge-sm mb-2 font-mono uppercase tracking-wider">{contact.kind}</span>
           <h1 className="break-words text-3xl font-bold">{contact.name}</h1>
           {contact.designation && <p className="mt-2 text-base-content/65">{contact.designation}</p>}
         </div>
@@ -57,7 +59,7 @@ export default async function ContactDetailsPage({
       <SavedNotice saved={saved} noun="Contact" />
       <div className="grid gap-6 xl:grid-cols-[1fr_1.5fr]">
         <ContactInformation contact={contact} />
-        <section className="rounded-xl border border-base-300 bg-base-100 p-6">
+        <section className="panel p-6">
           <h2 className="mb-4 text-lg font-semibold">Relationship notes</h2>
           <p className="whitespace-pre-wrap break-words text-sm leading-7">
             {contact.notes || "No relationship notes yet."}

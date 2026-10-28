@@ -161,23 +161,23 @@ export function PipelineSettings({ initial, manager }: { initial: OpportunityOpt
   }
   return (
     <div className="max-w-4xl space-y-7">
-      <p className="rounded-lg bg-info/10 p-4 text-sm">
+      <p className="border-l-2 border-info bg-info/5 p-4 text-sm">
         The assessment’s original stages are provisional. Configure labels and ordering with PSE. Contribution
         categories are separate from target verticals. Deactivate unused entries to retain historical records.
       </p>
       {!manager && <p className="text-sm">You can view this configuration. An authorized manager can change it.</p>}
       {error && (
-        <p role="alert" className="rounded-lg bg-error/10 p-4 text-error">
+        <p role="alert" className="border-l-2 border-error bg-error/5 p-4 text-error">
           {error}
         </p>
       )}
       {message && (
-        <p role="status" className="rounded-lg bg-success/10 p-4 text-success">
+        <p role="status" className="border-l-2 border-success bg-success/5 p-4 text-success">
           {message}
         </p>
       )}
       {manager && (
-        <section className="space-y-3 rounded-lg border border-base-300 p-5">
+        <section className="space-y-3 panel p-5">
           <h2 className="font-semibold">Optional assessment examples</h2>
           <p className="text-sm text-base-content/65">
             Add missing original stage/category examples, marked provisional. Existing entries are kept. Final labels
@@ -197,7 +197,7 @@ export function PipelineSettings({ initial, manager }: { initial: OpportunityOpt
         <h2 className="mb-3 text-xl font-semibold">Stages</h2>
         <div className="space-y-3">
           {options.stages.map(stage => (
-            <details key={`${stage.id}:${stage.updated_at}`} className="rounded-lg border border-base-300 p-4">
+            <details key={`${stage.id}:${stage.updated_at}`} className="panel p-4">
               <summary className="cursor-pointer font-medium">
                 {stage.position}. {stage.name} · {stage.outcome ?? "open"}
                 {!stage.active && " · inactive"}
@@ -207,7 +207,7 @@ export function PipelineSettings({ initial, manager }: { initial: OpportunityOpt
             </details>
           ))}
           {manager && (
-            <details className="rounded-lg border border-base-300 p-4">
+            <details className="panel p-4">
               <summary className="cursor-pointer font-medium">Add a stage</summary>
               {editor("stage")}
             </details>
@@ -218,7 +218,7 @@ export function PipelineSettings({ initial, manager }: { initial: OpportunityOpt
         <h2 className="mb-3 text-xl font-semibold">Contribution categories</h2>
         <div className="space-y-3">
           {options.categories.map(category => (
-            <details key={`${category.id}:${category.updated_at}`} className="rounded-lg border border-base-300 p-4">
+            <details key={`${category.id}:${category.updated_at}`} className="panel p-4">
               <summary className="cursor-pointer font-medium">
                 {category.code} · {category.name}
                 {!category.active && " · inactive"}
@@ -228,7 +228,7 @@ export function PipelineSettings({ initial, manager }: { initial: OpportunityOpt
             </details>
           ))}
           {manager && (
-            <details className="rounded-lg border border-base-300 p-4">
+            <details className="panel p-4">
               <summary className="cursor-pointer font-medium">Add a category</summary>
               {editor("category")}
             </details>

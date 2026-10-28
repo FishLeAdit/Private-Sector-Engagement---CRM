@@ -74,7 +74,7 @@ export function ConfirmDeleteButton({ noun, name, endpoint, redirectTo, conseque
             {consequences}
           </p>
           {error && (
-            <p role="alert" className="mt-4 rounded-lg bg-error/10 p-3 text-sm text-error">
+            <p role="alert" className="mt-4 border-l-2 border-error bg-error/5 p-3 text-sm text-error">
               {error}
             </p>
           )}

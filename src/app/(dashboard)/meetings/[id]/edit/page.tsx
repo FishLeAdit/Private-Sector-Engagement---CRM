@@ -5,6 +5,7 @@ import { canEditMeeting, meetingValues } from "@/features/meetings/service";
 import { isPseManager } from "@/lib/auth/roles";
 import { MeetingForm } from "@/components/meetings/meeting-form";
 import { MeetingProblem } from "@/components/meetings/meeting-state";
+import { SysCode } from "@/components/ui/hud";
 export default async function EditMeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const { access, service } = await meetingPageContext();
   const { id } = await params;
@@ -24,7 +25,8 @@ export default async function EditMeetingPage({ params }: { params: Promise<{ id
       <Link href={`/meetings/${id}`} className="link text-sm">
         ← Meeting details
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">Edit meeting</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.MTG // EDIT"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">Edit meeting</h1>
       <MeetingForm
         meetingId={id}
         initial={meetingValues(row)}

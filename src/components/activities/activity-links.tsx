@@ -78,7 +78,7 @@ type Props = {
 export function ActivityLinksSection({ links, control, issue, disabled, onBusyChange }: Props) {
   const { contact, opportunity, meeting, effectiveOpportunity, choices, notice } = links;
   return (
-    <section className="space-y-5 rounded-lg border border-base-300 p-5">
+    <section className="space-y-5 panel p-5">
       <h2 className="font-semibold">Related CRM records (optional)</h2>
       <div className="grid gap-5 sm:grid-cols-2">
         <div>

@@ -15,6 +15,8 @@ import { ActivityLinkedRecords, ActivityWorkDetails } from "@/components/activit
 import { AuditHistory } from "@/components/ui/audit-history";
 import { SavedNotice } from "@/components/ui/page";
 import type { Json } from "@/types/database.types";
+import { SysCode } from "@/components/ui/hud";
+import { RecordStatus } from "@/components/ui/record-status";
 function status(value: Json) {
   return value && typeof value === "object" && !Array.isArray(value) && typeof value.status === "string"
     ? value.status
@@ -47,8 +49,10 @@ export default async function ActivityDetailsPage({
       </Link>
       <div className="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm text-base-content/65">
-            {activityTypeLabels[row.activity_type as (typeof activityTypes)[number]]} · {label(row.status)}
+          <SysCode className="mb-1 block">{`SYS.ACT // ${id.slice(0, 8).toUpperCase()}`}</SysCode>
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span>{activityTypeLabels[row.activity_type as (typeof activityTypes)[number]]} ·</span>
+            <RecordStatus status={row.status} label={label(row.status)} />
           </p>
           <h1 className="break-words text-3xl font-bold">{title}</h1>
         </div>
@@ -67,7 +71,7 @@ export default async function ActivityDetailsPage({
         !row.meeting_id &&
         !row.related_person_name?.trim() &&
         !row.related_organization_name?.trim() && (
-          <p className="mb-5 rounded-lg bg-warning/10 p-4 text-sm">
+          <p className="mb-5 border-l-2 border-warning bg-warning/5 p-4 text-sm">
             This older activity is missing related context. Add a person or organization when editing it.
           </p>
         )}

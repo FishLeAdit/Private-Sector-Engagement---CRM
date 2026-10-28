@@ -5,6 +5,7 @@ import { canEditContact } from "@/features/contacts/service";
 import type { ContactInput } from "@/features/contacts/schemas";
 import { ContactForm } from "@/components/contacts/contact-form";
 import { ContactProblem } from "@/components/contacts/contact-state";
+import { SysCode } from "@/components/ui/hud";
 
 export default async function EditContactPage({ params }: { params: Promise<{ id: string }> }) {
   const { service, access } = await contactPageContext();
@@ -18,6 +19,7 @@ export default async function EditContactPage({ params }: { params: Promise<{ id
   if (!canEditContact(access, contact))
     return (
       <section className="space-y-4">
+        <SysCode className="mb-1 block">{"SYS.CON // EDIT"}</SysCode>
         <h1 className="text-2xl font-bold">Editing is restricted</h1>
         <p>Only the creator or an authorized manager may edit this contact.</p>
         <Link href={`/contacts/${contact.id}`} className="btn btn-outline">
@@ -41,7 +43,8 @@ export default async function EditContactPage({ params }: { params: Promise<{ id
       <Link href={`/contacts/${contact.id}`} className="link link-hover text-sm text-base-content/65">
         ← {contact.name}
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">Edit contact</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.CON // EDIT"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">Edit contact</h1>
       <ContactForm contactId={contact.id} initial={initial} company={contact.company} />
     </>
   );

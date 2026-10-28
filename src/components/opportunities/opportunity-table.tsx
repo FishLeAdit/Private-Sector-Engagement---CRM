@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { RecordStatus } from "@/components/ui/record-status";
 import type { OpportunityRecord } from "@/features/opportunities/types";
 import { formatDate } from "@/lib/dates";
 import { money } from "@/lib/money";
 
 export function OpportunityTable({ rows }: { rows: OpportunityRecord[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-300">
+    <div className="overflow-x-auto panel">
       <table className="table">
         <caption className="sr-only">Opportunities matching the selected filters</caption>
         <thead>
@@ -27,7 +28,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRecord[] }) {
                 </Link>
                 <p className="mt-1 text-xs text-base-content/60">{row.contact?.name}</p>
               </td>
-              <td>{row.stage?.name}</td>
+              <td>
+                <RecordStatus status={row.stage?.outcome ?? "open"} label={row.stage?.name ?? "No stage"} />
+              </td>
               <td className="whitespace-nowrap">{money(row.expected_amount, row.currency)}</td>
               <td>
                 {row.contribution_type === "cash" ? "Cash" : "Valued in-kind"}

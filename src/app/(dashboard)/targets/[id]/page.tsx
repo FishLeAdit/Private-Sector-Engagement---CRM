@@ -8,6 +8,7 @@ import { AllocationPerformance, QuarterPerformance } from "@/components/targets/
 import { isPseManager } from "@/lib/auth/roles";
 import { cents, money, targetPerformance } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
+import { SysCode } from "@/components/ui/hud";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service, access } = await targetPage();
   const { id } = await params,
@@ -29,6 +30,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       </Link>
       <div className="mb-6 mt-4 flex flex-wrap justify-between gap-4">
         <div>
+          <SysCode className="mb-1 block">{`SYS.TGT // ${id.slice(0, 8).toUpperCase()}`}</SysCode>
           <h1 className="text-3xl font-bold">
             {plan.year} · {plan.currency} target plan
           </h1>
@@ -51,8 +53,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           ["Remaining", money(annual.remaining, plan.currency)],
           ["Overachievement", money(annual.over, plan.currency)],
         ].map(([key, value]) => (
-          <div key={key} className="rounded-xl border border-base-300 p-5">
-            <h2 className="text-sm text-base-content/60">{key}</h2>
+          <div key={key} className="panel p-5">
+            <h2 className="hud-label">{key}</h2>
             <p className="mt-2 text-xl font-semibold">{value}</p>
           </div>
         ))}
@@ -65,7 +67,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <QuarterPerformance quarters={plan.quarters} actuals={actuals} currency={plan.currency} />
       <AllocationPerformance allocations={allocations} actuals={actuals} options={options} currency={plan.currency} />
       {manager && plan.status === "draft" && <ApproveTarget id={id} stamp={plan.updated_at} />}
-      <section className="mt-6 rounded-xl border border-base-300 p-5">
+      <section className="mt-6 panel p-5">
         <h2 className="font-semibold">Recent plan changes</h2>
         <p className="mt-2 text-xs text-base-content/60">
           Latest 20 header changes. Detailed quarter/allocation snapshots are also retained in database audit history.

@@ -99,7 +99,9 @@ export function ContactForm({
               // The type of an existing contact cannot change.
               <>
                 <input type="hidden" {...register("kind")} />
-                <p className="rounded-lg bg-base-200 px-4 py-3 capitalize">{fixedKind ?? initial.kind}</p>
+                <p className="border border-base-300 bg-base-200/60 px-4 py-3 capitalize">
+                  {fixedKind ?? initial.kind}
+                </p>
               </>
             ) : (
               <select id="kind" className="select select-bordered w-full" {...register("kind")}>

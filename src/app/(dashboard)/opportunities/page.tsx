@@ -46,7 +46,11 @@ export default async function OpportunitiesPage({
 
   return (
     <>
-      <ListHeader title="Opportunities" description="Financial opportunities and their expected value.">
+      <ListHeader
+        code={`SYS.OPP // ${count} ${count === 1 ? "RECORD" : "RECORDS"}`}
+        title="Opportunities"
+        description="Financial opportunities and their expected value."
+      >
         <Link className="btn btn-primary" href="/opportunities/new">
           New deal
         </Link>
@@ -73,7 +77,7 @@ export default async function OpportunitiesPage({
         received funds. Currencies are kept separate.
       </p>
       {!opportunities.length ? (
-        <section className="rounded-xl border border-base-300 p-10 text-center">
+        <section className="panel p-10 text-center">
           <h2 className="text-xl font-semibold">No matching opportunities</h2>
           <p className="my-3 text-base-content/65">Create a financial deal or adjust your filters.</p>
           <Link href="/opportunities/new" className="btn btn-outline">

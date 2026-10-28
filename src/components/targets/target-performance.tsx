@@ -16,7 +16,7 @@ export function QuarterPerformance({
   currency: string;
 }) {
   return (
-    <section className="mb-6 overflow-x-auto rounded-xl border border-base-300 p-5">
+    <section className="mb-6 overflow-x-auto panel p-5">
       <h2 className="mb-4 text-lg font-semibold">Quarter performance</h2>
       <table className="table">
         <thead>
@@ -72,7 +72,7 @@ export function AllocationPerformance({
     ]),
   ].sort();
   return (
-    <section className="overflow-x-auto rounded-xl border border-base-300 p-5">
+    <section className="overflow-x-auto panel p-5">
       <h2 className="mb-4 text-lg font-semibold">Employee / vertical performance</h2>
       <table className="table">
         <thead>

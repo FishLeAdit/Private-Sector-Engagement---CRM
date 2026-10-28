@@ -1,10 +1,9 @@
 import Link from "next/link";
 import type { MeetingRecord } from "@/features/meetings/types";
 import { formatDate } from "@/lib/dates";
+import { RecordStatus } from "@/components/ui/record-status";
 import { meetingContact } from "./contact-information";
 
-const statusBadge = (status: string) =>
-  status === "done" ? "badge-success" : status === "cancelled" ? "badge-ghost" : "badge-info";
 const statusLabel = (status: string) =>
   status === "done" ? "Done" : status === "cancelled" ? "Cancelled" : "Scheduled";
 
@@ -12,7 +11,7 @@ const statusLabel = (status: string) =>
 export function MeetingTable({ rows }: { rows: MeetingRecord[] }) {
   if (!rows.length)
     return (
-      <div className="overflow-x-auto rounded-xl border border-base-300">
+      <div className="overflow-x-auto panel">
         <section className="p-10 text-center">
           <h2 className="text-xl font-semibold">No matching meetings</h2>
           <p className="my-3 text-base-content/65">Schedule a meeting or adjust your filters.</p>
@@ -23,7 +22,7 @@ export function MeetingTable({ rows }: { rows: MeetingRecord[] }) {
       </div>
     );
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-300">
+    <div className="overflow-x-auto panel">
       <table className="table">
         <caption className="sr-only">Meetings matching the selected filters</caption>
         <thead>
@@ -47,7 +46,7 @@ export function MeetingTable({ rows }: { rows: MeetingRecord[] }) {
                 </td>
                 <td className="whitespace-nowrap">{formatDate(row.scheduled_at, true)}</td>
                 <td>
-                  <span className={`badge ${statusBadge(row.status)}`}>{statusLabel(row.status)}</span>
+                  <RecordStatus status={row.status} label={statusLabel(row.status)} />
                 </td>
                 <td>
                   {contact && (

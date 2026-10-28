@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RecordStatus } from "@/components/ui/record-status";
 import {
   activityTitle,
   activityTypes,
@@ -15,7 +16,7 @@ import { formatDate } from "@/lib/dates";
 export function ActivityTable({ rows }: { rows: ActivityRecord[] }) {
   if (!rows.length)
     return (
-      <div className="overflow-x-auto rounded-xl border border-base-300">
+      <div className="overflow-x-auto panel">
         <section className="p-10 text-center">
           <h2 className="text-xl font-semibold">No matching activities</h2>
           <p className="my-3 text-base-content/65">
@@ -28,7 +29,7 @@ export function ActivityTable({ rows }: { rows: ActivityRecord[] }) {
       </div>
     );
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-300">
+    <div className="overflow-x-auto panel">
       <table className="table">
         <caption className="sr-only">Activities matching the selected filters</caption>
         <thead>
@@ -52,9 +53,10 @@ export function ActivityTable({ rows }: { rows: ActivityRecord[] }) {
                 </p>
               </td>
               <td>
-                <span className="badge badge-ghost">
-                  {activityStatusLabels[row.status as (typeof activityStatuses)[number]]}
-                </span>
+                <RecordStatus
+                  status={row.status}
+                  label={activityStatusLabels[row.status as (typeof activityStatuses)[number]]}
+                />
                 <p className="mt-1 text-xs text-base-content/60">
                   {workCategoryLabels[row.work_category as (typeof workCategories)[number]]}
                 </p>

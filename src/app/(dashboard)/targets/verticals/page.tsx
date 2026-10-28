@@ -4,6 +4,7 @@ import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { VerticalForm } from "@/components/targets/vertical-form";
 import { isPseManager } from "@/lib/auth/roles";
+import { SysCode } from "@/components/ui/hud";
 export default async function Page() {
   const { service, access } = await targetPage();
   if (!isPseManager(access.profile))
@@ -15,7 +16,8 @@ export default async function Page() {
       <Link href="/targets" className="link text-sm">
         ← Targets
       </Link>
-      <h1 className="mb-6 mt-4 text-3xl font-bold">Target verticals</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.TGT // VERTICALS"}</SysCode>
+      <h1 className="mb-6 text-3xl font-bold">Target verticals</h1>
       <VerticalForm verticals={result.data.verticals} />
     </>
   );

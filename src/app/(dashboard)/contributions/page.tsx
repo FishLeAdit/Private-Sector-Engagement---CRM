@@ -28,6 +28,7 @@ export default async function Page({
   return (
     <>
       <ListHeader
+        code={`SYS.RCV // ${count} ${count === 1 ? "RECORD" : "RECORDS"}`}
         title="Recognized contributions"
         description="Actual received cash and confirmed valued in-kind support."
       >
@@ -36,7 +37,7 @@ export default async function Page({
         </Link>
       </ListHeader>
       <ContributionFilters input={input} options={options} />
-      <div className="overflow-x-auto rounded-xl border border-base-300">
+      <div className="overflow-x-auto panel">
         <table className="table">
           <thead>
             <tr>

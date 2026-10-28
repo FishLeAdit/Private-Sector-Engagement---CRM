@@ -86,7 +86,7 @@ export function ContributionForm({
   }
   return (
     <form onSubmit={submit} className="max-w-3xl space-y-5">
-      <p className="rounded-lg bg-warning/10 p-4 text-sm">
+      <p className="border-l-2 border-warning bg-warning/5 p-4 text-sm">
         Record only realized cash or confirmed valued in-kind support. This creates an append-only financial record.
         Refunds, corrections and deletion are outside this workflow.
       </p>
@@ -192,7 +192,7 @@ export function ContributionForm({
         </label>
       </fieldset>
       {review && (
-        <section className="space-y-3 rounded-lg border border-warning p-4" aria-label="Review contribution">
+        <section className="space-y-3 border border-warning bg-warning/5 p-4" aria-label="Review contribution">
           <h2 className="font-semibold">Confirm this financial entry</h2>
           <p className="text-sm">
             Review the amount, recognition date, attribution and supporting references above. Saving records

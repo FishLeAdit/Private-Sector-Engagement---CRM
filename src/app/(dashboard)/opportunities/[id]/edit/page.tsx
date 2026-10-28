@@ -5,6 +5,7 @@ import { canEditOpportunity, opportunityValues } from "@/features/opportunities/
 import { isPseManager } from "@/lib/auth/roles";
 import { OpportunityForm } from "@/components/opportunities/opportunity-form";
 import { OpportunityProblem } from "@/components/opportunities/opportunity-state";
+import { SysCode } from "@/components/ui/hud";
 export default async function EditOpportunityPage({ params }: { params: Promise<{ id: string }> }) {
   const { access, service } = await opportunityPageContext();
   const { id } = await params;
@@ -30,7 +31,8 @@ export default async function EditOpportunityPage({ params }: { params: Promise<
       <Link href={`/opportunities/${id}`} className="link text-sm">
         ← Deal details
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">Edit deal</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.OPP // EDIT"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">Edit deal</h1>
       <OpportunityForm
         opportunityId={id}
         initial={opportunityValues(row)}

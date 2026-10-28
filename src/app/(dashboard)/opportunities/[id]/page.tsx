@@ -13,7 +13,9 @@ import {
 } from "@/components/opportunities/opportunity-details";
 import { OpportunityProblem } from "@/components/opportunities/opportunity-state";
 import { AuditHistory } from "@/components/ui/audit-history";
+import { RecordStatus } from "@/components/ui/record-status";
 import { SavedNotice } from "@/components/ui/page";
+import { SysCode } from "@/components/ui/hud";
 
 // Audit snapshots are raw rows; only the stage is read here to describe stage moves.
 function stageId(value: Json) {
@@ -47,9 +49,10 @@ export default async function OpportunityDetailsPage({
       </Link>
       <div className="mb-6 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm text-base-content/65">
-            {row.stage?.name}
-            {row.stage?.is_provisional && " · provisional stage"}
+          <SysCode className="mb-1 block">{`SYS.OPP // ${id.slice(0, 8).toUpperCase()}`}</SysCode>
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <RecordStatus status={row.stage?.outcome ?? "open"} label={row.stage?.name ?? "No stage"} />
+            {row.stage?.is_provisional && <span>· provisional stage</span>}
           </p>
           <h1 className="break-words text-3xl font-bold">{row.deal_name}</h1>
         </div>

@@ -9,7 +9,7 @@ import { MeetingStatus } from "./meeting-status";
 
 export function MeetingInformation({ row, editable }: { row: MeetingRecord; editable: boolean }) {
   return (
-    <section className="space-y-5 rounded-xl border border-base-300 p-6">
+    <section className="space-y-5 panel p-6">
       <h2 className="text-lg font-semibold">Meeting information</h2>
       <dl className="space-y-4 text-sm">
         <div>
@@ -47,7 +47,7 @@ export function MeetingInformation({ row, editable }: { row: MeetingRecord; edit
 // A deal-only meeting shows the deal's primary contact (or party) without a separate contact link.
 export function MeetingContactSection({ row }: { row: MeetingRecord }) {
   return (
-    <section className="rounded-xl border border-base-300 p-6">
+    <section className="panel p-6">
       <h2 className="mb-5 text-lg font-semibold">Contact information</h2>
       <MeetingContactInformation contact={row.contact} opportunity={row.opportunity} />
       {!row.contact_id && (
@@ -74,7 +74,7 @@ export function MeetingFollowUps({
   manager: boolean;
 }) {
   return (
-    <section className="rounded-xl border border-base-300 p-6">
+    <section className="panel p-6">
       <h2 className="text-lg font-semibold">Linked activities and follow-ups</h2>
       <p className="mt-2 text-xs text-base-content/60">Latest 20 activities directly linked to this meeting.</p>
       <ul className="mt-5 space-y-4">

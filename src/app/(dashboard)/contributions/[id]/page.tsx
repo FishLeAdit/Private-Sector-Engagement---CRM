@@ -5,6 +5,7 @@ import { financeData } from "@/features/finance/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { money } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
+import { SysCode } from "@/components/ui/hud";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service } = await contributionPage();
   const { id } = await params;
@@ -19,8 +20,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Link href="/contributions" className="link text-sm">
         ← Contributions
       </Link>
-      <h1 className="mb-6 mt-4 text-3xl font-bold">{money(row.amount, row.currency)} recognized</h1>
-      <section className="max-w-3xl space-y-5 rounded-xl border border-base-300 p-6">
+      <SysCode className="mt-4 mb-1 block">{`SYS.RCV // ${id.slice(0, 8).toUpperCase()}`}</SysCode>
+      <h1 className="mb-6 text-3xl font-bold">{money(row.amount, row.currency)} recognized</h1>
+      <section className="max-w-3xl space-y-5 panel p-6">
         <Link href={`/opportunities/${row.opportunity_id}`} className="link font-medium">
           {row.opportunity?.deal_name ?? "Opportunity"}
         </Link>

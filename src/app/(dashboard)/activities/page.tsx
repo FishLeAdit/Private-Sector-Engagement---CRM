@@ -37,7 +37,11 @@ export default async function ActivitiesPage({
   if (input.page > pages) redirect(link(pages));
   return (
     <>
-      <ListHeader title="Activities" description="Independent work, relationship engagement and linked follow-ups.">
+      <ListHeader
+        code={`SYS.ACT // ${count} ${count === 1 ? "RECORD" : "RECORDS"}`}
+        title="Activities"
+        description="Independent work, relationship engagement and linked follow-ups."
+      >
         <Link href="/activities/new" className="btn btn-primary">
           New activity
         </Link>

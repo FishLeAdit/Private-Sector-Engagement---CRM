@@ -12,7 +12,7 @@ export function ContactFilters({ input, company }: { input: ContactListInput; co
     <form
       method="get"
       action="/contacts"
-      className="mb-6 grid items-start gap-4 rounded-xl border border-base-300 bg-base-100 p-4 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_2fr_auto]"
+      className="mb-6 grid items-start gap-4 panel p-4 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_2fr_auto]"
     >
       <div>
         <label htmlFor="contact-search" className="mb-2 block text-sm font-medium">

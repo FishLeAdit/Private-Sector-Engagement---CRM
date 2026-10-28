@@ -136,7 +136,7 @@ export function OpportunityForm({
   return (
     <>
       <form onSubmit={handleSubmit(save)} className="max-w-4xl space-y-7" noValidate>
-        <p className="rounded-lg bg-info/10 p-4 text-sm">
+        <p className="border-l-2 border-info bg-info/5 p-4 text-sm">
           Enter an expected financial opportunity. Unvalued gifts, visits and general engagement belong in Activities.
           Expected value and operational budget are separate from received contributions.
         </p>
@@ -170,7 +170,7 @@ export function OpportunityForm({
             {lookup("stage_id", "Stage *", options.stages)}
           </div>
           {company && (
-            <section className="space-y-4 rounded-lg border border-base-300 p-4">
+            <section className="space-y-4 panel p-4">
               <h2 className="font-semibold">Company contact people</h2>
               <div className="grid gap-5 sm:grid-cols-2">
                 {contactField("primary_contact_id")}
@@ -187,7 +187,7 @@ export function OpportunityForm({
             {textField("operational_budget", "Operational budget (optional)", "text", 15)}
           </div>
           {contributionType === "valued_in_kind" && (
-            <section className="space-y-4 rounded-lg border border-base-300 p-4">
+            <section className="space-y-4 panel p-4">
               <h2 className="font-semibold">Manual valuation</h2>
               <p className="text-sm text-base-content/65">
                 PSE enters the value agreed from the operational team’s inventory and market estimate. This form does

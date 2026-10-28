@@ -9,7 +9,7 @@ import { ActivityStatus } from "./activity-controls";
 
 export function ActivityWorkDetails({ row, editable }: { row: ActivityRecord; editable: boolean }) {
   return (
-    <section className="space-y-5 rounded-xl border border-base-300 p-6">
+    <section className="space-y-5 panel p-6">
       <h2 className="text-lg font-semibold">Work details</h2>
       <dl className="grid gap-5 text-sm sm:grid-cols-2">
         {[
@@ -50,7 +50,7 @@ export function ActivityLinkedRecords({ row }: { row: ActivityRecord }) {
   const effectiveOpportunity = row.opportunity ?? row.meeting?.opportunity ?? null;
   const contact = row.contact ?? row.meeting?.contact ?? null;
   return (
-    <section className="space-y-5 rounded-xl border border-base-300 p-6">
+    <section className="space-y-5 panel p-6">
       <h2 className="text-lg font-semibold">Linked records</h2>
       {row.meeting && (
         <p className="text-sm">

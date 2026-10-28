@@ -133,7 +133,7 @@ export function CompanyPicker({
           id={`${id}-results`}
           role="listbox"
           aria-label="Existing companies"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1"
         >
           {options.map((option, index) => (
             <li

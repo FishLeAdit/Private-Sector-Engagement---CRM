@@ -17,7 +17,7 @@ function Detail({ label, className, children }: { label: string; className?: str
 
 export function ContactInformation({ contact }: { contact: ContactRecord }) {
   return (
-    <section className="rounded-xl border border-base-300 bg-base-100 p-6">
+    <section className="panel p-6">
       <h2 className="mb-5 text-lg font-semibold">Contact information</h2>
       <dl className="space-y-4 text-sm">
         <Detail label="Email" className="break-all">
@@ -83,7 +83,7 @@ function RecentList({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-base-300 p-5">
+    <section className="panel p-5">
       <h2 className="text-lg font-semibold">{title}</h2>
       <p className="mt-1 text-xs text-base-content/60">{note}</p>
       <ul className="mt-4 space-y-4">{children}</ul>

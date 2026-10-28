@@ -127,7 +127,7 @@ export function ContactPicker<T extends Party = Party>({
           id={`${id}-results`}
           role="listbox"
           aria-label={label}
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1"
         >
           {rows.map((row, index) => (
             <li key={row.id} id={`${id}-${index}`} role="option" aria-selected={active === index || value === row.id}>

@@ -98,7 +98,7 @@ export function MeetingForm({
 
   return (
     <form onSubmit={handleSubmit(save)} className="max-w-4xl space-y-7" noValidate>
-      <p className="rounded-lg bg-info/10 p-4 text-sm">
+      <p className="border-l-2 border-info bg-info/5 p-4 text-sm">
         Link a contact, an opportunity, or both. Contact details come from your internal records. Meeting times are
         entered and displayed in Asia/Dhaka.
       </p>
@@ -147,7 +147,7 @@ export function MeetingForm({
           </p>
         )}
         {(contact || opportunity) && (
-          <section className="rounded-lg border border-base-300 p-5">
+          <section className="panel p-5">
             <h2 className="mb-4 font-semibold">Contact information</h2>
             <MeetingContactInformation contact={contact} opportunity={opportunity} />
             {!contact && opportunity && (

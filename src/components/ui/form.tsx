@@ -152,7 +152,7 @@ export function FormActions({
   return (
     <>
       {error && (
-        <p role="alert" className="rounded-lg bg-error/10 p-4 text-error">
+        <p role="alert" className="border-l-2 border-error bg-error/5 p-4 text-error">
           {error}
         </p>
       )}

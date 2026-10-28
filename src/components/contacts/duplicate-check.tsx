@@ -53,7 +53,7 @@ export function DuplicateWarning({ matches, checkError }: { matches: DuplicateCo
   return (
     <>
       {matches.length > 0 && (
-        <div role="alert" className="rounded-lg border border-warning bg-warning/10 p-4 text-sm">
+        <div role="alert" className="border-l-2 border-warning bg-warning/5 p-4 text-sm">
           <p className="font-semibold">Possible duplicate contact</p>
           <ul className="mt-2 space-y-1">
             {matches.map(match => (

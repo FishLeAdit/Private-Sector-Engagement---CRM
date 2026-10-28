@@ -30,14 +30,18 @@ export default async function ContactsPage({
   if (input.page > pages) redirect(pageLink(pages));
   return (
     <>
-      <ListHeader title="Contacts" description="People, companies and the relationships behind your work.">
+      <ListHeader
+        code={`SYS.CON // ${count} ${count === 1 ? "RECORD" : "RECORDS"}`}
+        title="Contacts"
+        description="People, companies and the relationships behind your work."
+      >
         <Link href="/contacts/new" className="btn btn-primary">
           New contact
         </Link>
       </ListHeader>
       {deleted === "1" && <StatusNotice>Contact deleted successfully.</StatusNotice>}
       <ContactFilters key={`${input.q}:${input.kind}:${input.company_id}`} input={input} company={company} />
-      <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100">
+      <div className="overflow-x-auto panel">
         {contacts.length ? (
           <table className="table">
             <caption className="sr-only">Contacts matching the selected search and filters</caption>
@@ -60,7 +64,9 @@ export default async function ContactsPage({
                     {contact.designation && <p className="mt-1 text-xs text-base-content/60">{contact.designation}</p>}
                   </td>
                   <td>
-                    <span className="badge badge-ghost capitalize">{contact.kind}</span>
+                    <span className="badge badge-ghost badge-sm font-mono uppercase tracking-wider">
+                      {contact.kind}
+                    </span>
                   </td>
                   <td>
                     <div className="space-y-1">

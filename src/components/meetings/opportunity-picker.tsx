@@ -142,7 +142,7 @@ export function OpportunityPicker({
           id={`${id}-results`}
           role="listbox"
           aria-label="Existing opportunities"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 p-1"
         >
           {rows.map((row, index) => (
             <li key={row.id} role="option" id={`${id}-${index}`} aria-selected={active === index || value === row.id}>

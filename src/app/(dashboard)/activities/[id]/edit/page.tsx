@@ -5,6 +5,7 @@ import { canEditActivity, activityValues } from "@/features/activities/service";
 import { isPseManager } from "@/lib/auth/roles";
 import { ActivityForm } from "@/components/activities/activity-form";
 import { ActivityProblem } from "@/components/activities/activity-state";
+import { SysCode } from "@/components/ui/hud";
 export default async function EditActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const { access, service } = await activityPageContext();
   const { id } = await params;
@@ -24,7 +25,8 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
       <Link href={`/activities/${id}`} className="link text-sm">
         ← Activity details
       </Link>
-      <h1 className="mb-7 mt-4 text-3xl font-bold">Edit activity</h1>
+      <SysCode className="mt-4 mb-1 block">{"SYS.ACT // EDIT"}</SysCode>
+      <h1 className="mb-7 text-3xl font-bold">Edit activity</h1>
       <ActivityForm
         activityId={id}
         initial={activityValues(row)}
