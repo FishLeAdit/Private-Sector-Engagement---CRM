@@ -3,9 +3,11 @@ import type { Report } from "@/features/reports/types";
 // Plain-language metric definitions; docs/09-reporting-definitions.md holds the full version.
 export function ReportDefinitions({ report }: { report: Report }) {
   return (
-    <details className="mt-8 rounded-xl border border-base-300 p-5">
-      <summary className="cursor-pointer font-semibold">How these figures are defined</summary>
-      <div className="mt-4 space-y-3 text-sm leading-6 text-base-content/70">
+    <details id="definitions" className="panel mt-10 scroll-mt-16 p-5">
+      <summary className="cursor-pointer font-mono text-xs font-semibold uppercase tracking-[0.1em]">
+        05 {"//"} How these figures are defined
+      </summary>
+      <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
         <p>
           Periods are calendar dates in Asia/Dhaka, from {report.start_date} inclusive to {report.end_date_exclusive}{" "}
           exclusive. Financial achievement uses the saved recognition time and explicit employee/vertical attribution.

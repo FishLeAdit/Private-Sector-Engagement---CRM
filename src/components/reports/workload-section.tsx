@@ -1,30 +1,20 @@
 import type { CountMetric, Report } from "@/features/reports/types";
-import { activityTypeLabels, activityStatusLabels, workCategoryLabels } from "@/features/activities/schemas";
 import { money } from "@/lib/money";
-import { ReportBars } from "./bars";
-import { labelFor, monthLabel } from "./format";
+import { Notice } from "@/components/ui/hud";
+import { SectionHeader } from "./section-header";
 import { StatCards } from "./stat-cards";
-
-const countBars = (metrics: CountMetric[], label: (key: string) => string) =>
-  metrics.map(m => ({ label: label(m.key), value: String(m.count), display: String(m.count) }));
-
-const capitalize = (key: string) => key[0].toUpperCase() + key.slice(1);
+import { WorkloadCharts } from "./workload-charts";
 
 // Activity and meeting record counts. Currency and funding vertical never filter this section.
 export function WorkloadSection({ report, detailed }: { report: Report; detailed: boolean }) {
   const { workload: w, trends } = report;
   const done = (metrics: CountMetric[]) => String(metrics.find(s => s.key === "done")?.count ?? 0);
   return (
-    <section aria-labelledby="workload-heading" className="mt-9 space-y-5">
-      <div>
-        <h2 id="workload-heading" className="text-2xl font-bold">
-          Non-monetary work
-        </h2>
-        <p className="mt-2 text-sm text-base-content/65">
-          Activity relevant dates and meeting scheduled dates determine the period. Owner filters apply; currency and
-          funding vertical do not restrict these work records.
-        </p>
-      </div>
+    <section id="workload" aria-labelledby="workload-heading" className="mt-10 scroll-mt-16 space-y-5">
+      <SectionHeader id="workload-heading" index="03" code="ACT-01" title="Non-monetary work">
+        Activity relevant dates and meeting scheduled dates determine the period. Owner filters apply; currency and
+        funding vertical do not restrict these work records.
+      </SectionHeader>
       <StatCards
         rows={[
           ["Dated activity records", String(w.activity_count)],
@@ -33,48 +23,17 @@ export function WorkloadSection({ report, detailed }: { report: Report; detailed
           ["Done meetings", done(w.meeting_statuses)],
         ]}
       />
-      <div className="grid gap-5 lg:grid-cols-2">
-        <ReportBars title="Activities by type" rows={countBars(w.types, key => labelFor(key, activityTypeLabels))} />
-        <div className="space-y-5">
-          <ReportBars
-            title="Work categories"
-            rows={countBars(w.categories, key => labelFor(key, workCategoryLabels))}
-          />
-          <ReportBars title="Meeting status" rows={countBars(w.meeting_statuses, capitalize)} />
-          <ReportBars
-            title="Activity status"
-            rows={countBars(w.statuses, key => labelFor(key, activityStatusLabels))}
-          />
-        </div>
-      </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <ReportBars
-          title="Activity records by month"
-          rows={trends.map(t => ({
-            label: monthLabel(t.month),
-            value: String(t.activities),
-            display: String(t.activities),
-          }))}
-        />
-        <ReportBars
-          title="Meeting records by month"
-          rows={trends.map(t => ({
-            label: monthLabel(t.month),
-            value: String(t.meetings),
-            display: String(t.meetings),
-          }))}
-        />
-      </div>
-      <p className="text-xs leading-6 text-base-content/60">
+      <WorkloadCharts report={report} />
+      <p className="text-xs leading-6 text-muted">
         Independent activities in period: {w.independent_count}. Undated activities across all dates for this owner
         selection: {w.undated_activities} (excluded from period counts). Meeting-type activities and canonical meetings
         are separate record counts and are never added together as unique interactions.
       </p>
       {w.missing_context > 0 && (
-        <p className="rounded-lg bg-warning/10 p-4 text-sm">
+        <Notice tone="warning">
           {w.missing_context} older independent {w.missing_context === 1 ? "activity needs" : "activities need"} a
           related person or organization. Add context when editing these records.
-        </p>
+        </Notice>
       )}
       {detailed && (
         <>
@@ -88,9 +47,11 @@ export function WorkloadSection({ report, detailed }: { report: Report; detailed
 
 function OwnerTable({ owners }: { owners: Report["workload"]["owners"] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-300">
+    <div className="panel overflow-x-auto p-0">
       <table className="table">
-        <caption className="p-4 text-left font-semibold">Work by owner</caption>
+        <caption className="p-4 text-left font-mono text-xs font-semibold uppercase tracking-[0.1em]">
+          Work by owner
+        </caption>
         <thead>
           <tr>
             <th>Owner</th>
@@ -119,9 +80,11 @@ function OwnerTable({ owners }: { owners: Report["workload"]["owners"] }) {
 // Each column is a separate measure; they are never summed into one workload total.
 function TrendTable({ trends, currency }: { trends: Report["trends"]; currency: string }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-300">
+    <div className="panel overflow-x-auto p-0">
       <table className="table">
-        <caption className="p-4 text-left font-semibold">Monthly trends</caption>
+        <caption className="p-4 text-left font-mono text-xs font-semibold uppercase tracking-[0.1em]">
+          Monthly trends
+        </caption>
         <thead>
           <tr>
             <th>Month</th>

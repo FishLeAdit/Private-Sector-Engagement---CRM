@@ -2,6 +2,24 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## UI redesign, charts and Reports (U2), on 28 October 2026
+
+Second phase of the UI redesign: a chart kit on recharts (now used, closing C4's "use recharts or remove it") and a rebuilt Reports page. Presentation follows the dataviz rules:
+
+- **Form.** One axis per chart. Accent for what the chart is about, grey for context; categorical colours were rejected after the validator failed blue against violet (13.5 normal-vision, 5.7 protan). Accent against grey passes in both themes (CVD 16.8 dark, 16.6 light).
+- **Marks.** Thin bars and lines with square ends; a legend only for two or more series; values in tooltips and in a visually hidden table on every chart. Big numbers use proportional figures.
+- **New figures.** Quarter target-vs-actual and year-pace charts for full-year views. Their targets come from the plan through the targets service, following the report's own target rule, so no migration was needed; if the plan can't be read, the charts show actuals only.
+- **Sections.** Pipeline by stage in configured order, outcomes with Won highlighted, and workload breakdowns with Done highlighted, plus small monthly charts. A sticky section index on Reports. The old progress-bar component is removed.
+
+| Check | Result |
+|---|---|
+| `npm test` | 700 passed across 53 files. Added: `report-quarters.test.ts` (baselines vs filtered cells, unassigned, future quarters, cumulative stops), `chart-frame.test.tsx` (named figure, hidden plot mirrored in a table, legend only for 2+ series, empty state) and Reports view tests (quarter and pace values readable per row, the section index on Reports only, outcomes readable) |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 26 passed in 4.6 min |
+| Signed-in screenshots of Reports (2026 and Q1) and the dashboard, dark and light at 1440 px and dark at 390 px | Reviewed against the anti-pattern list. Fixed during review: stage and activity names wrapping or clipping on the axis (now single-line, shortened only on the axis), tip labels wrapping on long bars, the cash readout wrapping, and the hidden tables widening the page by 113 px at 390 px (a table ignores `sr-only`'s width, so a clipped box now wraps it). No page scrolls sideways afterwards |
+| Charts against hosted data | Q1 shows the actual past its outlined 150,000 target at 110%; the other quarters and the pace lines match the plan and receipts |
+| Hosted demo after the runs | No QA records; still 7 contributions |
+
 ## UI redesign, foundation (U1), on 28 October 2026
 
 First phase of the UI redesign the user requested: an avionics style in dark and light themes. What changed:

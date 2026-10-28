@@ -273,7 +273,15 @@ Open [Dashboard](http://localhost:3000/dashboard) or [Reports](http://localhost:
 5. Select a **PSE team member** or **Funding vertical**. Actuals/targets use receipt attribution/allocation cells; pipeline and workload use current record ownership. Vertical affects only funding attribution/targets because no category/workload mapping has been approved. Select **Unassigned contributions** to see support without an allocated vertical target.
 6. Review **Pipeline forecast**. It uses current stages for opportunities with expected closing dates in the period. Won remains an expected classification, not a recorded receipt. Opportunities lacking closing dates appear separately and are excluded from period totals.
 7. Review **Non-monetary work**. Dated activities, canonical meetings, types/categories/statuses, independent work and monthly trends are separate counts. Undated activities are excluded from period counts and shown separately across all dates for the selected owner. Seeded work dates are mostly in October/November, so Q1 can show financial achievement with no demo work in that quarter.
-8. Open **Detailed reports** to inspect the full employee/vertical funding, stage, work-by-owner and monthly tables. Switching between views preserves the filters. Use **Refresh data** to expire your report snapshots and request current data. A normal browser reload can reuse an unexpired server snapshot.
+8. Open **Detailed reports** to inspect the full employee/vertical funding, stage, work-by-owner and monthly tables. A section index (01 Fundraising to 05 Definitions) stays at the top while scrolling.
+
+   The charts follow one rule: the accent colour marks what the chart is about and grey is context.
+   - **Fundraising, full-year views:** target against actual for each quarter (the target as an outline, so overachievement shows as the actual rising past it, labelled with its attainment), and the year's cumulative pace. The actual line stops at the current quarter.
+   - **Fundraising, every view:** monthly receipts, an attainment meter, and cash versus valued in-kind with each one's share.
+   - **Pipeline:** expected value by stage in the configured order, open stages in the accent, plus deals by outcome with Won highlighted.
+   - **Workload:** activity types largest first, work categories, activity and meeting status with Done highlighted, and per-month small charts of Done against everything logged.
+
+   Hover a bar or point for its exact value; every chart's values are also in a table for screen readers. Switching between views preserves the filters. Use **Refresh data** to expire your report snapshots and request current data. A normal browser reload can reuse an unexpired server snapshot.
 
 The earlier Activity context gap is closed in client/server validation and SQL. For an independent entry, enter a person or organization without creating a Contact/Opportunity. Alternatively, link a valid existing record. Try saving only Notes with no context/links: it must be rejected. Clearing the last context on edit must also fail. Older context-free rows remain readable and display a notice; add accurate context when editing them. The existing demo general-inbox row may need this correction because the seed preserves earlier rows and edits. No name is fabricated automatically for existing records.
 

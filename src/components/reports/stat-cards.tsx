@@ -1,11 +1,13 @@
-// A row of headline figures: each entry is [label, already formatted value].
+import { Readout } from "@/components/ui/hud";
+
+// A cluster of headline figures in hairline-divided cells: each entry is [label, already formatted value].
+// Cells stay transparent so the panel's surface and corner ticks show; half-pixel rings form 1px dividers.
 export function StatCards({ rows }: { rows: [string, string][] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {rows.map(([name, value]) => (
-        <div key={name} className="min-w-0 rounded-xl border border-base-300 bg-base-100 p-5">
-          <h3 className="text-sm text-base-content/60">{name}</h3>
-          <p className="mt-3 break-words text-xl font-bold tabular-nums">{value}</p>
+    <div className="panel grid p-0 sm:grid-cols-2 xl:grid-cols-4">
+      {rows.map(([label, value]) => (
+        <div key={label} className="p-5 shadow-[0_0_0_0.5px_var(--color-base-300)]">
+          <Readout label={label} value={value} />
         </div>
       ))}
     </div>

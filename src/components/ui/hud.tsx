@@ -83,7 +83,8 @@ export function Readout({
   return (
     <div className="min-w-0">
       <p className="hud-label">{label}</p>
-      <p className={`mt-2 break-words font-sans font-semibold tabular-nums ${valueSize}`}>{value}</p>
+      {/* Proportional figures: tabular digits look loose at display sizes. */}
+      <p className={`mt-2 break-words font-sans font-semibold ${valueSize}`}>{value}</p>
       {detail && <p className="mt-1 text-xs text-muted">{detail}</p>}
     </div>
   );
@@ -100,5 +101,29 @@ export function DataBlock({ items }: { items: [string, ReactNode][] }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+const noticeEdge: Record<Tone, string> = {
+  nominal: "border-success bg-success/5",
+  warning: "border-warning bg-warning/5",
+  critical: "border-error bg-error/5",
+  idle: "border-base-300 bg-base-200/60",
+};
+
+// A short message strip with a toned edge; the text carries the meaning, the tone only reinforces it.
+export function Notice({
+  tone = "idle",
+  role,
+  children,
+}: {
+  tone?: Tone;
+  role?: "status" | "alert";
+  children: ReactNode;
+}) {
+  return (
+    <p role={role} className={`border-l-2 p-4 text-sm ${noticeEdge[tone]}`}>
+      {children}
+    </p>
   );
 }

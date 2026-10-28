@@ -1,4 +1,6 @@
 import type { Report } from "@/features/reports/types";
+import { StatusPip } from "@/components/ui/hud";
+import { SectionHeader } from "./section-header";
 import { StatCards } from "./stat-cards";
 
 // Contacts engaged (assessment p10). The definition is a project proposal awaiting PSE confirmation
@@ -7,17 +9,12 @@ export function EngagementSection({ report, detailed }: { report: Report; detail
   const e = report.engagement;
   if (!e) return null;
   return (
-    <section aria-labelledby="engagement-heading" className="mt-9 space-y-5">
-      <div>
-        <h2 id="engagement-heading" className="text-2xl font-bold">
-          Contacts engaged
-        </h2>
-        <p className="badge badge-warning badge-outline mt-2">Provisional — awaiting PSE definition</p>
-        <p className="mt-2 text-sm text-base-content/65">
-          Distinct CRM contacts reached by Done meetings and Done activities in the period. Owner filters apply;
-          currency and funding vertical do not.
-        </p>
-      </div>
+    <section id="engagement" aria-labelledby="engagement-heading" className="mt-10 scroll-mt-16 space-y-5">
+      <SectionHeader id="engagement-heading" index="04" code="CON-01" title="Contacts engaged">
+        Distinct CRM contacts reached by Done meetings and Done activities in the period. Owner filters apply; currency
+        and funding vertical do not.
+      </SectionHeader>
+      <StatusPip tone="warning" label="Provisional — awaiting PSE definition" />
       <StatCards
         rows={[
           ["Contacts engaged", String(e.contacts)],
@@ -27,9 +24,11 @@ export function EngagementSection({ report, detailed }: { report: Report; detail
         ]}
       />
       {detailed && (
-        <div className="overflow-x-auto rounded-xl border border-base-300">
+        <div className="panel overflow-x-auto p-0">
           <table className="table">
-            <caption className="p-4 text-left font-semibold">Contacts engaged by owner</caption>
+            <caption className="p-4 text-left font-mono text-xs font-semibold uppercase tracking-[0.1em]">
+              Contacts engaged by owner
+            </caption>
             <thead>
               <tr>
                 <th>Owner</th>
@@ -48,7 +47,7 @@ export function EngagementSection({ report, detailed }: { report: Report; detail
           {!e.owners.length && <p className="p-4 text-sm">No contacts engaged in this period.</p>}
         </div>
       )}
-      <p className="text-xs leading-6 text-base-content/60">
+      <p className="text-xs leading-6 text-muted">
         An interaction without its own contact counts its meeting&apos;s contact, then its deal&apos;s primary contact,
         then the deal&apos;s party. People or organizations named on an activity without a CRM link are counted as
         interactions, never as contacts. A contact engaged by two owners counts once in the total and once for each

@@ -1,5 +1,7 @@
 import { PageProblem } from "@/components/ui/page-problem";
-import { reportsPage, reportData } from "@/features/reports/context";
+import { reportsPage, reportData, reportPlan } from "@/features/reports/context";
+import { quarterSeries } from "@/features/reports/quarters";
+import { toDhakaDateTimeInput } from "@/lib/dates";
 import { ReportView } from "./view";
 export async function ReportScreen({
   view,
@@ -28,5 +30,9 @@ export async function ReportScreen({
     );
   }
   const [{ filters: input, report }, options] = result.data;
-  return <ReportView view={view} filters={input} report={report} options={options} />;
+  // Quarter charts need the plan's quarter baselines and cells; only full-year views show them.
+  const plan =
+    input.period === "year" && report.fundraising.plan_id ? await reportPlan(report.fundraising.plan_id) : null;
+  const quarters = quarterSeries(report, plan, input, toDhakaDateTimeInput(new Date().toISOString()));
+  return <ReportView view={view} filters={input} report={report} options={options} quarters={quarters} />;
 }

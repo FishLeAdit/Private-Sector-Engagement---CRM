@@ -58,6 +58,15 @@ Interface code is split the same way. `src/components/ui` holds pieces every mod
 
 The visual style is two daisyUI themes, `avionics-dark` (default) and `avionics-light`, defined in `src/app/globals.css`. They give every daisyUI component square corners, 1px borders and flat depth. Project tokens daisyUI has no slot for are switched by the same `data-theme` attribute: muted and decorative text, the translucent panel surface, corner ticks and the background grid. Cyan, amber and red are reserved for nominal, warning and critical status; system blue is the interactive accent. Fonts are Inter (body copy and figures) and JetBrains Mono (headings, labels, table headers, system strings), loaded with `next/font`. The theme is a `pse-theme` cookie read on the server (`src/lib/theme.ts`), so the first render already uses it. `tests/unit/design-tokens.test.ts` checks both themes for WCAG contrast.
 
+Charts live in `src/components/charts`. They use recharts in client components, which read the live theme colours (`chart-theme.ts`) and follow the dataviz rules:
+- One axis per chart.
+- An accent hue for the series that matters and grey for context, never status colours as series (accent against grey validated for colour-vision deficiency in both themes).
+- Thin bars and lines, square ends, hairline grids.
+- A legend for two or more series and selective direct labels.
+- Every chart in a `ChartFrame`, a named `<figure>` whose plot is hidden from assistive technology and mirrored by a visually hidden table.
+
+Quarter targets for the Reports charts come from the plan through the targets service (`reportPlan` and `features/reports/quarters.ts`), using the report's own target rule; no migration was needed.
+
 Two guardrails keep files in this shape: `npm run lint` also runs Prettier's check, and ESLint warns when a source file in `src` passes 300 lines.
 
 ## Database boundaries

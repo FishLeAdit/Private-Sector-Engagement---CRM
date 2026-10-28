@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ReportView } from "../../src/components/reports/view";
 import { reportFixture } from "../helpers/report-fixture";
 const navigation = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -109,5 +109,43 @@ describe("dashboard and detailed reporting views", () => {
     await waitFor(() => expect(navigation.refresh).toHaveBeenCalledTimes(1));
     expect(screen.getAllByRole("figure").length).toBeGreaterThan(4);
     expect(screen.getByText("Fictional configurable stage (provisional)")).toBeTruthy();
+  });
+  it("shows quarter and pace charts for a full-year report, with every value in the figure's table", () => {
+    const quarters = [
+      { quarter: 1, target: "150000.00", actual: "165000.00" },
+      { quarter: 2, target: "250000.00", actual: "40000.00" },
+      { quarter: 3, target: "250000.00", actual: null },
+      { quarter: 4, target: "350000.00", actual: null },
+    ];
+    render(
+      <ReportView view="reports" filters={filters} report={reportFixture()} options={options} quarters={quarters} />,
+    );
+    const byQuarter = screen.getByRole("figure", { name: "Target vs actual by quarter" });
+    expect(within(byQuarter).getByRole("row", { name: /Q1 BDT 150,000.00 BDT 165,000.00 110%/ })).toBeTruthy();
+    expect(within(byQuarter).getByRole("row", { name: /Q3 BDT 250,000.00 Not started/ })).toBeTruthy();
+    const pace = screen.getByRole("figure", { name: "Year pace, cumulative" });
+    expect(within(pace).getByRole("row", { name: /Q2 BDT 400,000.00 BDT 205,000.00/ })).toBeTruthy();
+    expect(within(pace).getByRole("row", { name: /Q4 BDT 1,000,000.00 Not started/ })).toBeTruthy();
+  });
+  it("leaves quarter charts out without quarter data and indexes the detailed report's sections", () => {
+    const { unmount } = render(
+      <ReportView view="reports" filters={filters} report={reportFixture()} options={options} />,
+    );
+    expect(screen.queryByRole("figure", { name: "Target vs actual by quarter" })).toBeNull();
+    const index = screen.getByRole("navigation", { name: "Report sections" });
+    expect(
+      within(index)
+        .getAllByRole("link")
+        .map(link => link.getAttribute("href")),
+    ).toEqual(["#fundraising", "#pipeline", "#workload", "#engagement", "#definitions"]);
+    unmount();
+    render(<ReportView view="dashboard" filters={filters} report={reportFixture()} options={options} />);
+    expect(screen.queryByRole("navigation", { name: "Report sections" })).toBeNull();
+  });
+  it("highlights Won among outcomes and keeps every outcome readable", () => {
+    render(<ReportView view="reports" filters={filters} report={reportFixture()} options={options} />);
+    const outcomes = screen.getByRole("figure", { name: "Deals by current outcome" });
+    expect(within(outcomes).getByRole("row", { name: /Open 2 BDT 500,000.00/ })).toBeTruthy();
+    expect(outcomes.textContent).toContain("Won");
   });
 });

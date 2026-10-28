@@ -12,9 +12,9 @@ export function ReportFiltersForm({
   path: string;
 }) {
   return (
-    <form action={path} className="mb-6 space-y-4 rounded-xl border border-base-300 bg-base-100 p-5">
+    <form action={path} className="panel mb-6 space-y-4 p-5">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <label className="text-xs">
+        <label className="hud-label block">
           Year
           <input
             name="year"
@@ -25,7 +25,7 @@ export function ReportFiltersForm({
             className="input input-bordered mt-2 w-full"
           />
         </label>
-        <label className="text-xs">
+        <label className="hud-label block">
           Period
           <select name="period" defaultValue={filters.period} className="select select-bordered mt-2 w-full">
             <option value="year">Full year</option>
@@ -49,7 +49,7 @@ export function ReportFiltersForm({
             </optgroup>
           </select>
         </label>
-        <label className="text-xs">
+        <label className="hud-label block">
           PSE team member
           <select name="employee_id" defaultValue={filters.employee_id} className="select select-bordered mt-2 w-full">
             <option value="">Whole team</option>
@@ -64,7 +64,7 @@ export function ReportFiltersForm({
             ))}
           </select>
         </label>
-        <label className="text-xs">
+        <label className="hud-label block">
           Funding vertical
           <select name="vertical_id" defaultValue={filters.vertical_id} className="select select-bordered mt-2 w-full">
             <option value="">All verticals</option>
@@ -83,7 +83,7 @@ export function ReportFiltersForm({
             ))}
           </select>
         </label>
-        <label className="text-xs">
+        <label className="hud-label block">
           Funding currency
           <input
             name="currency"

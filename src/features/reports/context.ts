@@ -1,9 +1,12 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import { noStoreHeaders } from "@/lib/api/handler";
 import { authorizeApi, requirePseUser } from "@/lib/auth/access";
 import { loadPageData } from "@/lib/page-data";
 import { createClient } from "@/lib/supabase/server";
+import { targetPage } from "@/features/targets/context";
+import type { PlanBreakdown } from "./quarters";
 import { reportRequestService } from "./request-service";
 import { ReportError } from "./types";
 
@@ -13,6 +16,21 @@ export async function reportsPage() {
 }
 
 export const reportData = <T>(load: () => Promise<T>) => loadPageData(ReportError, load);
+
+// The plan's quarter baselines and cells, for the quarter charts. Best effort: if the plan cannot be read, the
+// charts show actuals without targets rather than failing the whole report.
+export async function reportPlan(planId: string): Promise<PlanBreakdown | null> {
+  try {
+    const { plan, allocations } = await (await targetPage()).service.details(planId);
+    return {
+      quarters: plan.quarters.map(q => ({ quarter: q.quarter, amount: String(q.amount) })),
+      allocations: allocations.map(a => ({ ...a, amount: String(a.amount) })),
+    };
+  } catch (error) {
+    unstable_rethrow(error); // Never swallow Next.js redirects or dynamic-rendering signals.
+    return null;
+  }
+}
 
 // Reports use their own handler: the cached request service is built per caller,
 // and Server-Timing exposes total handler time for later HTTP measurements.

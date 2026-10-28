@@ -89,6 +89,10 @@
   --hud-surface: rgb(26 35 51 / 0.4);
   --hud-mark: #64748b;
   --hud-grid: rgb(100 116 139 / 0.07);
+  /* Charts use emphasis, not categories: the accent marks what matters, grey is context (validated for CVD). */
+  --chart-accent: #3b82f6;
+  --chart-neutral: #64748b;
+  --chart-soft: #1e3a8a;
 }
 [data-theme="avionics-light"] {
   --hud-muted: #475569;
@@ -96,6 +100,9 @@
   --hud-surface: rgb(255 255 255 / 0.7);
   --hud-mark: #94a3b8;
   --hud-grid: rgb(100 116 139 / 0.09);
+  --chart-accent: #1d4ed8;
+  --chart-neutral: #64748b;
+  --chart-soft: #bfdbfe;
 }
 
 @theme inline {
