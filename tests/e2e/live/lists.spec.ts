@@ -24,3 +24,19 @@ test("every list redirects a page past the end to its last page", async ({ page 
     await expect(page.getByText(/temporarily unavailable/i)).toHaveCount(0);
   }
 });
+
+// The stage board covers every matching deal, not one page of the list (read-only).
+test("the stage board counts every matching deal and the list agrees", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/opportunities");
+  const listed = await page.getByText(/^Expected value of all \d+ matching deals?:/).textContent({ timeout: 30000 });
+  await page.getByRole("link", { name: "Stage board", exact: true }).click();
+  await expect(page).toHaveURL(/view=board/, { timeout: 30000 });
+  // The same deals and totals as the list, with no pagination.
+  await expect(page.getByText(listed!, { exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Opportunity pages" })).toHaveCount(0);
+  const total = Number(/all (\d+) matching/.exec(listed!)![1]);
+  const badges = await page.locator("section[aria-labelledby^='stage-'] h2 .badge").allTextContents();
+  expect(badges.reduce((sum, n) => sum + Number(n), 0)).toBe(total);
+  await expect(page.getByText(/temporarily unavailable/i)).toHaveCount(0);
+});

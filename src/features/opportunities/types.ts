@@ -1,6 +1,7 @@
 import type { Tables, TablesInsert } from "@/types/database.types";
 import { AppError } from "@/lib/errors";
 import type { OpportunityListInput } from "./schemas";
+import type { SummaryRow } from "./board";
 
 export type Party = Pick<Tables<"contacts">, "id" | "name" | "kind" | "email" | "phone" | "website">;
 export type Stage = Tables<"pipeline_stages">;
@@ -34,8 +35,12 @@ export type OpportunityHistory = {
     actor: { display_name: string } | null;
   })[];
 };
+// The list filters without the page number, shared by the list, the board and the pipeline summary.
+export type OpportunityFilters = Omit<OpportunityListInput, "page">;
 export interface OpportunityRepository {
   list(input: OpportunityListInput): Promise<{ opportunities: OpportunityRecord[]; count: number }>;
+  summary(input: OpportunityFilters): Promise<SummaryRow[]>;
+  stageCards(input: OpportunityFilters, stageId: string, limit: number): Promise<OpportunityRecord[]>;
   find(id: string): Promise<OpportunityRecord | null>;
   contact(id: string): Promise<Party | null>;
   options(): Promise<OpportunityOptions>;

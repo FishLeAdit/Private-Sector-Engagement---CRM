@@ -122,6 +122,11 @@ export const opportunityListSchema = z
   .strict()
   .refine(value => !value.from || !value.to || value.from <= value.to, "Closing date range is reversed.");
 export type OpportunityListInput = z.output<typeof opportunityListSchema>;
+// The same filters for the board and the pipeline summary, which have no pages.
+export const opportunityFilterSchema = opportunityListSchema.transform(({ page, ...filters }) => {
+  void page; // accepted, so a list URL can switch views, and ignored
+  return filters;
+});
 export const stageSchema = z
   .object({
     name: text(100).min(1),

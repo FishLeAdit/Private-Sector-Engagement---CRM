@@ -103,6 +103,21 @@ function repository(actor: string, database: PGlite = db): OpportunityRepository
       const opportunities = (await query<OpportunityRecord>(selection)).rows;
       return { opportunities, count: opportunities.length };
     },
+    async summary() {
+      return (
+        await query<{ stage_id: string; currency: string; expected_amount: string }>(
+          "select stage_id,currency,expected_amount from public.opportunities",
+        )
+      ).rows;
+    },
+    async stageCards(_input, stageId, limit) {
+      return (
+        await query<OpportunityRecord>(`${selection} where o.stage_id=$1 order by o.created_at desc,o.id limit $2`, [
+          stageId,
+          limit,
+        ])
+      ).rows;
+    },
     async create(input, creator) {
       const result = await query<{ id: string }>(
         `insert into public.opportunities(${columns.join(",")},created_by)

@@ -6,6 +6,7 @@ import { isPseManager } from "@/lib/auth/roles";
 import { parseOrThrow, requireUuid } from "@/lib/validation";
 import {
   configurationSchema,
+  opportunityFilterSchema,
   opportunityListSchema,
   opportunityPatchSchema,
   opportunitySchema,
@@ -19,6 +20,7 @@ import {
   type StageWrite,
 } from "./types";
 import { provisionalCategories, provisionalStages } from "./defaults";
+import { BOARD_CARDS, boardStages, cardLimits, summarize, type BoardColumn } from "./board";
 
 const parse = <T>(schema: z.ZodType<T>, input: unknown) =>
   parseOrThrow(schema, input, OpportunityError, "Review the opportunity details.");
@@ -116,6 +118,28 @@ export function createOpportunitiesService(repository: OpportunityRepository, ac
     async list(input: unknown) {
       authorize();
       return repository.list(parse(opportunityListSchema, input));
+    },
+    // Counts and expected value per currency for every matching deal, overall and per stage.
+    async summary(input: unknown) {
+      authorize();
+      return summarize(await repository.summary(parse(opportunityFilterSchema, input)));
+    },
+    // Every matching deal by stage: full counts and totals, and the latest cards of each stage up to its limit.
+    async board(input: unknown, cards?: unknown) {
+      authorize();
+      const filters = parse(opportunityFilterSchema, input);
+      const limits = cardLimits(cards);
+      const [rows, options] = await Promise.all([repository.summary(filters), repository.options()]);
+      const summary = summarize(rows);
+      const columns: BoardColumn[] = await Promise.all(
+        boardStages(options.stages, summary, filters.stage_id).map(async stage => {
+          const { count, totals } = summary.stages.get(stage.id) ?? { count: 0, totals: new Map() };
+          const limit = limits.get(stage.id) ?? BOARD_CARDS;
+          const deals = count ? await repository.stageCards(filters, stage.id, limit) : [];
+          return { stage, deals, count, totals, limit };
+        }),
+      );
+      return { summary, columns, options };
     },
     async get(id: string) {
       authorize();
