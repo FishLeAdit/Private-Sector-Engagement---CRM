@@ -79,7 +79,7 @@ export function Readout({
   detail?: ReactNode;
   size?: "md" | "lg" | "hero";
 }) {
-  const valueSize = size === "hero" ? "text-5xl sm:text-6xl" : size === "lg" ? "text-3xl" : "text-xl";
+  const valueSize = size === "hero" ? "text-4xl sm:text-5xl 2xl:text-6xl" : size === "lg" ? "text-3xl" : "text-xl";
   return (
     <div className="min-w-0">
       <p className="hud-label">{label}</p>

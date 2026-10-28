@@ -4,5 +4,5 @@ export default function Page({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  return <ReportScreen view="reports" searchParams={searchParams} />;
+  return <ReportScreen searchParams={searchParams} />;
 }

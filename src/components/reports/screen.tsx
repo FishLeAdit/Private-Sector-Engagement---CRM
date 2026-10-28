@@ -4,10 +4,8 @@ import { quarterSeries } from "@/features/reports/quarters";
 import { toDhakaDateTimeInput } from "@/lib/dates";
 import { ReportView } from "./view";
 export async function ReportScreen({
-  view,
   searchParams,
 }: {
-  view: "dashboard" | "reports";
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const filters = await searchParams;
@@ -19,12 +17,12 @@ export async function ReportScreen({
     const signedOut = result.error.status === 401;
     return (
       <PageProblem
-        title={`${view === "dashboard" ? "Dashboard" : "Reports"} could not be loaded`}
+        title="Reports could not be loaded"
         message={result.error.message}
         links={[
           signedOut
             ? { href: "/login", label: "Sign in again" }
-            : { href: `/${view}`, label: "Reset filters and retry" },
+            : { href: "/reports", label: "Reset filters and retry" },
         ]}
       />
     );
@@ -34,5 +32,5 @@ export async function ReportScreen({
   const plan =
     input.period === "year" && report.fundraising.plan_id ? await reportPlan(report.fundraising.plan_id) : null;
   const quarters = quarterSeries(report, plan, input, toDhakaDateTimeInput(new Date().toISOString()));
-  return <ReportView view={view} filters={input} report={report} options={options} quarters={quarters} />;
+  return <ReportView filters={input} report={report} options={options} quarters={quarters} />;
 }

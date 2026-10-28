@@ -41,3 +41,10 @@ export function fromDhakaDateTimeInput(value: string) {
   }
   return "";
 }
+
+// The Asia/Dhaka calendar date, optionally some days ahead, as YYYY-MM-DD.
+export function dhakaDate(now: Date, daysAhead = 0) {
+  const day = new Date(`${toDhakaDateTimeInput(now.toISOString()).slice(0, 10)}T00:00Z`);
+  day.setUTCDate(day.getUTCDate() + daysAhead);
+  return day.toISOString().slice(0, 10);
+}

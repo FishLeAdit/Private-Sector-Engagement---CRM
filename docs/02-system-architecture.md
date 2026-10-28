@@ -65,6 +65,8 @@ Charts live in `src/components/charts`. They use recharts in client components, 
 - A legend for two or more series and selective direct labels.
 - Every chart in a `ChartFrame`, a named `<figure>` whose plot is hidden from assistive technology and mirrored by a visually hidden table.
 
+The home dashboard is assembled by `features/overview/context.ts`. It reads the team report and then each module's own service, so every read keeps that module's access rules: the user's upcoming meetings and open activities, recent contributions, deals closing in 30 days and the contact count. The report is required; each queue panel loads and fails on its own, and Next.js redirect signals are re-thrown rather than caught. Its components live in `src/components/overview` and reuse the Reports figures.
+
 Quarter targets for the Reports charts come from the plan through the targets service (`reportPlan` and `features/reports/quarters.ts`), using the report's own target rule; no migration was needed.
 
 Two guardrails keep files in this shape: `npm run lint` also runs Prettier's check, and ESLint warns when a source file in `src` passes 300 lines.

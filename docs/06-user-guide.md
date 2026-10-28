@@ -264,7 +264,13 @@ Preview is read-only. Apply inserts missing fictional receipt IDs, provisional v
 
 ## Try Phase 11: Dashboard and Reports
 
-Open [Dashboard](http://localhost:3000/dashboard) or [Reports](http://localhost:3000/reports) after signing in. The hosted project has migrations 0010 and 0011; no business records, receipts, approvals or target baselines were changed to implement reporting. All chart values come from the current database, including the fictional records already seeded.
+Open [Dashboard](http://localhost:3000/dashboard) after signing in. It is an overview of the whole PSE team for a year, quarter or month (choose the period and currency at the top):
+- **Status strip:** record counts for contacts, deals in the period, meetings, activities and receipts.
+- **Monetary lens:** actual achievement as the headline figure, with its target, attainment meter, remaining and overachieved amounts. Next to it, the year's cumulative pace against the quarterly targets (monthly receipts outside full-year views). Then pipeline value by stage, and the pipeline, won, cash and in-kind figures.
+- **Non-monetary lens:** activity and meeting counts, monthly work volume, the five most common activity types, meeting status and the provisional contacts-engaged figures.
+- **Your queue:** your next five meetings and open activities, the team's latest contributions, and open deals expected to close in the next 30 days, each with a link to the full filtered list.
+
+**Detailed reports** opens Reports for the same year, period and currency. Open [Reports](http://localhost:3000/reports) directly for team-member and funding-vertical filters and every table. The hosted project has migrations 0010 and 0011; no business records, receipts, approvals or target baselines were changed to implement reporting. All chart values come from the current database, including the fictional records already seeded.
 
 1. Select **2026 / Full year / Whole team / All verticals / BDT**. With the untouched finance examples, target is 1,000,000 and actual is 280,000 (28%). The target remains labeled Draft until a manager reviews and approves it.
 2. Switch to **Q1**: target 150,000, actual 165,000, attainment 110%, overachievement 15,000. Switch to Q2: its target stays 250,000 and actual is 40,000. No carry-forward adjustment changes targets.

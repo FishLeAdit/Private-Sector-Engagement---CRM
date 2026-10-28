@@ -2,6 +2,27 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## UI redesign, overview dashboard (U3), on 28 October 2026
+
+The home dashboard is no longer a copy of Reports. It is an overview of the whole PSE team for the chosen year, quarter or month, with the user's own queue at the end:
+
+- **Status strip:** record counts.
+- **Monetary lens:** the one hero figure (actual achievement, with its currency as a small unit so it stays on one line) with target, attainment meter, remaining and overachieved amounts; the year pace chart (monthly receipts outside full-year views); compact pipeline by stage; pipeline, won, cash and in-kind readouts.
+- **Non-monetary lens:** work volume, the top five activity types, meeting status, and the provisional contacts engaged.
+- **Queue:** the user's next five meetings and open activities, recent contributions, and open deals closing in 30 days, each linked to its full filtered list.
+
+`features/overview/context.ts` reads every panel through the owning module's service, so access rules are unchanged. The report is required; each queue panel fails on its own and says so. Reports became reports-only, and each page links to the other for the same year, period and currency.
+
+| Check | Result |
+|---|---|
+| `npm test` | 706 passed across 54 files. Added `overview-view.test.tsx`: lens and queue headings, the hero figure read as one amount, pace or monthly fallback, five rows with the full count and a filtered link, a failed panel contained while the others render, the Reports link carrying only year/period/currency, and Dhaka dates crossing the UTC day. Report view tests now cover Reports only |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 27 passed in 4.8 min, including the new read-only `live/overview.spec.ts` (lenses and queue panels present, a chosen quarter carried into Reports, theme kept across a reload) |
+| Signed-in screenshots of the dashboard (2026 and Q4) in both themes at 1440 px and at 390 px | Reviewed. The hero figure wrapped, so its currency now sits as a small unit beside the number. No page scrolls sideways |
+| Hosted demo after the runs | No QA records; still 7 contributions |
+
+Known limitation: "Deals closing in 30 days" comes from the deals list's first page (the 20 most recently created deals in the window), filtered to open stages and sorted by closing date. With more than 20 deals in a 30-day window it could miss an earlier one; the panel's View all link opens the complete list.
+
 ## UI redesign, charts and Reports (U2), on 28 October 2026
 
 Second phase of the UI redesign: a chart kit on recharts (now used, closing C4's "use recharts or remove it") and a rebuilt Reports page. Presentation follows the dataviz rules:

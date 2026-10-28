@@ -5,26 +5,26 @@ import { formatDate } from "@/lib/dates";
 import { PanelHeader, StatusPip } from "@/components/ui/hud";
 import { RefreshReport } from "./refresh-button";
 
-type Props = {
-  view: "dashboard" | "reports";
-  filters: ReportFilters;
-  report: Report;
-  query: string; // Current filters, carried over when switching between Dashboard and Reports.
-};
+type Props = { filters: ReportFilters; report: Report };
 
-export function ReportHeader({ view, filters, report, query }: Props) {
-  const isDashboard = view === "dashboard";
+export function ReportHeader({ filters, report }: Props) {
+  // The overview is always the whole team, so only the year, period and currency carry over.
+  const overview = new URLSearchParams({
+    year: String(filters.year),
+    period: filters.period,
+    currency: filters.currency,
+  }).toString();
   const period = filters.period === "year" ? "FY" : filters.period.toUpperCase();
   return (
     <div className="mb-6">
       <PanelHeader
         level={1}
         code={`SYS.RPT // ${period}-${filters.year} · ${report.currency}`}
-        title={isDashboard ? "PSE dashboard" : "Performance reports"}
+        title="Performance reports"
       >
         <RefreshReport />
-        <Link href={`/${isDashboard ? "reports" : "dashboard"}?${query}`} className="btn btn-ghost btn-sm">
-          {isDashboard ? "Detailed reports" : "Dashboard overview"}
+        <Link href={`/dashboard?${overview}`} className="btn btn-ghost btn-sm">
+          Dashboard overview
         </Link>
       </PanelHeader>
       <p className="text-sm text-muted">
