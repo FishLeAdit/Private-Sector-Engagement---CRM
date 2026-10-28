@@ -15,6 +15,9 @@ The SQL migrations implement the database foundation. They are designed for Supa
 | [0012_contribution_stage_guard.sql](../supabase/migrations/0012_contribution_stage_guard.sql) | New contributions only on open or won opportunities; earlier receipts stay valid when a deal later closes |
 | [0013_contribution_attribution.sql](../supabase/migrations/0013_contribution_attribution.sql) | Members credit contributions only to themselves; authorized managers may credit any active PSE employee |
 | [0014_contacts_engaged.sql](../supabase/migrations/0014_contacts_engaged.sql) | Adds the provisional contacts-engaged figures to the reporting snapshot |
+| [0015_contribution_corrections.sql](../supabase/migrations/0015_contribution_corrections.sql) | Manager-only contribution corrections as negative reversal entries |
+| [0016_superadmin_accounts.sql](../supabase/migrations/0016_superadmin_accounts.sql) | The `admin` role becomes the superadmin: account functions, cross-department profile reads, and draft target plan deletion |
+| [0017_odoo_import.sql](../supabase/migrations/0017_odoo_import.sql) | Unique Odoo IDs on contacts, deals and activities, and the transactional `import_odoo` function |
 | [0010_activity_context.sql](../supabase/migrations/0010_activity_context.sql) | Related person/organization or CRM link required on Activity writes; legacy rows retained through NOT VALID |
 | [0009_demo_target_seed.sql](../supabase/migrations/0009_demo_target_seed.sql) | Service-role-only atomic insertion of reserved demo target plans; existing plans skipped without edits or approval |
 | [0008_phase10_workflows.sql](../supabase/migrations/0008_phase10_workflows.sql) | Atomic version-checked target snapshots/approval, contribution retry RPC, actual aggregation and parent revision triggers |
@@ -98,6 +101,16 @@ The amount check becomes `amount <> 0`, at most 999,999,999,999.99 in magnitude,
 A correction skips the open-or-won stage check and the active-employee and active-vertical checks on purpose: a mistake must stay correctable after a deal closes or a person or vertical becomes inactive.
 
 `public.correct_contribution(p_id, p_original_id, p_amount, p_reason)` is a security-invoker RPC (so RLS applies) that takes the positive amount to reverse, copies the original's fields, stores the negative row with the caller as recorder and leaves `notes` null. A stable `p_id` makes retries idempotent; a reused ID with different values returns `23505`. Totals in `pse_report` and `target_actuals` already sum amounts, so they net automatically; `pse_report` (replaced in 0015) leaves corrections out of every receipt count.
+
+### Superadmin and accounts (migration 0016)
+
+`private.is_superadmin()` is true for an active PSE profile with role `admin`; `private.is_target_manager()` already included that role, so a superadmin keeps every manager right. A `superadmin_read` policy lets a superadmin read profiles in every department. Profiles still have no app write grants: `admin_save_profile(id, name, department, role, active)` creates the profile for an existing sign-in or changes one, `admin_delete_profile(id)` deletes one that nothing references (foreign keys refuse the rest), and `admin_list_accounts()` returns every `auth.users` row with its profile as JSON. All three are security definer, check for a superadmin first, refuse to let the caller remove their own superadmin access or delete themselves, and are audited like any profile change.
+
+`admin_delete_target_draft(plan_id)` deletes a draft plan's allocation cells, quarters and header in one call. The plan guard trigger from 0003 is replaced so that a delete is allowed only for a draft and a superadmin; approved plans stay immutable.
+
+### Odoo import (migration 0017)
+
+Contacts, opportunities and activities gain a nullable `odoo_id` (nonblank, at most 200 characters) with a partial unique index each, so an export cannot be imported twice. `import_odoo(contacts, deals, activities)` takes JSON arrays of prepared rows whose IDs and links the server has already set. It is security invoker and needs a manager, so the normal insert policies, link triggers and audit apply to every row, with the caller as creator. It inserts companies, then people, then deals, then activities, and returns the counts; one refused row rolls back the whole call.
 
 ## Target reconciliation and locking
 

@@ -9,13 +9,44 @@ Database authorization is implemented in grants, row-level security (RLS), valid
 - Proxy refreshes/verifies tokens with `getClaims()` and preserves refreshed cookies across redirects. Protected page rendering and all API GET handlers independently verify the current user/profile. Future business services must call the guard before accessing data; layout checks alone are insufficient.
 - Anonymous API callers receive JSON 401; authenticated callers without active PSE membership receive 403; identity/profile service failures produce 503 and never grant access. Authorized Contacts/Opportunities/Meetings/Activities/Contributions/Targets calls return data or validation/conflict errors; Reports calls return a read-only aggregate or a safe validation/availability error. Unsupported methods have no implemented mutation.
 - `authorizeApi({ manager: true })` provides the server-side manager check for future target mutations. Existing target GET access remains team-wide; target writes still require RLS/approval validation.
-- Auth responses use private/no-store headers and Supabase server fetches bypass caching. Cookie-session refresh is implemented; ordinary CRM requests use no administrative/service-role client. The separate explicitly run demo-seed CLI is administrative tooling. Sign out affects the current session and reports failure instead of claiming success if the provider rejects it.
+- Auth responses use private/no-store headers and Supabase server fetches bypass caching. Cookie-session refresh is implemented; ordinary CRM requests use no administrative/service-role client. The only exception is the superadmin's sign-in changes (creating and deleting accounts, setting passwords), which use the Supabase Auth admin API on the server after a superadmin check. The separate explicitly run seed and dry-run CLIs are administrative tooling. Sign out affects the current session and reports failure instead of claiming success if the provider rejects it.
 
 ## Membership and trusted administration
 
 A CRM caller must have an active `profiles` record in the PSE department. Proposed roles are `pse_member`, `pse_manager` and `admin`; manager permissions do not admit an inactive or non-PSE profile. Authentication alone does not establish PSE membership.
 
 Application clients cannot create profiles or change their own role, department or active flag. A trusted database/Supabase administrator provisions the corresponding Auth identity and profile. No client-accessible signup trigger grants CRM membership, and no demo login credentials are committed.
+
+### Roles and the superadmin
+
+Three roles (decided 28 October 2026):
+
+| Role | Label | Can do |
+|---|---|---|
+| `pse_member` | PSE member (staff) | Work in the CRM under the ownership rules below |
+| `pse_manager` | PSE manager | Also create, edit and approve target plans, configure verticals, stages and categories, assign another focal person, credit a contribution to another employee, record contribution corrections and use the Odoo import |
+| `admin` | Superadmin | Everything a manager can do, plus manage accounts (Settings → Accounts) and delete draft target plans |
+
+Every role needs an active profile in the PSE department. Financial history stays protected even for a superadmin: contributions are corrected rather than deleted, approved plans stay locked, and audit history cannot be changed.
+
+**Accounts screen.** A superadmin creates sign-in accounts (email, initial password, name, department, role), changes any account's name, department and role, restricts an account by clearing **Active**, sets a new password, and deletes an account that owns or created nothing. An account with any records or audit history cannot be deleted; restrict it instead, so its work stays attributed. A superadmin cannot remove their own superadmin access or delete their own account, so at least one active superadmin always remains. Restricting takes effect on that person's next request, because the app reads the profile again every time; cached report snapshots are keyed by role, so a role change never reuses another role's cache entry.
+
+**How it is enforced.** Profile changes go through the security-definer functions `admin_list_accounts`, `admin_save_profile` and `admin_delete_profile` (migration 0016), which check for an active superadmin in SQL as well as in the service. Creating and deleting sign-ins and setting passwords need the Supabase Auth admin API, so the server uses `SUPABASE_SERVICE_ROLE_KEY` for those three calls only (`src/lib/supabase/admin.ts`), after the service has verified a superadmin. The key is server-only and never reaches the browser. Without it on the server, the screen still edits and restricts profiles and says that sign-in changes are unavailable.
+
+**The first superadmin** has to be set outside the app, in the Supabase SQL Editor (it runs as the database owner):
+
+```sql
+-- Find the person first:
+select p.id, p.display_name, u.email, p.role, p.department, p.active
+from public.profiles p join auth.users u on u.id = p.id
+order by p.display_name;
+
+-- Make an active PSE profile the superadmin:
+update public.profiles set role = 'admin'
+where id = '<profile id>' and department = 'PSE' and active;
+```
+
+The hosted demo's superadmin was set with `npm.cmd run seed:accounts -- --superadmin=<email> --apply`. Profile changes are written to `audit_logs`; an SQL Editor change has no app actor.
 
 ## Contacts API contract
 
@@ -96,6 +127,8 @@ All responses use private/no-store headers. POST/PATCH requires matching Origin,
 | Correct a recognized contribution (negative reversal entry) | Denied | Denied | Allowed, with a reason; never below zero |
 | Edit/delete a recognized contribution | Denied | Denied | Denied through application grants |
 | Configure stages, categories and target verticals | Denied | Denied | Allowed subject to constraints |
+| Run the Odoo import check (read-only) and import files with nothing to review | Denied | Denied | Allowed |
+| Manage accounts and delete draft target plans | Denied | Denied | Superadmin only |
 | Create/edit draft target data and approve a plan | Denied | Denied | Allowed subject to reconciliation |
 | Change approved target data | Denied | Denied | Denied |
 | Directly insert/edit/delete audit history or membership | Denied | Denied | Denied through application grants |
@@ -170,6 +203,25 @@ All responses are private/no-store. Writes require a matching Origin and JSON, w
 
 `seed_demo_target` is administrative fixture tooling only. It is not used by the Targets API and cannot be executed by anonymous or authenticated application users, including PSE managers. Only the service-role CLI may insert the two reserved draft demo IDs; existing plans are preserved and approval still requires a real authorized user. No private administrative key is imported by the app.
 
+
+## Accounts API
+
+All superadmin only (members and managers get 403 before any read), private/no-store, and writes need a matching Origin.
+
+| Method and path | Contract |
+|---|---|
+| `GET /api/accounts` | `{ accounts }`: every sign-in account with its email, last sign-in and profile (null fields for an account without one) |
+| `POST /api/accounts` | `{ email, password, display_name, department?, role, active? }` creates a confirmed sign-in and its profile (201, `{ account: { id } }`). A taken email is 409; a failed profile removes the new sign-in again. Needs the service role key (503 otherwise) |
+| `PATCH /api/accounts/[id]` | `{ display_name, department, role, active }` creates or changes the profile. Removing the caller's own superadmin access is 422 |
+| `POST /api/accounts/[id]/password` | `{ password }` (8–72 characters) sets a new password; needs the service role key |
+| `DELETE /api/accounts/[id]` | Deletes the profile, then the sign-in. An account with records or history is 409; the caller's own account is 422. Without the key the response says `signInRemoved: false` |
+| `DELETE /api/targets/[id]` | Superadmin only: deletes a draft plan with its quarters and cells (`admin_delete_target_draft`); an approved plan is 409 |
+
+## Odoo import check API
+
+`POST /api/settings/odoo-check` is for PSE managers and admins only (members get 403 before any read) and needs a matching Origin. The JSON body is `{ contacts?, deals?, activities? }`, each the text of one CSV export of at most 2,000,000 characters; unknown fields are rejected, and at least one file must have content (422 otherwise). A file that cannot be parsed (an unclosed quote) returns 422 naming the file. The response is `{ report }`: per-file row, ready, missing-column and ignored-column counts plus each finding's file, line, Odoo ID and message, with private/no-store headers. The route stores nothing and writes nothing. It reads existing contacts' normalized emails and phones, PSE profiles, stages and categories with the caller's own client, so RLS bounds what it can compare against. The rules are in [migration plan](08-migration-plan.md).
+
+`POST /api/settings/odoo-import` takes the same body, repeats the check on the server and imports only when nothing needs review (422 otherwise). It inserts everything through `import_odoo` (migration 0017) in one transaction with the caller's own rights, so every RLS policy and link trigger applies; any refused row rolls the whole batch back. It returns 201 with `{ result: { contacts, deals, activities } }`, the new records' IDs, and expires the contact, deal, activity, dashboard and report pages. Files already imported are refused: every imported row keeps its Odoo ID, unique per table (409 if the check is bypassed).
 
 ## Reports API
 

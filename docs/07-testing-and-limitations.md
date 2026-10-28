@@ -2,6 +2,56 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Superadmin, named demo staff, Odoo import and logo on 28 October 2026
+
+Requested by the user on 28 October 2026:
+
+- **Superadmin.** The `admin` role is now the superadmin: every manager right, plus Settings → Accounts (create sign-ins with an initial password, change name, department and role, restrict, set passwords, delete accounts that own or created nothing) and deleting draft target plans. Migration 0016 adds the SQL functions, a cross-department profile read policy and the draft-delete path; the service checks the role first, and sign-in changes use the server-only service role key for the Auth admin API only. Contributions, approved plans and audit history stay undeletable.
+- **Named demo staff.** `npm.cmd run seed:accounts -- --superadmin=fishyadit@gmail.com --apply` made the user's login the superadmin ("PSE Superadmin"), renamed the other "Demo Manager" to Farzana Rahman and "Demo Member" to Nusrat Jahan (keeping their sign-ins and records), and created Tanvir Hasan (manager), Arif Chowdhury and Sadia Islam (staff) with random, unshown passwords. A second preview reports nothing left to do.
+- **Odoo import.** When a check finds nothing to review, the page imports the files: the server checks again, builds linked rows and calls `import_odoo` (migration 0017), one transaction under RLS. Imported rows keep a unique Odoo ID, so a second import is refused. Two sample sets now exist: `mixed` (a problem of every kind) and `ready` (passes and imports). Two new rules: Odoo IDs already imported, and an activity naming someone outside its deal.
+- **Logo.** "PSE // CRM" is set in Nasalization and converted to SVG outlines. Its Typodermic desktop licence allows logos and outlined SVG but needs a separate licence for webfonts and apps, so the font file is not in the repository or served.
+
+| Check | Result |
+|---|---|
+| `npm test` | 800 passed across 69 files; 39 added or extended. `accounts-database.test.ts` (11, PGlite): list, every function refused to managers, members, outsiders, inactive and anonymous callers, create and change profiles, no self-demotion, cross-department reads, delete only unused profiles, draft-only superadmin plan deletion. `odoo-import-database.test.ts` (4, PGlite): members refused, one bad row rolls back everything, the ready samples import with links, staff and creator, and a repeat is refused by the check and the database. `accounts-api.test.ts` (9), `account-forms.test.tsx` (4), `target-draft-delete.test.ts` (2), `demo-accounts.test.ts` (3), and the Odoo check, import and component tests |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed. The type generator now writes `Args: never` for a function without arguments, as Supabase's generator does |
+| Playwright without `E2E_LIVE_WRITES`, development server | 21 passed, 11 skipped |
+| Live specs (accounts walk and a QA import that the fixture deletes afterwards) | Waiting for 0016 and 0017 on the hosted project |
+
+## Account menu and Settings pages on 28 October 2026
+
+Requested by the user on 28 October 2026:
+
+- **Account menu.** The signed-in name and role moved from the header to the foot of the navigation rail, as a button. It opens upwards to **Settings** and **Sign out**, and closes on Escape (focus returns to the button), on a click elsewhere, or when Settings is chosen. Settings left the rail. On a phone the button sits at the end of the opened Menu.
+- **Settings hub.** `/settings` links to two pages: **Pipeline** (`/settings/pipeline`, the former Settings page, unchanged) and **Odoo import check** (`/settings/odoo-import`).
+- **Odoo import check in the app.** Managers upload up to three CSV files, or check the fictional samples in one click, and get the report per file with each finding's line, Odoo ID and column. The rules moved from `scripts/lib` to `src/features/odoo` and are shared with `npm.cmd run odoo:dry-run`; the templates moved to `public/odoo-templates/` so the page can offer them. The route is manager-only, stores nothing, and compares against the data the manager's own client can read (no service-role key in the app).
+
+| Check | Result |
+|---|---|
+| `npm test` | 761 passed across 63 files; 9 added. `account-menu.test.tsx` (3): opening, Settings and Sign out, Escape with focus return, outside click, and Settings gone from the rail. `odoo-check-api.test.ts` (3): the report through the route, manager-only, same-origin, empty, unknown-field and unreadable files. `odoo-import-check.test.tsx` (3): chosen files, the sample button, and errors |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` and both accounts, development server | 30 passed in 5.2 min. New: `live/settings.spec.ts` (account menu, Escape, Settings hub, pipeline page, sample check) and anonymous redirects for both Settings pages and a 401 for the check route. The sign-in spec now signs out through the account menu |
+| Signed-in screenshots of the menu and all three Settings pages, dark and light at 1440 px and dark at 390 px | No sideways page scroll. Fixed during review: the three file pickers were too narrow side by side and are now stacked, and the findings table scrolled inside its panel on a phone, so messages now wrap |
+| Hosted demo after the runs | No QA records; still 7 contributions |
+
+## Full stage board, Odoo dry run and role notes on 28 October 2026
+
+The rest of Block 5:
+
+- **Full stage board (C1).** The board shows every matching deal with no pages. Each stage's count and expected totals (per currency, in integer cents) come from a three-column read of every matching deal in 1,000-row chunks. Each stage lists its latest 10 cards, and **Show 20 more** raises that stage's limit through the `cards` URL parameter, up to 500; past that, the stage links to the list filtered to it. A stage filter shows only that stage. The list and the board share one filter helper, and the line above both views now covers every matching deal instead of the current page.
+- **Odoo dry run (D1).** `npm.cmd run odoo:dry-run` checks contacts, deals and activities CSVs with the CRM's own Zod create schemas, links rows by Odoo ID, finds duplicate emails and phones within the file and (read-only) against existing contacts, and matches staff, stages and tags against the project. It never writes; the templates and column names await PSE's field mapping ([docs/08](08-migration-plan.md)).
+- **Roles (C3).** No role screen. docs/04 and the README give the SQL to grant or revoke `pse_manager`.
+- **Polish (C4).** Already done in the UI redesign (recharts for every chart, the mobile navigation's active state). The react-hook-form conversion is skipped, and the user chose to keep the three empty placeholder folders.
+
+| Check | Result |
+|---|---|
+| `npm test` | 752 passed across 60 files; 16 added. `opportunity-board.test.ts` (7): summary totals per stage and currency, card-limit parsing, stage selection, chunked summary reads and stage card queries through the Supabase SDK, and the board service. `opportunity-board-view.test.tsx` (2): counts, totals, Show more and the list link. `odoo-dry-run.test.ts` (7): the CSV reader, the rules on the templates offline and with reference data, missing columns and repeated IDs, and a check that the command only selects |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| `npm.cmd run odoo:dry-run` against the hosted demo | Ran read-only. It reported each deliberate problem in the templates, plus a real one: two PSE profiles are both named "Demo Manager", so a salesperson of that name is ambiguous |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` and both accounts, development server | 29 passed in 5.6 min, including the new board check (the board's stage counts add up to the list's total, and it has no pagination) and the correction form walk |
+| Signed-in screenshots of the board, the list and a contribution page at 1440 and 390 px | No sideways page scroll; the board scrolls inside its own strip on a phone |
+| Hosted demo after the runs | No QA records; still 7 contributions and no corrections |
+
 ## Contribution corrections on 28 October 2026
 
 Decided 28 October 2026: a refund or recording mistake is fixed with a manager-only correction entry, not by editing the receipt. Migration 0015 adds the columns, the trigger rules, the `correct_contribution` RPC and a `pse_report` that leaves corrections out of receipt counts. The schema is in [docs/03](03-database-schema.md#contribution-corrections-migration-0015).
@@ -17,7 +67,7 @@ Decided 28 October 2026: a refund or recording mistake is fixed with a manager-o
 | `npm test` | 736 passed across 57 files; 30 added. `contribution-corrections.test.ts` (20): signed amounts, input rules, and PGlite tests of the RPC and trigger (inherited fields, idempotent retry, member/outsider/inactive/anonymous denial, direct-insert denial, net never below zero, full reversal, no correction of a correction, no changed attribution, closed deal, report netting and counts). `correction-api.test.ts` (5) and `correction-form.test.tsx` (5) |
 | `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed; generated types gain the two columns and the RPC |
 | Playwright without `E2E_LIVE_WRITES`, development server | 21 passed, 7 skipped (the new live test is one of the skips) |
-| Live specs against the hosted demo | Waiting for 0015 on the hosted project: the deal and contribution pages now read the new columns |
+| Live specs against the hosted demo, after 0015 was applied there | Passed as part of the 29-test run above: the manager's correction form is offered on a demo receipt and its request is blocked in the browser. Nothing was recorded |
 
 ## UI redesign, module pages and QA (U4–U5), on 28 October 2026
 
