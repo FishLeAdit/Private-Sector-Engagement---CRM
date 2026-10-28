@@ -56,7 +56,7 @@ export function FundraisingSection({ report, monthly, detailed, quarters }: Prop
               label="Attainment"
               size="lg"
               value={totals?.percentage == null || !totals ? "Not applicable" : `${totals.percentage}%`}
-              detail={`${funds.receipt_count} contribution records`}
+              detail={`${funds.receipt_count} contribution ${funds.receipt_count === 1 ? "record" : "records"}`}
             />
             {funds.plan_id && (
               <Link className="link font-mono text-xs uppercase tracking-wider" href={`/targets/${funds.plan_id}`}>
@@ -72,7 +72,7 @@ export function FundraisingSection({ report, monthly, detailed, quarters }: Prop
               key={t.key}
               label={t.key === "cash" ? "Cash" : "Valued in-kind"}
               value={money(t.amount, currency)}
-              detail={`${share(t.amount, funds.actual)} of actuals · ${t.count} records`}
+              detail={`${share(t.amount, funds.actual)} of actuals · ${t.count} ${t.count === 1 ? "record" : "records"}`}
             />
           ))}
         </div>

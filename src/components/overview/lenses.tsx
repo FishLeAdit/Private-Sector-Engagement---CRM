@@ -81,7 +81,7 @@ export function MonetaryLens({ data }: { data: OverviewData }) {
               key={t.key}
               label={t.key === "cash" ? "Cash received" : "Valued in-kind"}
               value={money(t.amount, currency)}
-              detail={`${t.count} records`}
+              detail={`${t.count} ${t.count === 1 ? "record" : "records"}`}
             />
           ))}
         </div>
