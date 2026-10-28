@@ -61,3 +61,24 @@ test("an open deal offers the contribution form and a closed, not-won deal refus
   await expect(page.getByRole("alert").filter({ hasText: "can only be recorded on open or won deals" })).toBeVisible();
   await expect(page.getByLabel("Actual amount received / agreed value *")).toHaveCount(0);
 });
+
+// Corrections are permanent too, so the save request is blocked: this opens an existing demo receipt, checks
+// the panel and walks the manager's correction form up to the blocked request. Nothing is created.
+test("a manager can open the correction form on an existing receipt", async ({ page, qa }) => {
+  await signIn(page);
+  const body = await (await page.request.get("/api/contributions")).json();
+  const receipt = ((body.data ?? body).contributions as { id: string; corrects_contribution_id: string | null }[]).find(
+    row => !row.corrects_contribution_id,
+  );
+  test.skip(!receipt, "The demo project has no recognized contribution to open.");
+  await page.goto(`/contributions/${receipt!.id}`);
+  await expect(page.getByRole("heading", { level: 2, name: "Corrections" })).toBeVisible({ timeout: 30000 });
+  const amount = page.getByLabel(/^Amount to reverse/);
+  test.skip(!(await amount.count()), "This account is not a PSE manager, so it is not offered the correction form.");
+  await amount.fill("0.01");
+  await page.getByLabel("Reason for the correction *").fill(qaName("Correction check"));
+  await page.getByRole("button", { name: "Review correction", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm and record correction", exact: true }).click();
+  await expect(page.getByText(/The result is uncertain/)).toBeVisible({ timeout: 30000 });
+  expect(qa.blocked).toEqual([`POST /api/contributions/${receipt!.id}/corrections`]);
+});

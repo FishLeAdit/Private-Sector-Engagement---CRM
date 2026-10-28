@@ -20,7 +20,8 @@ An empty employee/vertical filter means the whole team/all verticals. `unassigne
 
 | Metric | Definition |
 |---|---|
-| Actual achievement | Sum of recognized contribution amounts in the selected currency and recognition period, with the selected attribution filters |
+| Actual achievement | Sum of recognized contribution amounts in the selected currency and recognition period, with the selected attribution filters. Correction entries are negative, so the sum is net of them |
+| Receipt count | Receipts only: correction entries are left out of every count (total, per type and per employee × vertical cell) |
 | Cash / valued in-kind | The same actuals grouped by their saved financial contribution type |
 | Assigned target, whole team/all verticals | Stored annual amount for a full year; stored quarter baseline for a quarter |
 | Assigned target with employee or vertical selection | Sum of matching canonical allocation cells across the selected year/quarter |
@@ -32,7 +33,7 @@ An empty employee/vertical filter means the whole team/all verticals. `unassigne
 
 Missing targets are distinct from explicit zero allocations. Missing targets leave remaining/over/attainment unavailable. A zero baseline can have actual overachievement, but no percentage denominator. Draft target values are labeled provisional; the report does not approve or lock them. Approved baselines remain fixed: Q1 at 110% stays in Q1 and never lowers Q2. Annual actuals aggregate the year's recognized support.
 
-Receipt employee/vertical attribution is independent of future opportunity ownership. Opportunity expectations, operational budgets, activity estimates and unvalued gifts contribute zero to actual monetary achievement. In-kind amounts are manually agreed by PSE with operational-team evidence, not valued by this report. The report does not create receipts, reverse them or apply exchange rates.
+Receipt employee/vertical attribution is independent of future opportunity ownership. Opportunity expectations, operational budgets, activity estimates and unvalued gifts contribute zero to actual monetary achievement. In-kind amounts are manually agreed by PSE with operational-team evidence, not valued by this report. The report does not create receipts, reverse them or apply exchange rates. A manager's correction (migration 0015) copies its receipt's attribution and recognition time, so it always reduces the same period, employee and vertical as the receipt it reverses, and a receipt's net never goes below zero.
 
 ## Pipeline forecast
 

@@ -94,7 +94,7 @@ export function OverviewQueue({ data }: { data: OverviewData }) {
     d.contributions.map(c => ({
       key: c.id,
       href: `/contributions/${c.id}`,
-      title: money(c.amount, c.currency),
+      title: `${money(c.amount, c.currency)}${c.corrects_contribution_id ? " correction" : ""}`,
       meta: `${c.opportunity?.deal_name ?? "Opportunity"} · ${c.employee?.display_name ?? "Employee"}`,
       aside: formatDate(c.recognized_at),
     })),

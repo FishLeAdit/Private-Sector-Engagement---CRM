@@ -67,7 +67,7 @@ Existing RLS gives active PSE staff team reads and limits meeting updates to own
 
 ## Financial values and recognition
 
-Amounts use `numeric(14,2)` with finite-value checks. Expected opportunity amounts, actual contribution amounts and annual targets are positive; allocation amounts and an optional operational budget are non-negative. Currency is stored as a three-letter uppercase code. PostgreSQL decimal arithmetic performs reconciliation; Phase 10 application inputs handle percentage rounding explicitly.
+Amounts use `numeric(14,2)` with finite-value checks. Expected opportunity amounts, actual contribution receipts and annual targets are positive (a contribution correction is the one negative amount, below); allocation amounts and an optional operational budget are non-negative. Currency is stored as a three-letter uppercase code. PostgreSQL decimal arithmetic performs reconciliation; Phase 10 application inputs handle percentage rounding explicitly.
 
 Opportunity creation/editing uses the original tables; deletion adds only the grant/policy in migration 0005. Input rejects more than two decimal places or more than 12 whole digits, rather than silently rounding entered amounts. Stage/category activation is required on creation or selection changes; unchanged inactive historical references can still be edited. Only a manager can reassign a focal person. Configurable stage labels, positions, closed outcomes and provisional flags are maintained through Settings; target verticals remain separate.
 
@@ -75,7 +75,29 @@ Opportunity creation/editing uses the original tables; deletion adds only the gr
 
 `cash` and `valued_in_kind` are proposed internal financial types. For valued in-kind opportunities, `valuation_note` records the agreed estimate context. Recognized in-kind contributions retain their own `approved_value_note` and optional `valuation_reference_url`; both opportunity and contribution references accept HTTP(S) links. The operational team supplies the inventory/market estimate and PSE enters the agreed amount manually. Notes and URLs preserve evidence; no upload or valuation engine is included.
 
-Expected value and realized support remain separate records. Winning a deal or editing its value does not insert a contribution. Contributions carry explicit `employee_id` and optional `target_vertical_id`, so later opportunity ownership changes do not silently reassign historical achievement. An absent vertical remains unassigned rather than being inferred from a contribution category. Refunds/corrections are not implemented; application clients cannot edit or delete recognized contributions.
+Expected value and realized support remain separate records. Winning a deal or editing its value does not insert a contribution. Contributions carry explicit `employee_id` and optional `target_vertical_id`, so later opportunity ownership changes do not silently reassign historical achievement. An absent vertical remains unassigned rather than being inferred from a contribution category. Application clients cannot edit or delete recognized contributions.
+
+### Contribution corrections (migration 0015)
+
+A refund or recording mistake is corrected with a new row, never by editing the receipt. `recognized_contributions` gains two columns:
+
+| Column | Meaning |
+| --- | --- |
+| `corrects_contribution_id` | The receipt this row reverses (`on delete restrict`); null for an ordinary receipt |
+| `correction_reason` | Required, nonblank and at most 2,000 characters on a correction; must be null on a receipt |
+
+The amount check becomes `amount <> 0`, at most 999,999,999,999.99 in magnitude, and positive exactly when `corrects_contribution_id` is null, so a receipt is always positive and a correction always negative.
+
+`private.validate_contribution()` keeps the 0012 receipt rules and adds these for a correction:
+
+1. Only a PSE manager or admin may insert one (`42501`).
+2. The original must exist and must not itself be a correction.
+3. Opportunity, employee, vertical, currency, type and recognition time must equal the original's, so the correction lands in the same report period and cell.
+4. The original plus all its corrections, including the new one, must stay at or above zero. The original row is locked `for update`, which serializes concurrent corrections.
+
+A correction skips the open-or-won stage check and the active-employee and active-vertical checks on purpose: a mistake must stay correctable after a deal closes or a person or vertical becomes inactive.
+
+`public.correct_contribution(p_id, p_original_id, p_amount, p_reason)` is a security-invoker RPC (so RLS applies) that takes the positive amount to reverse, copies the original's fields, stores the negative row with the caller as recorder and leaves `notes` null. A stable `p_id` makes retries idempotent; a reused ID with different values returns `23505`. Totals in `pse_report` and `target_actuals` already sum amounts, so they net automatically; `pse_report` (replaced in 0015) leaves corrections out of every receipt count.
 
 ## Target reconciliation and locking
 
@@ -92,7 +114,7 @@ Approval and child-allocation edits lock the same parent plan row to prevent con
 
 ## Configuration and remaining integration
 
-Seed stage/category/vertical labels are provisional demonstration configuration, not finalized PSE terminology. Updating configuration is restricted to authorized managers. Contacts' active/inactive lifecycle, final category-to-vertical mappings, refund handling and reporting formulas still need decisions.
+Seed stage/category/vertical labels are provisional demonstration configuration, not finalized PSE terminology. Updating configuration is restricted to authorized managers. Contacts' active/inactive lifecycle, final category-to-vertical mappings, PSE's own refund policy (the correction entries above are a project choice) and reporting formulas still need decisions.
 
 The seed is local demonstration data using fixed fictional profile IDs. Matching Auth identity rows are supplied by the isolated test bootstrap, not by the migrations or seed. There are no Auth passwords or real demo login accounts. A hosted import requires trusted identity provisioning and reviewed ID mappings; this checkpoint does not deploy to a hosted project.
 

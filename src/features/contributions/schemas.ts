@@ -27,6 +27,17 @@ export const contributionSchema = z
   });
 export type ContributionInput = z.output<typeof contributionSchema>;
 
+// A manager's reversal of part or all of a receipt, entered as the positive amount to take off. The correction
+// copies the receipt's attribution and recognition time, so only the amount and the reason are asked for.
+export const correctionSchema = z
+  .object({
+    request_id: z.uuid(),
+    amount: positiveAmount,
+    reason: z.string().trim().min(1, "Explain why this contribution is being corrected.").max(2000),
+  })
+  .strict();
+export type CorrectionInput = z.output<typeof correctionSchema>;
+
 export const contributionFilters = z
   .object({
     opportunity_id: optionalId.default(""),

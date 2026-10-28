@@ -57,7 +57,10 @@ export default async function Page({
                 </td>
                 <td>
                   {money(row.amount, row.currency)}
-                  <p className="mt-1 text-xs">{row.contribution_type === "cash" ? "Cash" : "Valued in-kind"}</p>
+                  <p className="mt-1 text-xs">
+                    {row.corrects_contribution_id ? "Correction · " : ""}
+                    {row.contribution_type === "cash" ? "Cash" : "Valued in-kind"}
+                  </p>
                 </td>
                 <td>{formatDate(row.recognized_at, true)}</td>
                 <td>

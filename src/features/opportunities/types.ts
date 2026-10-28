@@ -21,7 +21,14 @@ export type CategoryWrite = Pick<Category, "code" | "name" | "active" | "is_prov
 export type OpportunityHistory = {
   contributions: Pick<
     Tables<"recognized_contributions">,
-    "id" | "amount" | "currency" | "recognized_at" | "contribution_type" | "notes"
+    | "id"
+    | "amount"
+    | "currency"
+    | "recognized_at"
+    | "contribution_type"
+    | "notes"
+    | "corrects_contribution_id"
+    | "correction_reason"
   >[];
   audits: (Pick<Tables<"audit_logs">, "id" | "action" | "before" | "after" | "created_at"> & {
     actor: { display_name: string } | null;

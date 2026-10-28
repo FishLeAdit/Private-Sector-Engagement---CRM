@@ -6,10 +6,12 @@ export const liveEnabled =
   process.env.E2E_LIVE_WRITES === "1" && !!process.env.E2E_PSE_EMAIL && !!process.env.E2E_PSE_PASSWORD;
 export const liveSkipReason = "Live checks need E2E_LIVE_WRITES=1 and the demo E2E_PSE_EMAIL/E2E_PSE_PASSWORD.";
 
-// Hosted writes with no delete path: receipts are append-only, approval locks a plan, and target plans,
-// verticals, stages and categories cannot be deleted. Contacts, deals, meetings and activities can be.
+// Hosted writes with no delete path: receipts and their corrections are append-only, approval locks a plan,
+// and target plans, verticals, stages and categories cannot be deleted. Contacts, deals, meetings and
+// activities can be.
 const permanentWrites: [method: string, path: RegExp][] = [
   ["POST", /^\/api\/contributions$/],
+  ["POST", /^\/api\/contributions\/[^/]+\/corrections$/],
   ["POST", /^\/api\/targets$/],
   ["PATCH", /^\/api\/targets\/[^/]+$/],
   ["POST", /^\/api\/targets\/[^/]+\/approve$/],

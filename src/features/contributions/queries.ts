@@ -5,8 +5,8 @@ import { financeDatabaseError, loadFinanceOptions } from "@/features/finance/que
 import { FinanceError } from "@/features/finance/types";
 import { fromDhakaDateTimeInput } from "@/lib/dates";
 import { isPastLastPage } from "@/lib/supabase/pagination";
-import type { ContributionFilters, ContributionInput } from "./schemas";
-import type { Contribution } from "./types";
+import type { ContributionFilters, ContributionInput, CorrectionInput } from "./schemas";
+import type { Contribution, ContributionCorrection } from "./types";
 
 const contributionSelect =
   "*,opportunity:opportunity_id(id,deal_name),employee:employee_id(display_name),vertical:target_vertical_id(name),recorder:recorded_by(display_name)" as const;
@@ -78,6 +78,34 @@ export function createContributionRepository(client: SupabaseClient<Database>) {
       const saved = await find(data);
       if (!saved || saved.recorded_by !== actor)
         throw new FinanceError(503, "Reload the contribution list to verify this submission before retrying.");
+      return saved;
+    },
+
+    async corrections(id: string): Promise<ContributionCorrection[]> {
+      const { data, error } = await client
+        .from("recognized_contributions")
+        .select("id,amount,currency,correction_reason,created_at,recorder:recorded_by(display_name)")
+        .eq("corrects_contribution_id", id)
+        .order("created_at")
+        .order("id")
+        .limit(1000);
+      if (error) financeDatabaseError(error);
+      return data ?? [];
+    },
+
+    // Like record(): the RPC deduplicates retries, and the re-read confirms the recorder and the original.
+    async correct(id: string, input: CorrectionInput, actor: string) {
+      const { data, error } = await client.rpc("correct_contribution", {
+        p_id: input.request_id,
+        p_original_id: id,
+        p_amount: input.amount,
+        p_reason: input.reason,
+      });
+      if (error) financeDatabaseError(error);
+      if (!data) throw new FinanceError(503, "Correction could not be recorded.");
+      const saved = await find(data);
+      if (!saved || saved.recorded_by !== actor || saved.corrects_contribution_id !== id)
+        throw new FinanceError(503, "Reload the contribution to verify this correction before retrying.");
       return saved;
     },
   };

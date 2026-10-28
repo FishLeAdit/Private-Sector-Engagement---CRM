@@ -137,16 +137,21 @@ export function OpportunityContributions({ contributions }: { contributions: Opp
       <h2 className="text-lg font-semibold">Recognized contributions</h2>
       <p className="mt-2 text-sm text-base-content/65">
         Latest 10 recorded actuals, shown separately from expected value. Use Record contribution to add a receipt while
-        the deal is open or won.
+        the deal is open or won. A correction is a negative entry recorded by a PSE manager.
       </p>
       <ul className="mt-5 space-y-4">
         {contributions.map(item => (
           <li key={item.id}>
-            <p className="font-semibold">{money(item.amount, item.currency)}</p>
+            <Link className="link font-semibold" href={`/contributions/${item.id}`}>
+              {money(item.amount, item.currency)}
+              {item.corrects_contribution_id ? " correction" : ""}
+            </Link>
             <p className="mt-1 text-sm text-base-content/65">
               {formatDate(item.recognized_at)} · {item.contribution_type === "cash" ? "Cash" : "Valued in-kind"}
             </p>
-            {item.notes && <p className="mt-1 whitespace-pre-wrap text-sm">{item.notes}</p>}
+            {(item.correction_reason ?? item.notes) && (
+              <p className="mt-1 whitespace-pre-wrap text-sm">{item.correction_reason ?? item.notes}</p>
+            )}
           </li>
         ))}
       </ul>

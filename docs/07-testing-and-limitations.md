@@ -2,6 +2,23 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## Contribution corrections on 28 October 2026
+
+Decided 28 October 2026: a refund or recording mistake is fixed with a manager-only correction entry, not by editing the receipt. Migration 0015 adds the columns, the trigger rules, the `correct_contribution` RPC and a `pse_report` that leaves corrections out of receipt counts. The schema is in [docs/03](03-database-schema.md#contribution-corrections-migration-0015).
+
+- **Entry.** A PSE manager or admin opens a contribution and records a correction under **Corrections**: the amount to reverse and a reason, then a confirmation step, as for a receipt. The request ID is kept across retries and replaced after a success.
+- **Rules (service and database).** Manager only. The correction copies the receipt's opportunity, employee, vertical, currency, type and recognition time. A receipt's net never goes below zero, and a correction cannot itself be corrected. A retry of the same request is not counted against itself. Corrections stay possible after the deal closes.
+- **Display.** The receipt page shows recorded, corrected and net amounts and lists each correction with its reason and recorder; a correction's own page links back to the receipt. Lists, the deal page and the overview queue label corrections, and money formatting shows the minus sign. User input still rejects negative amounts: stored amounts use the new `signedCents()`, and `cents()` is unchanged.
+- **Reports.** Totals, months, quarters, employee × vertical cells and target actuals net the correction in the receipt's period; receipt counts exclude corrections.
+- **Live tests.** `POST /api/contributions/{id}/corrections` is added to the fixture's blocked permanent writes. The new live test walks the form up to the blocked request and records nothing.
+
+| Check | Result |
+|---|---|
+| `npm test` | 736 passed across 57 files; 30 added. `contribution-corrections.test.ts` (20): signed amounts, input rules, and PGlite tests of the RPC and trigger (inherited fields, idempotent retry, member/outsider/inactive/anonymous denial, direct-insert denial, net never below zero, full reversal, no correction of a correction, no changed attribution, closed deal, report netting and counts). `correction-api.test.ts` (5) and `correction-form.test.tsx` (5) |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed; generated types gain the two columns and the RPC |
+| Playwright without `E2E_LIVE_WRITES`, development server | 21 passed, 7 skipped (the new live test is one of the skips) |
+| Live specs against the hosted demo | Waiting for 0015 on the hosted project: the deal and contribution pages now read the new columns |
+
 ## UI redesign, module pages and QA (U4–U5), on 28 October 2026
 
 The last two phases of the UI redesign: the module pages in the avionics style, then a QA pass across the app. No behaviour, labels or roles changed.
@@ -445,7 +462,7 @@ The TypeScript runner initially could not read Windows user information inside t
 - Phone normalization strips formatting only; it does not infer country codes, leading-zero rules or extensions. Imports/entry must use consistent international numbers and review ambiguous matches.
 - Currency codes are syntactically uppercase three-letter identifiers; no exchange rates, currency conversion or full currency registry is implemented.
 - Allocation percentages split each member's quarter amount; parts round down to the cent, the member's last vertical takes the leftover cents, and only the resulting amounts are stored. Members must still add up to each quarter before approval. Final pipeline stages, vertical mappings and reporting formulas remain provisional.
-- Refund/contribution correction and deletion workflows are not implemented. Application clients cannot edit/delete realized contributions or approved targets.
+- Contributions cannot be edited or deleted; a manager reverses part or all of one with a correction entry (migration 0015). Whether PSE wants this refund policy is still to be confirmed. Approved targets cannot be edited or deleted.
 - Fixed 28 October 2026 (found in manual testing, 27 October): the target form's "% of quarter" box was a one-shot calculator that dropped a typed but unapplied percentage on save. Each box now shows the share its saved amount represents, typing a percentage updates the amount immediately (the Apply button is gone), invalid percentages are flagged under the box without changing the amount, and removing rows or changing quarter totals keeps every row's percentage correct.
 - Fixed 28 October 2026 (found in signed-in acceptance testing): a list page beyond the last one (for example `/activities?page=5` when one page exists) showed "temporarily unavailable". PostgREST answers such a request with HTTP 416 (`PGRST103`) and no row count; all six list queries now re-read page 1 for the total, so the page redirects to the real last page with its filters kept.
 - Fixed 28 October 2026: the opt-in live contact workflow browser test, which takes about a minute against a compiling development server, now sets its own 2-minute limit instead of Playwright's 30-second default.

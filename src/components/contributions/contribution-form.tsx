@@ -87,8 +87,8 @@ export function ContributionForm({
   return (
     <form onSubmit={submit} className="max-w-3xl space-y-5">
       <p className="border-l-2 border-warning bg-warning/5 p-4 text-sm">
-        Record only realized cash or confirmed valued in-kind support. This creates an append-only financial record.
-        Refunds, corrections and deletion are outside this workflow.
+        Record only realized cash or confirmed valued in-kind support. This creates an append-only financial record that
+        cannot be edited or deleted; a PSE manager can later reverse it with a correction entry.
       </p>
       <p className="text-sm">
         {opportunity.deal_name} · {opportunity.currency} ·{" "}

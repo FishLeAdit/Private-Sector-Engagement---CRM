@@ -602,6 +602,8 @@ export type Database = {
           recorded_by: string;
           created_at: string;
           updated_at: string;
+          corrects_contribution_id: string | null;
+          correction_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -618,6 +620,8 @@ export type Database = {
           recorded_by?: string;
           created_at?: string;
           updated_at?: string;
+          corrects_contribution_id?: string | null;
+          correction_reason?: string | null;
         };
         Update: {
           id?: string;
@@ -634,8 +638,21 @@ export type Database = {
           recorded_by?: string;
           created_at?: string;
           updated_at?: string;
+          corrects_contribution_id?: string | null;
+          correction_reason?: string | null;
         };
         Relationships: [
+          {
+            "foreignKeyName": "recognized_contributions_corrects_contribution_id_fkey",
+            "columns": [
+              "corrects_contribution_id"
+            ],
+            "referencedRelation": "recognized_contributions",
+            "referencedColumns": [
+              "id"
+            ],
+            "isOneToOne": false
+          },
           {
             "foreignKeyName": "recognized_contributions_employee_id_fkey",
             "columns": [
@@ -884,6 +901,7 @@ export type Database = {
     Functions: {
       approve_target_draft: { Args: { p_plan_id: string; p_expected_updated_at: string }; Returns: string };
       approve_target_plan: { Args: { p_plan_id: string }; Returns: string };
+      correct_contribution: { Args: { p_id: string; p_original_id: string; p_amount: string; p_reason: string }; Returns: string };
       pse_report: { Args: { p_year: number; p_quarter: number; p_month: number; p_employee_id: string; p_vertical_id: string; p_currency: string }; Returns: Json };
       record_contribution: { Args: { p_id: string; p_values: Json }; Returns: string };
       save_target_draft: { Args: { p_id: string; p_values: Json; p_expected_updated_at: string }; Returns: string };

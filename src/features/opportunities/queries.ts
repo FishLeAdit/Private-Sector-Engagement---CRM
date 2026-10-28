@@ -116,7 +116,7 @@ export function createOpportunityRepository(client: SupabaseClient<Database>): O
       const [contributions, audits] = await Promise.all([
         client
           .from("recognized_contributions")
-          .select("id,amount,currency,recognized_at,contribution_type,notes")
+          .select("id,amount,currency,recognized_at,contribution_type,notes,corrects_contribution_id,correction_reason")
           .eq("opportunity_id", id)
           .order("recognized_at", { ascending: false })
           .order("id")

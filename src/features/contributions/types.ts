@@ -6,3 +6,9 @@ export type Contribution = Tables<"recognized_contributions"> & {
   vertical: { name: string } | null;
   recorder: { display_name: string } | null;
 };
+
+// A correction as listed on the receipt it reverses.
+export type ContributionCorrection = Pick<
+  Tables<"recognized_contributions">,
+  "id" | "amount" | "currency" | "correction_reason" | "created_at"
+> & { recorder: { display_name: string } | null };

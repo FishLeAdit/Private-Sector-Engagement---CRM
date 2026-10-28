@@ -8,6 +8,13 @@ export function cents(value: string | number): bigint {
   return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
 }
 
+// A stored amount, which may be negative: a contribution correction (migration 0015) is a negative entry.
+// User input goes through cents(), which accepts only non-negative amounts.
+export function signedCents(value: string | number): bigint {
+  const text = String(value);
+  return text.startsWith("-") ? -cents(text.slice(1)) : cents(text);
+}
+
 export function decimal(value: bigint): string {
   const sign = value < 0n ? "-" : "";
   const magnitude = value < 0n ? -value : value;
@@ -20,7 +27,7 @@ export function formatCents(value: bigint, currency: string) {
 }
 
 export function money(value: string | number, currency: string) {
-  return formatCents(cents(value), currency);
+  return formatCents(signedCents(value), currency);
 }
 
 // Overachievement stays in its own period: nothing here carries a surplus into later targets.
