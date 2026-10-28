@@ -1,6 +1,252 @@
 @import "tailwindcss";
-@plugin "daisyui";
 
-body {
-  margin: 0;
+/* Only the two project themes below; daisyUI's built-in themes are not shipped. */
+@plugin "daisyui" {
+  themes: false;
+}
+
+/*
+ * Avionics themes. Every daisyUI component (btn, input, select, table, badge, modal) takes its colours, square
+ * corners, 1px borders and flat depth from here. Hex values only: tests/unit/design-tokens.test.ts parses these
+ * blocks and checks WCAG contrast. Cyan, amber and red are reserved for status (nominal, warning, critical);
+ * system blue is the interactive accent.
+ */
+@plugin "daisyui/theme" {
+  name: "avionics-dark";
+  default: true;
+  prefersdark: false;
+  color-scheme: dark;
+  --color-base-100: #0b0f19;
+  --color-base-200: #0f1522;
+  --color-base-300: #1e293b;
+  --color-base-content: #f2f4f7;
+  --color-primary: #1d4ed8;
+  --color-primary-content: #f2f4f7;
+  --color-secondary: #1e293b;
+  --color-secondary-content: #f2f4f7;
+  --color-accent: #3b82f6;
+  --color-accent-content: #0b0f19;
+  --color-neutral: #1a2333;
+  --color-neutral-content: #f2f4f7;
+  --color-info: #60a5fa;
+  --color-info-content: #0b0f19;
+  --color-success: #4af2ff;
+  --color-success-content: #0b0f19;
+  --color-warning: #ff9f1c;
+  --color-warning-content: #0b0f19;
+  --color-error: #ff4d6a;
+  --color-error-content: #0b0f19;
+  --radius-selector: 0rem;
+  --radius-field: 0rem;
+  --radius-box: 0rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "avionics-light";
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #eef1f5;
+  --color-base-200: #e2e7ee;
+  --color-base-300: #cbd5e1;
+  --color-base-content: #0b0f19;
+  --color-primary: #1d4ed8;
+  --color-primary-content: #f8fafc;
+  --color-secondary: #cbd5e1;
+  --color-secondary-content: #0b0f19;
+  --color-accent: #1d4ed8;
+  --color-accent-content: #f8fafc;
+  --color-neutral: #1e293b;
+  --color-neutral-content: #f2f4f7;
+  --color-info: #1d4ed8;
+  --color-info-content: #f8fafc;
+  --color-success: #0e7490;
+  --color-success-content: #f8fafc;
+  --color-warning: #92400e;
+  --color-warning-content: #f8fafc;
+  --color-error: #be123c;
+  --color-error-content: #f8fafc;
+  --radius-selector: 0rem;
+  --radius-field: 0rem;
+  --radius-box: 0rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Project tokens daisyUI has no slot for, switched by the same data-theme attribute. */
+:root,
+[data-theme="avionics-dark"] {
+  --hud-muted: #8492a6; /* small metadata text */
+  --hud-decor: #64748b; /* borders, grid lines, system strings, large text only */
+  --hud-surface: rgb(26 35 51 / 0.4);
+  --hud-mark: #64748b;
+  --hud-grid: rgb(100 116 139 / 0.07);
+}
+[data-theme="avionics-light"] {
+  --hud-muted: #475569;
+  --hud-decor: #64748b;
+  --hud-surface: rgb(255 255 255 / 0.7);
+  --hud-mark: #94a3b8;
+  --hud-grid: rgb(100 116 139 / 0.09);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+  --color-muted: var(--hud-muted);
+  --color-decor: var(--hud-decor);
+  /* Sharp hardware: every rounded utility except rounded-full renders square. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-base-100);
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-base-content);
+    background-color: var(--color-base-100);
+    background-image:
+      linear-gradient(var(--hud-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hud-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Monospace for headings, labels, table headers and system strings; sans for body copy and readouts. */
+  h1,
+  h2,
+  h3,
+  h4,
+  caption,
+  th,
+  legend,
+  label,
+  nav,
+  .badge {
+    font-family: var(--font-mono);
+  }
+  h1 {
+    letter-spacing: -0.01em;
+  }
+  h2,
+  h3,
+  h4,
+  caption,
+  thead th,
+  .badge {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  thead th {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--hud-muted);
+  }
+  /* Typed values keep their own case and the sans face, even inside monospaced labels. */
+  input,
+  select,
+  textarea,
+  option {
+    font-family: var(--font-sans);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* A hardware panel: translucent surface, 1px hairline and four corner ticks drawn without extra markup. */
+  .panel {
+    position: relative;
+    border: 1px solid var(--color-base-300);
+    background-color: var(--hud-surface);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    background-image:
+      linear-gradient(var(--hud-mark), var(--hud-mark)), linear-gradient(var(--hud-mark), var(--hud-mark)),
+      linear-gradient(var(--hud-mark), var(--hud-mark)), linear-gradient(var(--hud-mark), var(--hud-mark)),
+      linear-gradient(var(--hud-mark), var(--hud-mark)), linear-gradient(var(--hud-mark), var(--hud-mark)),
+      linear-gradient(var(--hud-mark), var(--hud-mark)), linear-gradient(var(--hud-mark), var(--hud-mark));
+    background-repeat: no-repeat;
+    background-size:
+      10px 1px,
+      1px 10px,
+      10px 1px,
+      1px 10px,
+      10px 1px,
+      1px 10px,
+      10px 1px,
+      1px 10px;
+    background-position:
+      left top,
+      left top,
+      right top,
+      right top,
+      left bottom,
+      left bottom,
+      right bottom,
+      right bottom;
+  }
+  .hud-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--hud-muted);
+  }
+  .pip {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .pip-blink {
+    animation: hud-blink 1.6s steps(1, end) infinite;
+  }
+}
+
+@keyframes hud-blink {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  61%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

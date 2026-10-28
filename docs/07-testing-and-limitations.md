@@ -2,6 +2,25 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## UI redesign, foundation (U1), on 28 October 2026
+
+First phase of the UI redesign the user requested: an avionics style in dark and light themes. What changed:
+
+- **Themes.** Two daisyUI themes, `avionics-dark` (default) and `avionics-light`, with square corners, 1px borders and no shadows. Fonts are Inter and JetBrains Mono through `next/font`.
+- **Shared pieces.** HUD primitives (`components/ui/hud.tsx`), a theme toggle remembered in a cookie, and a navigation rail that marks the current section and folds behind a Menu button on phones (part of C4).
+- **Pages.** The login, access-denied and workspace-error pages are restyled. Module pages pick up the themes without markup changes; their layouts follow in U4.
+
+No behaviour, labels or roles changed.
+
+| Check | Result |
+|---|---|
+| `npm test` | 690 passed across 51 files; 30 added in `design-tokens.test.ts`, which reads both themes from `globals.css` and checks WCAG contrast (text and small metadata 4.5:1 on the page, raised and panel surfaces; status text 4.5:1; button text 4.5:1; focus ring and decorative strings 3:1). Its first run caught two light-theme values, amber `#B45309` at 4.4:1 and decorative grey `#94A3B8` at 2.3:1, now `#92400E` and `#64748B` |
+| `npm run lint`, `npm run typecheck`, `npm run build` (downloads the fonts), `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 26 passed in 4.8 min. The typography is global, so this confirms every label, role and accessible name the specs use is unchanged |
+| Signed-in screenshots of login, dashboard, contacts, deals and the target grid, dark and light at 1440 px and dark at 390 px | Reviewed. The phone header took four rows, so the system string and session pip now hide below the `sm` breakpoint |
+| Theme toggle and phone menu, signed in at 390 px | Dark → light → reload stays light → back to dark. The menu opens the rail with the current page marked |
+| Hosted demo after the runs | No QA records; still 7 contributions |
+
 ## Contacts engaged, provisional, on 28 October 2026
 
 Assessment page 10 lists contacts engaged for the non-monetary lens. It is now built with a provisional definition, labelled "Provisional — awaiting PSE definition" (full rule in [reporting definitions](09-reporting-definitions.md)).

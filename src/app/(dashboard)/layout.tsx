@@ -1,49 +1,33 @@
-import Link from "next/link";
 import { requirePseUser } from "@/lib/auth/access";
 import { roleLabels } from "@/lib/auth/roles";
+import { currentTheme } from "@/lib/theme";
 import { LogoutButton } from "@/components/auth/logout-button";
-
-const sections = [
-  "dashboard",
-  "contacts",
-  "opportunities",
-  "meetings",
-  "activities",
-  "contributions",
-  "targets",
-  "reports",
-  "settings",
-];
+import { ShellNav } from "@/components/shell/nav";
+import { StatusPip, SysCode } from "@/components/ui/hud";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await requirePseUser();
+  const [{ profile }, theme] = await Promise.all([requirePseUser(), currentTheme()]);
   return (
-    <div className="min-h-screen lg:flex">
-      <aside className="border-base-300 bg-base-200 p-6 lg:w-64 lg:shrink-0 lg:border-r">
-        <Link href="/dashboard" className="text-xl font-bold">
-          PSE CRM
-        </Link>
-        <nav aria-label="Main navigation">
-          <ul className="menu mt-4 w-full p-0">
-            {sections.map(section => (
-              <li key={section}>
-                <Link className="capitalize" href={`/${section}`}>
-                  {section}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-      <div className="min-w-0 flex-1">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-6 py-4">
-          <div>
-            <p className="font-medium">{profile.display_name}</p>
-            <p className="text-sm text-base-content/60">{roleLabels[profile.role]}</p>
+    <div className="min-h-screen lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <ShellNav />
+      <div className="min-w-0">
+        <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-base-300 bg-base-100/80 px-6 py-3 backdrop-blur">
+          <div className="min-w-0">
+            <SysCode className="hidden sm:block">JAAGO.PSE // OPS</SysCode>
+            <p className="font-mono text-sm sm:mt-1">
+              {profile.display_name} <span className="text-muted">· {roleLabels[profile.role]}</span>
+            </p>
           </div>
-          <LogoutButton />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline-flex">
+              <StatusPip tone="nominal" label="Session active" blink />
+            </span>
+            <ThemeToggle initial={theme} />
+            <LogoutButton />
+          </div>
         </header>
         <main className="p-6 lg:p-8">{children}</main>
       </div>
