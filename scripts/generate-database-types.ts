@@ -96,7 +96,9 @@ async function main() {
       'export type TableName = keyof Database["public"]["Tables"];\nexport type Tables<T extends TableName> = Database["public"]["Tables"][T]["Row"];\nexport type TablesInsert<T extends TableName> = Database["public"]["Tables"][T]["Insert"];\nexport type TablesUpdate<T extends TableName> = Database["public"]["Tables"][T]["Update"];\n';
     const path = "src/types/database.types.ts";
     if (process.argv.includes("--check")) {
-      if ((await readFile(path, "utf8")) !== output) throw new Error("Database types are stale. Run npm run db:types.");
+      // Git on Windows may check the file out with CRLF line endings; only the content has to match.
+      if ((await readFile(path, "utf8")).replace(/\r\n/g, "\n") !== output)
+        throw new Error("Database types are stale. Run npm run db:types.");
       console.log(`Database types match all ${tables.length} migrated tables.`);
     } else {
       await writeFile(path, output, "utf8");
