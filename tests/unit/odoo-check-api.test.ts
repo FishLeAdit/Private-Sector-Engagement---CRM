@@ -43,7 +43,7 @@ beforeEach(() => {
     contacts: [
       { name: "Existing Fictional Donor", email_normalized: "csr@fictional-textiles.example", phone_normalized: null },
     ],
-    owners: ["Farzana Rahman", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) => ({
+    owners: ["JAC", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) => ({
       id: `o${i}`,
       display_name: name,
       active: true,

@@ -9,7 +9,7 @@ import { importRows, type ImportRows } from "../../src/features/odoo/import-plan
 import type { Reference } from "../../src/features/odoo/types";
 
 let db: PGlite;
-const staff = ["Farzana Rahman", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"];
+const staff = ["JAC", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"];
 beforeAll(async () => {
   db = await createLocalDatabase();
   // The ready samples assign work to the named demo staff.

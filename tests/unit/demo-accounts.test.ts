@@ -25,7 +25,7 @@ describe("named demo accounts", () => {
   it("promotes the superadmin, renames the generic PSE profiles and creates the rest", () => {
     expect(planAccounts(generic, emails, "OWNER@fictional.example")).toEqual([
       { kind: "promote", id: "a", email: "OWNER@fictional.example", rename: true },
-      { kind: "adopt", id: "b", from: "Demo Manager", name: "Farzana Rahman", role: "pse_manager" },
+      { kind: "adopt", id: "b", from: "Demo Manager", name: "JAC", role: "pse_manager" },
       { kind: "create", email: "tanvir.hasan@example.com", name: "Tanvir Hasan", role: "pse_manager" },
       { kind: "adopt", id: "c", from: "Demo Member", name: "Nusrat Jahan", role: "pse_member" },
       { kind: "create", email: "arif.chowdhury@example.com", name: "Arif Chowdhury", role: "pse_member" },
@@ -35,7 +35,7 @@ describe("named demo accounts", () => {
   it("changes nothing once the named profiles exist, and never adopts another department's profile", () => {
     const done = [
       profile("a", "PSE Superadmin", "admin"),
-      ...["Farzana Rahman", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) =>
+      ...["JAC", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) =>
         profile(`n${i}`, name),
       ),
       profile("d", "Demo Member", "pse_member", "HR"),

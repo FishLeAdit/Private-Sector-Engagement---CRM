@@ -1,7 +1,8 @@
 // Fictional named PSE staff for the hosted demo: two managers and three members, so owners and focal people
 // are not all "Demo Manager". The example.com addresses never receive mail.
 export const demoAccounts = [
-  { email: "farzana.rahman@example.com", display_name: "Farzana Rahman", role: "pse_manager" },
+  // Named "Farzana Rahman" at first; the user renamed this manager "JAC" on 28 October 2026.
+  { email: "jac@example.com", display_name: "JAC", role: "pse_manager" },
   { email: "tanvir.hasan@example.com", display_name: "Tanvir Hasan", role: "pse_manager" },
   { email: "nusrat.jahan@example.com", display_name: "Nusrat Jahan", role: "pse_member" },
   { email: "arif.chowdhury@example.com", display_name: "Arif Chowdhury", role: "pse_member" },

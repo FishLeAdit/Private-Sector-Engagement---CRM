@@ -16,7 +16,7 @@ const templates = (set = "mixed") => ({
 });
 const reference: Reference = {
   contacts: [{ name: "Existing Fictional Donor", email_normalized: null, phone_normalized: "8801800000103" }],
-  owners: ["Farzana Rahman", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) => ({
+  owners: ["JAC", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"].map((name, i) => ({
     id: `o${i}`,
     display_name: name,
     active: true,

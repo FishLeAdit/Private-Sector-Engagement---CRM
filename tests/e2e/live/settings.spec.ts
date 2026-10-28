@@ -43,11 +43,11 @@ test("a superadmin sees every account and can open one to manage it", async ({ p
     (await page.getByText("Only a superadmin can manage accounts.").count()) > 0,
     "This account is not the superadmin.",
   );
-  for (const name of ["Farzana Rahman", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"])
+  for (const name of ["JAC", "Tanvir Hasan", "Nusrat Jahan", "Arif Chowdhury", "Sadia Islam"])
     await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
   await expect(page.getByText("(you)")).toBeVisible();
-  await page.getByRole("link", { name: "Farzana Rahman", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Farzana Rahman" })).toBeVisible({ timeout: 30000 });
+  await page.getByRole("link", { name: "JAC", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "JAC" })).toBeVisible({ timeout: 30000 });
   await expect(page.getByRole("form", { name: "Profile and access" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete account" })).toBeVisible();
 });
