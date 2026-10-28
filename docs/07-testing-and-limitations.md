@@ -2,6 +2,25 @@
 
 The database foundation, authentication, Contacts, financial Opportunities, Meetings with linked follow-up tasks, the full Activities workspace, contribution entry and target allocation/performance are implemented. Dashboard and detailed reports are implemented. Evidence below distinguishes PostgreSQL/service tests, mocked transports/form tests, anonymous browser checks and hosted verification that remains manual.
 
+## UI redesign, module pages and QA (U4–U5), on 28 October 2026
+
+The last two phases of the UI redesign: the module pages in the avionics style, then a QA pass across the app. No behaviour, labels or roles changed.
+
+- **Boxes and notices.** A reviewed mechanical pass across 39 files turned the repeated bordered boxes into `.panel` surfaces and the tinted notices into edge-toned strips, and removed shadows. Floating listboxes keep their box, and deal board cards keep plain borders inside their column panels.
+- **Status pips.** Meeting, activity and deal-stage states are pips with labels (`components/ui/record-status.tsx`): cyan while active, grey once settled, never blinking in tables.
+- **Headings.** Every page heading carries a system string from real context: the record count on lists, the record ID prefix on detail pages, NEW or EDIT on forms. Contact kind badges are small mono tags.
+- **Fixed during review:** on detail pages the system string first landed between the status line and the title, so it now leads the header block.
+
+| Check | Result |
+|---|---|
+| `npm test` | 706 passed across 54 files |
+| `npm run lint`, `npm run typecheck`, `npm run build`, `validate:seed`, `db:types:check` | Passed |
+| Full Playwright suite with `E2E_LIVE_WRITES=1` | 27 passed in 5.5 min |
+| Signed-in screenshots of all 24 routes (dashboard, reports, every list, detail and form page, the board, targets, verticals and settings), dark and light at 1440 px and dark at 390 px | 72 screenshots taken and a representative set reviewed. No route scrolls sideways at any width |
+| Keyboard focus and motion, login page | The focused field shows a solid 2px light outline. Under `prefers-reduced-motion` the pip animation drops to one 0.01 ms run, so nothing blinks |
+| Contrast | `design-tokens.test.ts` (30 checks) passes for both themes |
+| Hosted demo after the runs | No QA records; still 7 contributions |
+
 ## UI redesign, overview dashboard (U3), on 28 October 2026
 
 The home dashboard is no longer a copy of Reports. It is an overview of the whole PSE team for the chosen year, quarter or month, with the user's own queue at the end:
