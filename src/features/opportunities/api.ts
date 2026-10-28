@@ -34,5 +34,5 @@ export function invalidateOpportunity(id: string) {
 export function invalidateConfiguration() {
   invalidateReportCache(false);
   revalidateSections("/dashboard", "/reports", "/opportunities");
-  revalidatePath("/settings");
+  revalidatePath("/settings/pipeline");
 }

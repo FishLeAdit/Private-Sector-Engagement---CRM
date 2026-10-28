@@ -1,18 +1,53 @@
-import { opportunityPageContext, opportunityPageData } from "@/features/opportunities/context";
-import { isPseManager } from "@/lib/auth/roles";
-import { PipelineSettings } from "@/components/opportunities/pipeline-settings";
-import { OpportunityProblem } from "@/components/opportunities/opportunity-state";
-import { SysCode } from "@/components/ui/hud";
+import Link from "next/link";
+import { requirePseUser } from "@/lib/auth/access";
+import { isSuperadmin } from "@/lib/auth/roles";
+import { PanelHeader, SysCode } from "@/components/ui/hud";
+
+const sections = [
+  {
+    href: "/settings/pipeline",
+    code: "CFG-01",
+    title: "Pipeline",
+    action: "Open pipeline settings",
+    text: "Deal stages and contribution categories. Everyone can view them; an authorized manager changes them.",
+  },
+  {
+    href: "/settings/odoo-import",
+    code: "CFG-02",
+    title: "Odoo import check",
+    action: "Open the import check",
+    text: "Check Odoo CSV exports against the CRM's rules, then import them once nothing needs review. Managers only.",
+  },
+  {
+    href: "/settings/accounts",
+    code: "CFG-03",
+    title: "Accounts",
+    action: "Manage accounts",
+    text: "Create sign-in accounts, give staff, manager or superadmin access, restrict accounts and delete unused ones.",
+    superadmin: true,
+  },
+];
+
 export default async function SettingsPage() {
-  const { service, access } = await opportunityPageContext();
-  const result = await opportunityPageData(() => service.options());
-  if (!result.ok) return <OpportunityProblem message={result.error.message} />;
+  const access = await requirePseUser();
   return (
     <>
-      <SysCode className="mb-1 block">{"SYS.CFG // PIPELINE"}</SysCode>
-      <h1 className="mb-3 text-3xl font-bold">Pipeline settings</h1>
-      <p className="mb-7 text-base-content/65">Stages and contribution categories for the PSE team.</p>
-      <PipelineSettings initial={result.data} manager={isPseManager(access.profile)} />
+      <SysCode className="mb-1 block">{"SYS.CFG // SETTINGS"}</SysCode>
+      <h1 className="mb-3 text-3xl font-bold">Settings</h1>
+      <p className="mb-7 text-muted">Team configuration and data migration tools.</p>
+      <div className="grid max-w-4xl gap-5 md:grid-cols-2">
+        {sections
+          .filter(section => !section.superadmin || isSuperadmin(access.profile))
+          .map(section => (
+            <section key={section.href} className="flex flex-col panel p-5" aria-labelledby={section.code}>
+              <PanelHeader id={section.code} title={section.title} code={section.code} />
+              <p className="flex-1 text-sm text-muted">{section.text}</p>
+              <Link href={section.href} className="btn btn-outline btn-sm mt-5 self-start">
+                {section.action}
+              </Link>
+            </section>
+          ))}
+      </div>
     </>
   );
 }

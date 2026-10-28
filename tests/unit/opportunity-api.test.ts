@@ -168,7 +168,7 @@ describe("Opportunities HTTP API", () => {
       expect.objectContaining({ is_closed: true, outcome: "won" }),
       undefined,
     );
-    expect(mocks.revalidate).toHaveBeenCalledWith("/settings");
+    expect(mocks.revalidate).toHaveBeenCalledWith("/settings/pipeline");
   });
   it("returns safe integrity failures and scrubs unexpected exceptions", async () => {
     repo.update.mockRejectedValueOnce(new OpportunityError(422, "Linked record conflict."));

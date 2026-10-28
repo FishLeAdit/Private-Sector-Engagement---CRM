@@ -1,0 +1,5 @@
+odoo_id,name,partner_odoo_id,contact_odoo_id,salesperson,stage,tag,contribution_type,expected_revenue,currency,date_deadline,country,description,valuation_note
+crm_lead_401,Odoo sample | Riverbank classroom sponsorship,res_partner_301,res_partner_302,Farzana Rahman,Scoping,DSP,cash,300000,BDT,2027-01-31,Bangladesh,Two digital classrooms for workers' children,
+crm_lead_402,Odoo sample | Delta Telecom tablet donation,res_partner_303,res_partner_304,Tanvir Hasan,Submitted,Digital School Program,valued_in_kind,150000.50,BDT,2027-02-28,Bangladesh,Refurbished tablets for two schools,Agreed value from the operational team's tablet estimate
+crm_lead_403,Odoo sample | Sponsor a child pledge,res_partner_305,,Nusrat Jahan,New,SAC,cash,24000,BDT,2026-12-15,Bangladesh,Monthly sponsorship for one year,
+crm_lead_404,Odoo sample | Delta Telecom winter campaign,res_partner_303,res_partner_304,Arif Chowdhury,Preparation,EVENT_CAMPAIGN,cash,75000,BDT,2026-12-20,Bangladesh,Winter clothing drive for partner schools,

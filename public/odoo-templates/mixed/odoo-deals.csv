@@ -1,0 +1,5 @@
+odoo_id,name,partner_odoo_id,contact_odoo_id,salesperson,stage,tag,contribution_type,expected_revenue,currency,date_deadline,country,description,valuation_note
+crm_lead_201,Fictional classroom sponsorship,res_partner_101,res_partner_102,Nusrat Jahan,Scoping,DSP,cash,250000,BDT,2026-12-31,Bangladesh,Fictional template deal,
+crm_lead_202,Fictional laptop donation,res_partner_101,res_partner_102,Nusrat Jahan,Submitted,Digital School Program,valued_in_kind,80000.50,BDT,2027-01-15,Bangladesh,,"Agreed value from the operational team's laptop estimate"
+crm_lead_203,Fictional individual gift,res_partner_103,,Demo Manager,Qualified,Sponsor a Child,cash,5000,BDT,,Bangladesh,"A salesperson and an Odoo stage with no CRM match, on purpose",
+crm_lead_204,Fictional company pledge,res_partner_101,,Nusrat Jahan,New,CSR,cash,0,BDT,2027-02-30,Bangladesh,"No contact person, unknown tag, zero amount and an impossible date, on purpose",

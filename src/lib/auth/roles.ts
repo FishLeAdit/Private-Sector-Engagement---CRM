@@ -22,8 +22,13 @@ export function isPseManager(profile: AccessProfile | null): boolean {
   return isActivePseProfile(profile) && ["pse_manager", "admin"].includes(profile.role);
 }
 
+// The admin role is the superadmin: manager rights plus account management (migration 0016).
+export function isSuperadmin(profile: AccessProfile | null): boolean {
+  return isActivePseProfile(profile) && profile.role === "admin";
+}
+
 export const roleLabels: Record<PseRole, string> = {
   pse_member: "PSE member",
   pse_manager: "PSE manager",
-  admin: "Administrator",
+  admin: "Superadmin",
 };

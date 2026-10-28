@@ -7,6 +7,7 @@ test("opportunity data, mutations and configuration require authentication", asy
   expect((await request.patch(`/api/opportunities/${id}`, { data: { stage_id: id } })).status()).toBe(401);
   expect((await request.delete(`/api/opportunities/${id}`)).status()).toBe(401);
   expect((await request.post("/api/opportunities/configuration", { data: { entity: "starter" } })).status()).toBe(401);
+  expect((await request.post("/api/settings/odoo-check", { data: { contacts: "odoo_id" } })).status()).toBe(401);
 });
 test("opportunity forms, board and settings require sign-in", async ({ page }) => {
   for (const path of [
@@ -15,6 +16,8 @@ test("opportunity forms, board and settings require sign-in", async ({ page }) =
     `/opportunities/${id}`,
     `/opportunities/${id}/edit`,
     "/settings",
+    "/settings/pipeline",
+    "/settings/odoo-import",
   ]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login\?/);

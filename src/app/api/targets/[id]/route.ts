@@ -19,3 +19,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     true,
   );
 }
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  return targetApi(
+    request,
+    async service => {
+      const result = await service.removeDraft((await params).id);
+      invalidateFinance();
+      return result;
+    },
+    true,
+    true,
+  );
+}

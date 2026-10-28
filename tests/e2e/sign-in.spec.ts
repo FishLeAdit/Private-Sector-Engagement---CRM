@@ -51,6 +51,9 @@ test("PSE demo user can sign in, reload and sign out", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   expect((await page.request.get("/api/contacts")).status()).toBe(200);
+  // Sign out sits behind the account button at the foot of the navigation rail.
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeHidden();
+  await page.getByRole("button", { name: /account menu$/ }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/dashboard");

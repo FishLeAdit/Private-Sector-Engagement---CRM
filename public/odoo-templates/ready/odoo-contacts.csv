@@ -1,0 +1,6 @@
+odoo_id,is_company,name,parent_odoo_id,function,email,phone,mobile,website,industry,comment
+res_partner_301,TRUE,Odoo sample | Riverbank Garments Ltd,,,csr@riverbank-garments.example,+880 2 5555 0301,,https://riverbank-garments.example,Garments,Fictional company from the ready sample
+res_partner_302,FALSE,Rupa Akter,res_partner_301,Head of CSR,rupa.akter@riverbank-garments.example,,+880 1700 000302,,,
+res_partner_303,TRUE,Odoo sample | Delta Telecom Ltd,,,partnerships@delta-telecom.example,+880 2 5555 0303,,https://delta-telecom.example,Telecommunications,
+res_partner_304,FALSE,Kamal Uddin,res_partner_303,Partnerships Lead,kamal.uddin@delta-telecom.example,+880 1800 000304,+880 1900 000304,,,Prefers WhatsApp for quick questions
+res_partner_305,FALSE,Shirin Sultana,,Independent donor,shirin.sultana@mail.example,+880 1600 000305,,,,

@@ -1,0 +1,6 @@
+odoo_id,activity_type,work_category,status,date,assigned_to,partner_odoo_id,deal_odoo_id,related_person,related_organization,summary,note,remaining_work
+mail_activity_501,Call,prospect_engagement,done,2026-10-21 11:00,Farzana Rahman,res_partner_302,crm_lead_401,,,Introductory call,Agreed to send the classroom proposal,Send the proposal by Friday
+mail_activity_502,Meeting,prospect_engagement,planned,2026-11-04 15:30,Tanvir Hasan,res_partner_304,crm_lead_402,,,Tablet handover planning,,Confirm the school list
+mail_activity_503,Email,stewardship,done,2026-10-25,Nusrat Jahan,res_partner_305,crm_lead_403,,,Thank-you email,Sent the sponsorship welcome pack,
+mail_activity_504,To Do,independent_general,planned,2026-11-10,Sadia Islam,,,Fictional Headteacher,Fictional Primary School,Collect classroom photos,,Upload the photos to Drive
+mail_activity_505,Upload Document,stewardship,today,,Arif Chowdhury,res_partner_303,crm_lead_404,,,Campaign brief,,Share the brief with the design team

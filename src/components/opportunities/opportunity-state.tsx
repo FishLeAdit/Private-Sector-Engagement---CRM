@@ -19,7 +19,7 @@ export function PipelineSetupNeeded() {
         A manager needs to add at least one active stage and contribution category. The final pipeline labels still need
         PSE confirmation.
       </p>
-      <Link href="/settings" className="btn btn-outline">
+      <Link href="/settings/pipeline" className="btn btn-outline">
         Pipeline settings
       </Link>
     </section>

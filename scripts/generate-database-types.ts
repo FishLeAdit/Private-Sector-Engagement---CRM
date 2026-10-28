@@ -88,7 +88,8 @@ async function main() {
     output += "    };\n    Views: { [_ in never]: never };\n    Functions: {\n";
     for (const fn of functions) {
       const args = fn.arg_types.map((type, i) => `${fn.arg_names?.[i] ?? `arg${i}`}: ${tsType(type)}`).join("; ");
-      output += `      ${fn.name}: { Args: { ${args} }; Returns: ${tsType(fn.return_type)} };\n`;
+      // A function without arguments takes `never`, as in Supabase's own generator (an empty `{}` fails lint).
+      output += `      ${fn.name}: { Args: ${args ? `{ ${args} }` : "never"}; Returns: ${tsType(fn.return_type)} };\n`;
     }
     output += "    };\n    Enums: { [_ in never]: never };\n    CompositeTypes: { [_ in never]: never };\n  };\n};\n\n";
     output +=

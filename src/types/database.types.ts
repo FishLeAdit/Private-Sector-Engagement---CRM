@@ -26,6 +26,7 @@ export type Database = {
           estimated_nonmonetary_value: number | null;
           created_at: string;
           updated_at: string;
+          odoo_id: string | null;
         };
         Insert: {
           id?: string;
@@ -46,6 +47,7 @@ export type Database = {
           estimated_nonmonetary_value?: number | null;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Update: {
           id?: string;
@@ -66,6 +68,7 @@ export type Database = {
           estimated_nonmonetary_value?: number | null;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Relationships: [
           {
@@ -187,6 +190,7 @@ export type Database = {
           created_by: string;
           created_at: string;
           updated_at: string;
+          odoo_id: string | null;
         };
         Insert: {
           id?: string;
@@ -204,6 +208,7 @@ export type Database = {
           created_by?: string;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Update: {
           id?: string;
@@ -221,6 +226,7 @@ export type Database = {
           created_by?: string;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Relationships: [
           {
@@ -389,6 +395,7 @@ export type Database = {
           created_by: string;
           created_at: string;
           updated_at: string;
+          odoo_id: string | null;
         };
         Insert: {
           id?: string;
@@ -414,6 +421,7 @@ export type Database = {
           created_by?: string;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Update: {
           id?: string;
@@ -439,6 +447,7 @@ export type Database = {
           created_by?: string;
           created_at?: string;
           updated_at?: string;
+          odoo_id?: string | null;
         };
         Relationships: [
           {
@@ -899,9 +908,14 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      admin_delete_profile: { Args: { p_id: string }; Returns: string };
+      admin_delete_target_draft: { Args: { p_plan_id: string }; Returns: string };
+      admin_list_accounts: { Args: never; Returns: Json };
+      admin_save_profile: { Args: { p_id: string; p_display_name: string; p_department: string; p_role: string; p_active: boolean }; Returns: string };
       approve_target_draft: { Args: { p_plan_id: string; p_expected_updated_at: string }; Returns: string };
       approve_target_plan: { Args: { p_plan_id: string }; Returns: string };
       correct_contribution: { Args: { p_id: string; p_original_id: string; p_amount: string; p_reason: string }; Returns: string };
+      import_odoo: { Args: { p_contacts: Json; p_deals: Json; p_activities: Json }; Returns: Json };
       pse_report: { Args: { p_year: number; p_quarter: number; p_month: number; p_employee_id: string; p_vertical_id: string; p_currency: string }; Returns: Json };
       record_contribution: { Args: { p_id: string; p_values: Json }; Returns: string };
       save_target_draft: { Args: { p_id: string; p_values: Json; p_expected_updated_at: string }; Returns: string };

@@ -1,0 +1,5 @@
+odoo_id,activity_type,work_category,status,date,assigned_to,partner_odoo_id,deal_odoo_id,related_person,related_organization,summary,note,remaining_work
+mail_activity_301,Call,prospect_engagement,done,2026-10-20 15:30,Nusrat Jahan,res_partner_102,crm_lead_201,,,Introductory call,Discussed the classroom sponsorship,Send the proposal
+mail_activity_302,To Do,stewardship,planned,2026-11-05,Nusrat Jahan,res_partner_103,,,,Thank-you visit,,
+mail_activity_303,Upload Document,,overdue,,Nusrat Jahan,,,Fictional Visitor,Fictional School,Collect visit photos,,
+mail_activity_304,Lunch,,planned,2026-11-31,Nobody Here,res_partner_999,crm_lead_999,,,,"Unknown type, date, owner and links, on purpose",

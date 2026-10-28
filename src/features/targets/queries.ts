@@ -78,6 +78,14 @@ export function createTargetRepository(client: SupabaseClient<Database>) {
       return data!;
     },
 
+    // Superadmin only (migration 0016): the draft and its quarter and allocation cells go together.
+    async removeDraft(id: string) {
+      const { error } = await client.rpc("admin_delete_target_draft", { p_plan_id: id });
+      if (error?.code === "23514")
+        throw new FinanceError(409, "This plan is approved and locked, so it cannot be deleted.");
+      if (error) financeDatabaseError(error);
+    },
+
     async vertical(input: VerticalInput) {
       const query = input.id
         ? client.from("target_verticals").update(input.values).eq("id", input.id)

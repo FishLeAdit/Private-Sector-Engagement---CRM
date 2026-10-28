@@ -1,0 +1,6 @@
+odoo_id,is_company,name,parent_odoo_id,function,email,phone,mobile,website,industry,comment
+res_partner_101,TRUE,Fictional Textiles Ltd,,,csr@fictional-textiles.example,+880 2 5555 0101,,https://fictional-textiles.example,Textiles,Fictional company for the template
+res_partner_102,FALSE,Fictional Person One,res_partner_101,CSR Manager,person.one@fictional-textiles.example,,+880 1700 000102,,,
+res_partner_103,FALSE,Fictional Person Two,,Independent donor,,+880 1800 000103,,,,"Prefers calls, not email"
+res_partner_104,FALSE,Fictional Person Three,res_partner_101,Finance Officer,PERSON.ONE@fictional-textiles.example,,,,,Shares an email with line 3 on purpose
+res_partner_105,FALSE,Fictional Person Four,,,,,,,,No email or phone on purpose

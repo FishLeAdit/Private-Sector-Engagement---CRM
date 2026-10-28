@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AccountMenu } from "./account-menu";
+import { Wordmark } from "./wordmark";
 
 // Module codes are decorative; each link's accessible name is its label.
 const sections = [
@@ -13,18 +15,18 @@ const sections = [
   { href: "/contributions", label: "Contributions", code: "RCV" },
   { href: "/targets", label: "Targets", code: "TGT" },
   { href: "/reports", label: "Reports", code: "RPT" },
-  { href: "/settings", label: "Settings", code: "CFG" },
 ];
 
-// The navigation rail: always open from the lg breakpoint, behind a Menu button on smaller screens.
-export function ShellNav() {
+// The navigation rail: always open from the lg breakpoint, behind a Menu button on smaller screens. The
+// signed-in person sits at its foot, with Settings and Sign out behind their name.
+export function ShellNav({ name, role }: { name: string; role: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
-    <aside className="border-b border-base-300 bg-base-200/70 lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+    <aside className="border-b border-base-300 bg-base-200/70 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between gap-3 px-5 py-4">
-        <Link href="/dashboard" className="font-mono text-sm font-semibold uppercase tracking-[0.2em]">
-          PSE <span className="text-decor">{"//"}</span> CRM
+        <Link href="/dashboard" className="block py-0.5">
+          <Wordmark className="h-4 w-auto" />
         </Link>
         <button
           type="button"
@@ -36,7 +38,11 @@ export function ShellNav() {
           {open ? "Close" : "Menu"}
         </button>
       </div>
-      <nav id="main-nav" aria-label="Main navigation" className={`${open ? "block" : "hidden"} pb-4 lg:block`}>
+      <nav
+        id="main-nav"
+        aria-label="Main navigation"
+        className={`${open ? "block" : "hidden"} pb-4 lg:block lg:flex-1`}
+      >
         <ul>
           {sections.map(section => {
             const active = pathname === section.href || pathname.startsWith(`${section.href}/`);
@@ -62,6 +68,9 @@ export function ShellNav() {
           })}
         </ul>
       </nav>
+      <div className={`${open ? "block" : "hidden"} lg:block`}>
+        <AccountMenu name={name} role={role} onNavigate={() => setOpen(false)} />
+      </div>
     </aside>
   );
 }

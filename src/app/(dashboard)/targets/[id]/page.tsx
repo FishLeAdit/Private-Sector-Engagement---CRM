@@ -5,9 +5,10 @@ import { targetPage } from "@/features/targets/context";
 import { FinanceProblem } from "@/components/finance/problem";
 import { ApproveTarget } from "@/components/targets/approve-target";
 import { AllocationPerformance, QuarterPerformance } from "@/components/targets/target-performance";
-import { isPseManager } from "@/lib/auth/roles";
+import { isPseManager, isSuperadmin } from "@/lib/auth/roles";
 import { cents, money, targetPerformance } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 import { SysCode } from "@/components/ui/hud";
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { service, access } = await targetPage();
@@ -41,9 +42,20 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </p>
         </div>
         {manager && plan.status === "draft" && (
-          <Link href={`/targets/${id}/edit`} className="btn btn-outline">
-            Edit draft
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/targets/${id}/edit`} className="btn btn-outline">
+              Edit draft
+            </Link>
+            {isSuperadmin(access.profile) && (
+              <ConfirmDeleteButton
+                noun="draft plan"
+                name={`${plan.year} · ${plan.currency} target plan`}
+                endpoint={`/api/targets/${id}`}
+                redirectTo="/targets"
+                consequences="The draft, its quarter targets and its allocation cells are removed. Recognized contributions are not affected. Approved plans cannot be deleted."
+              />
+            )}
+          </div>
         )}
       </div>
       <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

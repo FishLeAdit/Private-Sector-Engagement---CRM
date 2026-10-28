@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { AccessResult } from "@/lib/auth/session";
+import { isSuperadmin } from "@/lib/auth/roles";
 import { cents } from "@/lib/money";
 import { authorizeFinance, financeId, parseFinance } from "@/features/finance/guards";
 import { FinanceError } from "@/features/finance/types";
@@ -73,6 +74,16 @@ export function createTargetsService(repo: TargetRepository, access: AccessResul
     async vertical(input: unknown) {
       authorize(true);
       return repo.vertical(parseFinance(verticalSchema, input));
+    },
+    // Only a superadmin deletes plans, and only drafts; an approved plan stays locked.
+    async removeDraft(id: string) {
+      const actor = authorize(true);
+      if (!isSuperadmin(actor.profile)) throw new FinanceError(403, "Only a superadmin can delete a target plan.");
+      const row = await plan(id);
+      if (row.status !== "draft")
+        throw new FinanceError(409, "This plan is approved and locked, so it cannot be deleted.");
+      await repo.removeDraft(row.id);
+      return { deleted: true, id: row.id };
     },
   };
 }
