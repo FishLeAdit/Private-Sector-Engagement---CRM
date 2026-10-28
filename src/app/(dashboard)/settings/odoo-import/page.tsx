@@ -14,8 +14,8 @@ export default async function OdooImportPage() {
       <SysCode className="mt-4 mb-1 block">{"SYS.CFG // ODOO"}</SysCode>
       <h1 className="mb-3 text-3xl font-bold">Odoo import check</h1>
       <p className="mb-5 max-w-3xl text-muted">
-        Check exported contacts, deals and activities against the CRM&apos;s own rules before any import. The check only
-        reads: files are not stored, and nothing is imported or changed.
+        Check exported contacts, deals and activities against the CRM&apos;s own rules. Files are not stored, and the
+        check changes nothing. Once nothing needs review, you can import the files in one step.
       </p>
       <div className="mb-6 max-w-3xl">
         <Notice tone="warning">
